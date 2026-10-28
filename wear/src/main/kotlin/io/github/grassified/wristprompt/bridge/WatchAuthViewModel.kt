@@ -1,5 +1,7 @@
 package io.github.grassified.wristprompt.bridge
 
+import io.github.grassified.wristprompt.auth.RevocationCredential
+import io.github.grassified.wristprompt.auth.RevocationResult
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
@@ -13,7 +15,10 @@ import kotlinx.coroutines.launch
 
 enum class WatchAuthState { IDLE, LOOKING_FOR_PHONE, REQUEST_SENT, COMPANION_UNAVAILABLE, ERROR, MULTIPLE_PHONES }
 
-class WatchAuthViewModel(private val bridge: WatchAuthBridge, private val profiles: io.github.grassified.wristprompt.auth.WatchProfiles) : ViewModel() {
+class WatchAuthViewModel(private val bridge: WatchAuthBridge, private val profiles: io.github.grassified.wristprompt.auth.WatchProfiles,
+    private val revoke: suspend (RevocationCredential) -> RevocationResult,
+    private val stopRequests: (String) -> Unit,
+) : ViewModel() {
     private val mutableState = MutableStateFlow(WatchAuthState.IDLE)
     val state = mutableState.asStateFlow()
     val accounts = profiles.state
@@ -25,6 +30,15 @@ class WatchAuthViewModel(private val bridge: WatchAuthBridge, private val profil
                     if (!value.expired) { delay((expiry - System.currentTimeMillis() + 1).coerceAtLeast(1)); profiles.load() }
                 }
             }
+        }
+    }
+    private var signOutJob: Job? = null
+    fun signOut() {
+        if (signOutJob?.isActive == true) return
+        requestJob?.cancel()
+        signOutJob = viewModelScope.launch {
+            try { profiles.signOut(stopRequests, revoke) }
+            catch (_: Exception) { mutableState.value = WatchAuthState.ERROR }
         }
     }
     fun confirmPlanNotice() {

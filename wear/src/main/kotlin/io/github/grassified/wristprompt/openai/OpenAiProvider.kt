@@ -62,14 +62,14 @@ class OpenAiProvider(private val http: OpenAiHttp) : AiProvider {
     }
 }
 
-class OpenAiRefresh(private val http: OpenAiHttp) {
+class OpenAiRefresh(private val http: OpenAiHttp, private val clock: SessionClock = SessionClock.SYSTEM) {
     suspend fun refresh(profile: CredentialProfile): CredentialProfile {
         val refreshToken = profile.refreshToken ?: throw ApiFailure(ApiProblem.REAUTHORIZE)
         val body = FormBody.Builder().add("grant_type", "refresh_token").add("client_id", profile.identity.clientId)
             .add("refresh_token", refreshToken).add("resource", OpenAiAuth.RESOURCE).build()
-        return http.execute(Request.Builder().url(OpenAiAuth.TOKEN).header("Accept", "application/json").post(body).build(), 30) { response ->
+        return http.execute(Request.Builder().url(OpenAiAuth.TOKEN).header("Accept", "application/json").post(body).build(), 30, trackTransmission = true) { response ->
             if (response.code != 200) throw http.failure(response, refresh = true)
-            RefreshProtocol.update(profile, http.body(response), System.currentTimeMillis())
+            RefreshProtocol.update(profile, http.body(response), clock())
         }
     }
 }

@@ -46,7 +46,8 @@
     <string name="proof_not_eligible">ChatGPT plan usage is unavailable for this account, workspace, or policy.</string>
     <string name="proof_permission">OpenAI did not accept this account’s permission or policy. Check the account and plan grant.</string>
     <string name="proof_temporary">OpenAI is temporarily unavailable. Credentials are preserved. Wait before retrying.</string>
-    <string name="proof_configuration">OpenAI rejected the client configuration. Repeated sign-in will not fix this configuration error.</string>
+    <string name="proof_configuration">This session cannot refresh with the current client configuration or token metadata. Credentials are preserved; repeated sign-in is not an automatic fix.</string>
+    <string name="session_renewed">ChatGPT session renewed on this watch.</string>
     <string name="proof_invalid_request">OpenAI rejected the request or selected model. Reload the catalog and choose a supported model.</string>
     <string name="proof_network">Could not reach OpenAI. Check the watch’s internet connection and retry explicitly.</string>
     <string name="proof_no_models">No displayable model is available. Reload the account catalog; select a model again if it changed.</string>
@@ -56,4 +57,9 @@
     <string name="proof_stale_account">Account changed during the request. Reload models for the selected account.</string>
     <string name="proof_protocol_detail">Failure category: %1$s. This contains no account or credential data.</string>
     <string name="proof_http_status">HTTP status: %1$d</string>
+    <string name="sign_out">Sign out of ChatGPT</string>
+    <string name="signing_out">Signing out. ChatGPT requests are stopped.</string>
+    <string name="signed_out">Signed out of ChatGPT. Select this saved account and Continue with ChatGPT to sign in again.</string>
+    <string name="signout_confirmed">Signed out locally. Remote renewable-session revocation confirmed.</string>
+    <string name="signout_unconfirmed">Signed out locally. REMOTE REVOCATION NOT CONFIRMED. Disconnect WristPrompt in your ChatGPT account settings if needed.</string>
 </resources>

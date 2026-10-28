@@ -68,4 +68,14 @@ class OAuthTransactionTest {
             assertThrows(IllegalArgumentException::class.java) { OAuthTransaction(BridgeProtocol.newHostId(), uri, null, null) }
         }
     }
+    @Test fun signInAfterLocalSignOutReusesIssuedClientAndHostWithoutIdTokenHint() {
+        val host = BridgeProtocol.newHostId()
+        val identity = RegistrationIdentity("oaiapp_saved", OpenAiAuth.ISSUER, "subject")
+        val t = OAuthTransaction(host, "http://127.0.0.1:23456/auth/callback", identity, null)
+        val p = params(t.authorizationUrl())
+        assertEquals(identity.clientId, p["client_id"]); assertEquals(host, p["ext_agent_host_id"])
+        assertFalse(p.containsKey("id_token_hint")); assertFalse(p.containsKey("agent_name_hint"))
+        assertEquals(identity.clientId, t.callback("/auth/callback?state=${t.state}&code=synthetic").clientId)
+    }
+
 }

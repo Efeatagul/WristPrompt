@@ -44,4 +44,16 @@ class ProfileProtocolTest {
             assertThrows(IllegalArgumentException::class.java) { p.validate() }
         }
     }
+    @Test fun clearedLocalRegistrationKeepsIdentityButCannotBeTransferredAsCredentials() {
+        val original = profile()
+        val cleared = original.copy(idToken = "", accessToken = null, refreshToken = null, tokenType = null,
+            expiresIn = null, reauthorizationRequired = true)
+        cleared.validate()
+        assertEquals(original.identity, cleared.identity); assertEquals(original.hostId, cleared.hostId)
+        assertFalse(cleared.planUsageEnabled)
+        val envelope = ProfileTransfer(1, BridgeProtocol.newRequestId(), BridgeProtocol.newRequestId(), cleared)
+        assertThrows(BridgeProtocolException::class.java) { ProfileProtocol.decodeTransfer(ProfileProtocol.encode(envelope)) }
+        assertThrows(IllegalArgumentException::class.java) { original.copy(idToken = "").validate() }
+    }
+
 }

@@ -635,3 +635,54 @@ Wear tests passed with zero failures/errors/skips. Lint warnings are unchanged.
 Exact commands, evidence limitations and remaining hardware checks are recorded
 in PERSISTENCE_TESTING.md. That automated run did not itself establish physical
 A/B/C behavior; the later user confirmation above supplies that evidence.
+
+
+## D11 — bounded per-registration refresh hardening
+
+Retain the existing encrypted vault, durable refresh intent and non-cancellable
+bounded rotation/atomic commit. Use a per-issued-client mutex across renewal;
+keep the vault mutex only around short reads/writes. Patch the latest vault's
+matching profile so another registration's concurrent update is never lost.
+Reauthorization of a live refreshing registration waits for explicit retry;
+stale selected-account callers cannot receive another account's lease.
+
+A shared SessionClock timestamps receipts and drives expiry/retry policy; tests
+can inject coroutine scheduling for timeout. A refresh-only OkHttp send boundary
+distinguishes definitely-unsent network failure from possible rotation. Preserve
+full credentials on retryable rejection/unsent failure with bounded manual retry;
+retain intent on lost/untrusted response. Only confirmed terminal token codes
+clear unusable access/refresh material. invalid_client remains configuration.
+The static runtime renewal indication is published only after durable commit.
+
+Current token-reference docs still do not define earliest_refresh_at encoding.
+Do not guess it. Missing/JSON-null uses the existing margin. Unknown non-null
+metadata defers renewal while the bearer is valid and blocks expired renewal
+with a configuration category; credentials remain preserved. The interpretation
+is BLOCKED pending an authoritative contract, not silently treated as supported.
+No vault schema migration or new auth/billing path. See REFRESH_REVIEW.md for
+sources, matrix and pending end-of-day device evidence. D2-1 model debt unchanged.
+
+
+## D12 — explicit local sign-out with bounded remote revocation
+
+Persist a signOutPending marker/generation before cancelling session jobs or
+waiting for the registration's bounded refresh. No vault lock crosses network
+work or cancellation. After refresh settles, revoke the latest known refresh
+token using the selected issued client and a validated discovery endpoint.
+Unknown rotation cannot become confirmed revocation merely by revoking an older,
+already-invalid token. Network/5xx revocation retries once with bounded backoff;
+local cleanup completes with explicit unconfirmed-remote guidance if needed.
+
+Clear access/refresh/retained ID token material and token timing/type while
+retaining identity/client/host and account display metadata. The local tokenless
+record permits an empty ID hint only with reauthorizationRequired; protocol
+transfers still require a nonempty ID token. No profile transfer shape/version
+change. Vault pending/result metadata defaults empty for existing records, with
+no automatic credential migration. Abandoned sign-out completes local cleanup on
+reconstruction rather than reviving the session. Storage errors never report
+local success. Same-registration OAuth reuses client/host without id_token_hint,
+as current docs specify after sign-out. No billing/account fallback.
+
+See SIGN_OUT_REVIEW.md for sources, state/race review and test evidence. Device
+sign-out/re-login/revocation is PENDING END-OF-DAY PHYSICAL TEST; no real session
+was revoked by the agent. Prior model-selection and earliest-refresh issues remain.

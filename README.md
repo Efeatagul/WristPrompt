@@ -65,7 +65,12 @@ Both apps disable backups, exclude app data from cloud/device-transfer backups,
 and disable cleartext traffic. The short-lived incoming listener binds only to
 127.0.0.1; outgoing OpenAI requests use HTTPS. The watch sends the test prompt
 directly to the public Responses API using the selected ChatGPT registration.
-There is no BYOK, production chat UI, sign-out implementation, or analytics. Phone process death discards
+Explicit watch sign-out now attempts discovery-backed renewable-session revocation,
+clears local token secrets and retains the saved registration for later sign-in.
+Unconfirmed remote revocation is reported explicitly; see
+[SIGN_OUT_REVIEW.md](SIGN_OUT_REVIEW.md) and the end-of-day checklist in
+[DAY2_STATUS.md](DAY2_STATUS.md). There is no BYOK, production chat UI or analytics.
+Phone process death discards
 untransferred tokens; keep setup alive during authorization.
 
 See [PROJECT_SPEC.md](PROJECT_SPEC.md) for the product/security contract,

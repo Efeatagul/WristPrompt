@@ -239,3 +239,26 @@ end-of-day checklist. Testing policy lives in AGENTS.md: batch non-blocking chec
 never infer physical success from automation, and preserve safety/phase boundaries.
 No BYOK, sign-out, refresh redesign or D2-2 implementation is authorized by this
 status update.
+
+
+## Day 2 Phase C — refresh/recovery audit (D2-2)
+
+- [x] VERIFIED AUTOMATICALLY: current official contracts reviewed; existing rotating-grant state machine mapped.
+- [x] VERIFIED AUTOMATICALLY: per-registration refresh locking, atomic latest-vault patching and stale-account protection.
+- [x] VERIFIED AUTOMATICALLY: shared fakeable clock, definitely-unsent transport distinction, conservative uncertain outcomes and terminal/configuration failure matrix.
+- [ ] BLOCKED: actual earliest_refresh_at scheduling semantics; official docs do not define its encoding/units. Unknown non-null constraints are never guessed.
+- [ ] PENDING END-OF-DAY PHYSICAL TEST: natural renewal with same registration, no phone consent/new client and successful inference.
+
+See REFRESH_REVIEW.md and DAY2_STATUS.md. No immediate device gate, credential
+schema migration, real token manipulation, sign-out, BYOK or model-restoration fix.
+
+
+## Day 2 Phase D — explicit sign-out and revocation
+
+- [x] VERIFIED AUTOMATICALLY: authoritative discovery-backed revocation, bounded retries and honest confirmed/unconfirmed outcomes.
+- [x] VERIFIED AUTOMATICALLY: durable sign-out gate, refresh/inference/catalog cancellation coordination, token clearing and metadata/host retention.
+- [x] VERIFIED AUTOMATICALLY: same-client reauthorization without retained ID hint; idempotence, storage-failure and process-recreation cases.
+- [ ] PENDING END-OF-DAY PHYSICAL TEST: normal sign-out, same-account/client re-login and offline local-only sign-out.
+
+See SIGN_OUT_REVIEW.md and the combined DAY2_STATUS.md checklist. No immediate
+real sign-out or revocation was performed. No BYOK, Day 3 chat or model-debt fix.

@@ -33,6 +33,7 @@ object ProfileProtocol {
             validate(ContextRequest(it.version, it.requestId, it.profile.hostId))
             require(BridgeProtocol.isRequestId(it.transferId))
             it.profile.validate()
+            require(it.profile.idToken.isNotEmpty()) // Cleared local registrations are never credential transfers.
         }
     } catch (_: Exception) { throw BridgeProtocolException() }
 }

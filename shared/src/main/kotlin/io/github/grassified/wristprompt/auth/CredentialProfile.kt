@@ -65,7 +65,9 @@ data class CredentialProfile(
     fun validate() {
         identity.validate()
         require(BridgeProtocol.isHostId(hostId) && savedAtEpochMs > 0)
-        require(idToken.length in 1..24_000 && name.orEmpty().length <= 256 && email.orEmpty().length <= 320)
+        require(idToken.length <= 24_000 && name.orEmpty().length <= 256 && email.orEmpty().length <= 320)
+        // Empty ID hint is valid only for a locally cleared, unusable registration.
+        require(idToken.isNotEmpty() || (reauthorizationRequired && accessToken == null && refreshToken == null))
         require("openid" in scopes && scopes.size <= 64 && OpenAiAuth.scopes(scopes.joinToString(" ")) == scopes)
         require(accessToken == null || accessToken.length in 1..24_000)
         require(refreshToken == null || refreshToken.length in 1..8192)

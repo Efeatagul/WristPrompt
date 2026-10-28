@@ -11,7 +11,7 @@ enum class ApiProblem {
 enum class ErrorShape { STRUCTURED, DETAIL, OTHER }
 // Static failure categories only: never include provider bodies, headers or exceptions.
 enum class ProtocolDetail {
-    BODY_TOO_LARGE, INVALID_UTF8, CATALOG_JSON, CATALOG_MODELS, CATALOG_MODEL, CATALOG_DUPLICATE,
+    REFRESH_TIMING_UNDOCUMENTED, BODY_TOO_LARGE, INVALID_UTF8, CATALOG_JSON, CATALOG_MODELS, CATALOG_MODEL, CATALOG_DUPLICATE,
     RESPONSE_JSON, RESPONSE_HTML, RESPONSE_MISSING_TYPE, RESPONSE_OTHER_TYPE,
     SSE_LINE_LIMIT, SSE_FRAME_LIMIT, SSE_EVENT_JSON, SSE_EVENT_TYPE, SSE_EVENT_MISMATCH,
     SSE_EVENT_SHAPE, OUTPUT_LIMIT, CLIENT_RESPONSE,
@@ -21,6 +21,7 @@ class ApiFailure(
     val problem: ApiProblem, val status: Int? = null, val code: String? = null,
     val requestId: String? = null, val shape: ErrorShape = ErrorShape.OTHER,
     val protocolDetail: ProtocolDetail? = null,
+    val requestNotSent: Boolean = false,
 ) : IllegalStateException("OpenAI operation: ${problem.name}") {
     override fun toString(): String = SafeDiagnostics.REDACTED
 }

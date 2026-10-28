@@ -6,13 +6,29 @@ import io.github.grassified.wristprompt.bridge.SafeDiagnostics
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+
+/** Shared wall-clock source for session expiry, receipt timestamps and retry gates. */
+fun interface SessionClock {
+    operator fun invoke(): Long
+    companion object { val SYSTEM = SessionClock(System::currentTimeMillis) }
+}
 
 object TokenExpiry {
     const val MARGIN_MS = 60_000L
     fun needsRefresh(profile: CredentialProfile, now: Long): Boolean {
         if (profile.savedAtEpochMs > now + 30_000) throw ApiFailure(ApiProblem.REAUTHORIZE)
         val expiry = profile.expiresAtEpochMs ?: return true
-        return now >= expiry - MARGIN_MS
+        val needed = now >= expiry - MARGIN_MS
+        // Official docs name the field but define neither encoding nor units. Do not
+        // guess a timestamp and potentially send a rotating grant before permitted.
+        if (needed && profile.earliestRefreshAt != null && profile.earliestRefreshAt != JsonNull) {
+            // The current bearer can still be used until expiry without submitting
+            // an early rotating grant. Expiry itself does not resolve unknown units.
+            if (now < expiry) return false
+            throw ApiFailure(ApiProblem.CONFIGURATION, protocolDetail = ProtocolDetail.REFRESH_TIMING_UNDOCUMENTED)
+        }
+        return needed
     }
 }
 

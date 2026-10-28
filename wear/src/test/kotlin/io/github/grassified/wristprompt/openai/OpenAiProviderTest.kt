@@ -76,8 +76,10 @@ class OpenAiProviderTest {
             assertEquals("synthetic-refresh", fields["refresh_token"]); assertEquals(OpenAiAuth.RESOURCE, fields["resource"])
             assertNull(request.header("Authorization"))
             200 to """{"access_token":"rotated-access","refresh_token":"rotated-refresh","token_type":"Bearer","expires_in":3600}"""
-        }))
-        assertEquals("rotated-refresh", refresh.refresh(testProfile()).refreshToken)
+        }), SessionClock { 4_550_000 })
+        val updated = refresh.refresh(testProfile())
+        assertEquals("rotated-refresh", updated.refreshToken)
+        assertEquals(4_550_000L, updated.savedAtEpochMs)
     }
     @Test fun eofAndWrongContentTypeNeverComplete() = runBlocking {
         for (type in listOf("application/json", "text/event-stream")) {

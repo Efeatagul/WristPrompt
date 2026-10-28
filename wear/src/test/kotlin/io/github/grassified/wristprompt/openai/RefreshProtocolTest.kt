@@ -51,4 +51,18 @@ class RefreshProtocolTest {
         assertEquals("[REDACTED]", lease.toString()); assertEquals("[REDACTED]", SafeDiagnostics.redact(lease))
         assertEquals("[REDACTED]", PreparedCatalog(lease, emptyList()).toString())
     }
+    @Test fun undocumentedEarliestMetadataNeverTriggersAnOptimisticRefresh() {
+        val old = testProfile()
+        for (metadata in listOf(kotlinx.serialization.json.JsonPrimitive(123), kotlinx.serialization.json.JsonPrimitive("2099-01-01T00:00:00Z"),
+            kotlinx.serialization.json.JsonObject(emptyMap()))) {
+            val constrained = old.copy(earliestRefreshAt = metadata)
+            assertFalse(TokenExpiry.needsRefresh(constrained, 4_000_000))
+            assertFalse(TokenExpiry.needsRefresh(constrained, 4_540_000))
+            val failure = assertThrows(ApiFailure::class.java) { TokenExpiry.needsRefresh(constrained, 4_600_000) }
+            assertEquals(ApiProblem.CONFIGURATION, failure.problem)
+            assertEquals(ProtocolDetail.REFRESH_TIMING_UNDOCUMENTED, failure.protocolDetail)
+        }
+        assertTrue(TokenExpiry.needsRefresh(old.copy(earliestRefreshAt = kotlinx.serialization.json.JsonNull), 4_540_000))
+    }
+
 }

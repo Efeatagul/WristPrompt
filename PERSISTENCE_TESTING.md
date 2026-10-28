@@ -85,6 +85,13 @@ uncertain session may require explicit phone reauthorization; that is distinct
 from an ordinary fresh-token restart. Do not force-stop during a refresh to test
 normal restart persistence.
 
+Phase C follow-up: the prior paragraphs describe the D2-1 implementation snapshot.
+[REFRESH_REVIEW.md](REFRESH_REVIEW.md) supersedes the refresh-lock/clock/timing
+assessment: registration-scoped locks, a shared injectable clock, a distinction
+between live and uncertain renewal, and a no-guess guard for undocumented earliest
+metadata. D2-1 physical results and the separate model-restoration defect remain
+unchanged; no physical refresh PASS has been supplied.
+
 ## Phone independence trace
 
 WristPromptApplication wires InferenceSession directly to WatchProfiles.credential,

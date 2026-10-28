@@ -1,6 +1,7 @@
 package io.github.grassified.wristprompt
 
 import io.github.grassified.wristprompt.auth.WatchProfiles
+import io.github.grassified.wristprompt.auth.OpenAiRevocation
 import io.github.grassified.wristprompt.storage.EncryptedRecord
 import io.github.grassified.wristprompt.openai.*
 import android.app.Application
@@ -16,9 +17,11 @@ private val Context.installationStore by preferencesDataStore(name = "installati
 class WristPromptApplication : Application() {
     private val connectivity by lazy { WearConnectivity(this, BridgeProtocol.MOBILE_CAPABILITY) }
     private val hostIds by lazy { HostIdRepository(installationStore) }
-    val profiles by lazy { WatchProfiles(EncryptedRecord(this, "chatgpt_profiles")) }
+    private val sessionClock = SessionClock.SYSTEM
+    val profiles by lazy { WatchProfiles(EncryptedRecord(this, "chatgpt_profiles"), now = sessionClock) }
     private val openAiHttp by lazy { OpenAiHttp() }
-    private val refresh by lazy { OpenAiRefresh(openAiHttp) }
+    val revocation by lazy { OpenAiRevocation(openAiHttp) }
+    private val refresh by lazy { OpenAiRefresh(openAiHttp, sessionClock) }
     val inference by lazy {
         InferenceSession(OpenAiCredentialSource { profiles.credential(refresh::refresh) },
             OpenAiProvider(openAiHttp), profiles::isCurrent)
