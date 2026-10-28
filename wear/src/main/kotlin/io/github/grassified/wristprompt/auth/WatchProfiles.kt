@@ -34,6 +34,7 @@ private data class AcceptedTransfer(
 private data class WatchVault(
     val version: Int = 1,
     val refreshPending: Set<String> = emptySet(),
+    val selectedModels: Map<String, String> = emptyMap(),
     val profiles: List<CredentialProfile> = emptyList(), val selectedClientId: String? = null,
     val generation: Long = 0, val pending: PendingLogin? = null,
     val accepted: AcceptedTransfer? = null, val confirmedPlanClients: Set<String> = emptySet(),
@@ -61,7 +62,11 @@ class WatchProfiles(private val record: SecretRecord, private val now: () -> Lon
             ProfileProtocol.json.decodeFromString<WatchVault>(bytes.decodeToString(throwOnInvalidSequence = true)).also {
                 require(it.version == 1 && it.profiles.size <= 10)
                 it.profiles.forEach(CredentialProfile::validate)
-                require(it.profiles.map { p -> p.identity.clientId }.distinct().size == it.profiles.size)
+                val clients = it.profiles.map { p -> p.identity.clientId }
+                require(clients.distinct().size == it.profiles.size)
+                require(it.profiles.map { p -> p.hostId }.distinct().size <= 1)
+                require(it.selectedClientId == null || it.selectedClientId in clients)
+                require(it.selectedModels.all { (client, slug) -> client in clients && validModel(slug) })
             }
         } catch (_: Exception) {
             mutableState.value = mutableState.value.copy(storageError = true, authorizing = false)
@@ -108,11 +113,26 @@ class WatchProfiles(private val record: SecretRecord, private val now: () -> Lon
             save(vault.copy(selectedClientId = clientId, pending = null, generation = vault.generation + 1))
         }
     }
+    private fun validModel(slug: String) = slug.isNotBlank() && slug.length <= 256 && slug.none(Char::isISOControl)
+
+    suspend fun selectedModel(clientId: String): String? = withContext(Dispatchers.IO) {
+        mutex.withLock { read().selectedModels[clientId] }
+    }
+
+    suspend fun selectModel(clientId: String, generation: Long, slug: String) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            require(validModel(slug))
+            val vault = read()
+            if (vault.selectedClientId != clientId || vault.generation != generation) throw ApiFailure(ApiProblem.STALE_ACCOUNT)
+            save(vault.copy(selectedModels = vault.selectedModels + (clientId to slug)))
+        }
+    }
+
     suspend fun prepare(nodeId: String, request: AuthStartRequest) = withContext(Dispatchers.IO) {
         mutex.withLock {
             val vault = read()
             val selected = vault.profiles.singleOrNull { it.identity.clientId == vault.selectedClientId }
-            require(selected == null || selected.hostId == request.hostId)
+            require(vault.profiles.all { it.hostId == request.hostId })
             val generation = vault.generation + 1
             save(vault.copy(generation = generation, pending = PendingLogin(nodeId, request.requestId, request.hostId,
                 now() + OpenAiAuth.ATTEMPT_MS, selected?.identity, generation)))
@@ -228,7 +248,7 @@ class WatchProfiles(private val record: SecretRecord, private val now: () -> Lon
                 transfer.profile.savedAtEpochMs >= now() - OpenAiAuth.ATTEMPT_MS)
             // Never allow a new registration to overwrite an existing identity/client binding.
             val existing = vault.profiles.singleOrNull { it.identity.clientId == transfer.profile.identity.clientId }
-            require(existing == null || existing.identity == transfer.profile.identity)
+            require(existing == null || (existing.identity == transfer.profile.identity && existing.hostId == transfer.profile.hostId))
             val profiles = vault.profiles.filterNot { it.identity.clientId == transfer.profile.identity.clientId } + transfer.profile
             require(profiles.size <= 10)
             save(vault.copy(profiles = profiles, selectedClientId = transfer.profile.identity.clientId,

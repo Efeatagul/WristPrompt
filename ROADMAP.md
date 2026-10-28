@@ -126,6 +126,10 @@ exclusions have evidence; no secret leakage or silent billing fallback.
 
 ## Day 3 — watch chat
 
+- [ ] Low-priority D2-1 debt: fix explicit model restoration (GPT-6.1 Terra →
+  GPT-6.1 Sol after restart while Terra remains listed). Physical result PARTIAL;
+  non-blocking for authentication persistence. No fix in the D2-1 status update.
+
 - [ ] Round-screen chat, text entry, account/model pickers, local context,
   visible billing path, first-use confirmation, and usage-management action.
 - [ ] Stop cancels transport; partial/error/completed states stay accurate.
@@ -210,3 +214,28 @@ output, Observed: response.completed and the explicit success state. Day 1’s
 physical vertical-slice gate is closed. Earlier blocked entries above record the
 investigation history. Remaining physical refresh/recovery/security checks belong
 to Day 2 hardening and remain unchecked. No Day 2 implementation has started.
+
+
+## Day 2 Phase B — persistence verification (2026-10-28)
+
+Authorized scope: restart persistence and watch-direct inference only. Baseline
+Phase A persistent-toolchain evidence is in DAY2_BASELINE.md.
+
+- [x] Trace protected registration/scopes/token/expiry/host storage and watch-direct transport.
+- [x] Persist per-registration model preference and revalidate against a current catalog.
+- [x] Add synthetic repository/file recreation, account isolation and failure-path tests.
+- [x] VERIFIED PHYSICALLY: A — app restart retains same account/plan, requests no reauthentication and completes inference (user-confirmed 2026-10-28).
+- [x] VERIFIED PHYSICALLY: B — authenticated state survives watch reboot and inference completes (user-confirmed 2026-10-28).
+- [x] VERIFIED PHYSICALLY: C — phone fully powered off, watch on direct Wi-Fi; catalog loads and inference completes (user-confirmed 2026-10-28).
+- [ ] PENDING END-OF-DAY PHYSICAL TEST: natural-expiry renewal without phone; separate from inference success.
+- [ ] VERIFIED PHYSICALLY — PARTIAL: explicit model restoration; Terra changed to Sol after restart despite Terra remaining available. Real, non-blocking defect deferred to Day 3 model-picker/chat work.
+
+**D2-1 overall PASS:** authentication/account persistence, watch reboot persistence,
+phone-independent networking, direct model discovery and direct inference. Exact
+host bytes were not physically compared; storage-abstraction stability remains
+VERIFIED AUTOMATICALLY. Model restoration is separately PARTIAL and is not fully
+verified. See PERSISTENCE_TESTING.md for evidence and DAY2_STATUS.md for the concise
+end-of-day checklist. Testing policy lives in AGENTS.md: batch non-blocking checks,
+never infer physical success from automation, and preserve safety/phase boundaries.
+No BYOK, sign-out, refresh redesign or D2-2 implementation is authorized by this
+status update.

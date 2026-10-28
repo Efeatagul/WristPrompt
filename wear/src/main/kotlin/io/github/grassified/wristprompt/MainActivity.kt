@@ -52,7 +52,7 @@ class MainActivity : ComponentActivity() {
             val proof: InferenceViewModel = viewModel(factory = viewModelFactory {
                 initializer {
                     val app = application as WristPromptApplication
-                    InferenceViewModel(app.profiles.state, app.inference)
+                    InferenceViewModel(app.profiles.state, app.inference, app.profiles::selectedModel, app.profiles::selectModel)
                 }
             })
             val state by auth.state.collectAsStateWithLifecycle()

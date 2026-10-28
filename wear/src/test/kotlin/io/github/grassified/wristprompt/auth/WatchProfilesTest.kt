@@ -104,4 +104,115 @@ class WatchProfilesTest {
         vault.accept("phone", ProfileProtocol.encode(value))
         assertTrue(vault.state.value.connected); assertFalse(vault.state.value.planEnabled)
     }
+    @Test fun recreationRestoresRegistrationCredentialsAndModelWithoutPhone() = runBlocking {
+        val record = Record(); val original = WatchProfiles(record) { now }; val req = request()
+        original.prepare("phone", req); val envelope = transfer(req)
+        original.accept("phone", ProfileProtocol.encode(envelope))
+        original.selectModel(envelope.profile.identity.clientId, original.state.value.generation, "saved-model")
+        val restored = WatchProfiles(record) { now }; restored.load()
+        assertEquals(original.state.value, restored.state.value)
+        assertEquals("saved-model", restored.selectedModel(envelope.profile.identity.clientId))
+        val lease = restored.credential { error("Fresh credentials must not refresh or use a phone") }
+        assertEquals(envelope.profile.accessToken, lease.accessToken)
+        val returning = request(); restored.prepare("phone", returning)
+        val context = restored.context("phone", ContextRequest(1, returning.requestId, host))
+        assertEquals(envelope.profile.identity, context.identity)
+        assertEquals(envelope.profile.idToken, context.idTokenHint)
+    }
+    @Test fun identityOnlyRestoresConnectedWithoutPlanPermission() = runBlocking {
+        val record = Record(); val vault = WatchProfiles(record) { now }; val req = request()
+        vault.prepare("phone", req)
+        vault.accept("phone", ProfileProtocol.encode(transfer(req).let { it.copy(profile = it.profile.copy(scopes = setOf("openid"))) }))
+        val restored = WatchProfiles(record) { now }; restored.load()
+        assertTrue(restored.state.value.connected); assertFalse(restored.state.value.planEnabled)
+        try { restored.credential { error("No refresh for identity-only") }; fail("Expected disabled plan") }
+        catch (failure: io.github.grassified.wristprompt.openai.ApiFailure) {
+            assertEquals(io.github.grassified.wristprompt.openai.ApiProblem.PLAN_DISABLED, failure.problem)
+        }
+    }
+    @Test fun sameEmailDoesNotMergeRegistrationsOrModelPreferences() = runBlocking {
+        val record = Record(); val vault = WatchProfiles(record) { now }
+        suspend fun add(client: String, subject: String) {
+            val req = request(); vault.prepare("phone", req)
+            val value = transfer(req, subject, client)
+            vault.accept("phone", ProfileProtocol.encode(value.copy(profile = value.profile.copy(email = "same@example.test"))))
+            vault.selectModel(client, vault.state.value.generation, "model-$client")
+        }
+        add("client_one", "subject_one"); vault.select(null); add("client_two", "subject_two")
+        val restored = WatchProfiles(record) { now }; restored.load()
+        assertEquals(2, restored.state.value.accounts.size)
+        for ((client, subject) in listOf("client_one" to "subject_one", "client_two" to "subject_two")) {
+            restored.select(client)
+            assertEquals("model-$client", restored.selectedModel(client))
+            val req = request(); restored.prepare("phone", req)
+            assertEquals(RegistrationIdentity(client, OpenAiAuth.ISSUER, subject),
+                restored.context("phone", ContextRequest(1, req.requestId, host)).identity)
+        }
+    }
+    @Test fun changedHostAndStaleModelWriteCannotAlterSavedRegistration() = runBlocking {
+        val record = Record(); val vault = WatchProfiles(record) { now }; val req = request()
+        vault.prepare("phone", req); vault.accept("phone", ProfileProtocol.encode(transfer(req)))
+        val generation = vault.state.value.generation
+        vault.select(null)
+        val before = record.data!!.clone()
+        assertThrows(Exception::class.java) { runBlocking { vault.selectModel("oaiapp_test", generation, "stale") } }
+        assertThrows(Exception::class.java) { runBlocking { vault.prepare("phone", request().copy(hostId = BridgeProtocol.newHostId())) } }
+        assertArrayEquals(before, record.data)
+    }
+    @Test fun missingMalformedAndUnreadableRecordsFailSafely() = runBlocking {
+        val missing = WatchProfiles(Record()) { now }; missing.load()
+        assertFalse(missing.state.value.connected); assertFalse(missing.state.value.storageError)
+        for (bytes in listOf("not-json".encodeToByteArray(), byteArrayOf(0xc3.toByte()),
+            "{\"selectedClientId\":\"missing-client\"}".encodeToByteArray(),
+            "{\"selectedModels\":{\"unknown\":\"model\"}}".encodeToByteArray())) {
+            val record = Record().apply { data = bytes }; val vault = WatchProfiles(record) { now }; vault.load()
+            assertTrue(vault.state.value.storageError); assertFalse(vault.state.value.connected)
+            assertEquals(0, record.writes)
+        }
+        val unreadable = WatchProfiles(object : SecretRecord {
+            override fun read(): ByteArray? = error("Synthetic key unavailable")
+            override fun write(plaintext: ByteArray) = error("Must not reset")
+        }) { now }
+        unreadable.load(); assertTrue(unreadable.state.value.storageError)
+    }
+
+    @Test fun encryptedFileRecreationCanDiscoverAndCompleteInferenceWithoutBridge() = runBlocking {
+        val directory = java.nio.file.Files.createTempDirectory("synthetic-vault").toFile()
+        try {
+            val file = java.io.File(directory, "vault.enc")
+            val key = javax.crypto.KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
+            val aad = "synthetic-vault".encodeToByteArray()
+            fun record() = object : SecretRecord {
+                override fun read(): ByteArray? = if (file.exists())
+                    io.github.grassified.wristprompt.storage.GcmRecord.decrypt(file.readBytes(), key, aad) else null
+                override fun write(plaintext: ByteArray) {
+                    file.writeBytes(io.github.grassified.wristprompt.storage.GcmRecord.encrypt(plaintext, key, aad))
+                }
+            }
+            val original = WatchProfiles(record()) { now }; val req = request()
+            original.prepare("phone", req); original.accept("phone", ProfileProtocol.encode(transfer(req)))
+            val restored = WatchProfiles(record()) { now }; restored.load()
+            var calls = 0
+            val provider = object : io.github.grassified.wristprompt.openai.AiProvider {
+                override suspend fun models(credential: io.github.grassified.wristprompt.openai.CredentialLease): List<io.github.grassified.wristprompt.openai.AiModel> {
+                    calls++; return listOf(io.github.grassified.wristprompt.openai.AiModel("model", "Model"))
+                }
+                override suspend fun stream(credential: io.github.grassified.wristprompt.openai.CredentialLease, model: String,
+                    onEvent: suspend (io.github.grassified.wristprompt.openai.ResponseEvent) -> Unit) {
+                    calls++
+                    onEvent(io.github.grassified.wristprompt.openai.ResponseEvent.Delta(io.github.grassified.wristprompt.openai.ResponsesProtocol.EXPECTED_TEXT))
+                    onEvent(io.github.grassified.wristprompt.openai.ResponseEvent.Completed(io.github.grassified.wristprompt.openai.ResponsesProtocol.EXPECTED_TEXT))
+                }
+            }
+            val session = io.github.grassified.wristprompt.openai.InferenceSession(
+                { restored.credential { error("Fresh token must not refresh") } }, provider, restored::isCurrent)
+            val result = session.test(session.catalog(), "model", {}, {})
+            assertTrue(result.proofPassed); assertEquals(2, calls)
+            // The protected-record implementation is recreated too; no in-memory record survives.
+            file.writeBytes(byteArrayOf(1, 2, 3))
+            val corrupt = WatchProfiles(record()) { now }; corrupt.load()
+            assertTrue(corrupt.state.value.storageError); assertFalse(corrupt.state.value.connected)
+        } finally { directory.deleteRecursively() }
+    }
+
 }

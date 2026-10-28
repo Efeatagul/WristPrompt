@@ -72,4 +72,39 @@ class InferenceViewModelTest {
         vm.test(); runCurrent(); vm.stop(); advanceTimeBy(1001); runCurrent()
         assertEquals(ProofStage.CANCELLED, vm.state.value.stage); assertFalse(vm.state.value.completedObserved)
     }
+    @Test fun recreatedViewModelRestoresOnlyModelStillInCurrentCatalog() = runTest {
+        val provider = object : AiProvider {
+            override suspend fun models(credential: CredentialLease) = listOf(AiModel("first", "First"), AiModel("second", "Second"))
+            override suspend fun stream(credential: CredentialLease, model: String, onEvent: suspend (ResponseEvent) -> Unit) = Unit
+        }
+        val session = InferenceSession({ CredentialLease("client", 0, "synthetic", 999) }, provider) { true }
+        var saved: String? = null
+        fun create() = InferenceViewModel(accounts(), session, { client -> assertEquals("client", client); saved },
+            { client, generation, slug -> assertEquals("client", client); assertEquals(0L, generation); saved = slug }).also { model = it }
+        val first = create(); runCurrent(); first.select("second"); runCurrent()
+        assertEquals("second", saved)
+        first.viewModelScope.cancel()
+        val restored = create(); runCurrent(); assertEquals("second", restored.state.value.selectedSlug)
+        restored.viewModelScope.cancel(); saved = "removed-model"
+        val changedCatalog = create(); runCurrent(); assertEquals("first", changedCatalog.state.value.selectedSlug)
+        changedCatalog.select("not-in-catalog"); runCurrent(); assertEquals("removed-model", saved)
+    }
+    @Test fun storageFailureCannotPublishAnUnsavedSelection() = runTest {
+        val provider = Provider()
+        val vm = InferenceViewModel(accounts(), InferenceSession({ CredentialLease("client", 0, "synthetic", 999) }, provider) { true },
+            saveModel = { _, _, _ -> throw io.github.grassified.wristprompt.storage.SecureStorageException() }).also { model = it }
+        runCurrent(); vm.select("slug"); runCurrent()
+        assertEquals(ProofStage.FAILED, vm.state.value.stage); assertEquals(ApiProblem.STORAGE, vm.state.value.problem)
+    }
+    @Test fun restoredUncertainRefreshDoesNotStartDiscovery() = runTest {
+        var requests = 0
+        val account = accounts().apply { value = value.copy(reauthorizationRequired = true) }
+        val provider = object : AiProvider {
+            override suspend fun models(credential: CredentialLease): List<AiModel> { requests++; return listOf(AiModel("slug", "Model")) }
+            override suspend fun stream(credential: CredentialLease, model: String, onEvent: suspend (ResponseEvent) -> Unit) = Unit
+        }
+        val vm = InferenceViewModel(account, InferenceSession({ CredentialLease("client", 0, "synthetic", 999) }, provider) { true }).also { model = it }
+        runCurrent(); assertEquals(0, requests); assertEquals(ApiProblem.REAUTHORIZE, vm.state.value.problem)
+    }
+
 }

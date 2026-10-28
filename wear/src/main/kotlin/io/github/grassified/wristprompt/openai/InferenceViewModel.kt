@@ -22,6 +22,8 @@ private data class ActiveAccount(val client: String?, val generation: Long, val 
 class InferenceViewModel(
     accounts: StateFlow<WatchAccountState>,
     private val session: InferenceSession,
+    private val selectedModel: suspend (String) -> String? = { null },
+    private val saveModel: suspend (String, Long, String) -> Unit = { _, _, _ -> },
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ProofState())
     val state = mutableState.asStateFlow()
@@ -42,14 +44,21 @@ class InferenceViewModel(
                         account.client != null && !account.plan -> ApiProblem.PLAN_DISABLED
                         else -> null
                     })
-                    if (account.client != null && account.plan && !account.pending && !account.storageError) loadModels()
+                    if (account.client != null && account.plan && !account.pending && !account.storageError && !accounts.value.reauthorizationRequired) loadModels()
                 }
         }
     }
     fun select(slug: String) {
-        if (!state.value.busy && state.value.models.any { it.slug == slug }) {
-            mutableState.value = state.value.copy(selectedSlug = slug, output = "", completedObserved = false,
-                stage = if (state.value.stage == ProofStage.FAILED) ProofStage.FAILED else ProofStage.READY)
+        if (operation?.isActive == true || state.value.busy || state.value.models.none { it.slug == slug }) return
+        val catalog = prepared ?: return
+        val run = epoch
+        operation = viewModelScope.launch {
+            try {
+                saveModel(catalog.credential.clientId, catalog.credential.generation, slug)
+                if (run == epoch) mutableState.value = state.value.copy(selectedSlug = slug, output = "", completedObserved = false,
+                    stage = if (state.value.stage == ProofStage.FAILED) ProofStage.FAILED else ProofStage.READY)
+            } catch (cancelled: CancellationException) { throw cancelled
+            } catch (failure: Exception) { failed(run, failure) }
         }
     }
     fun loadModels() {
@@ -60,8 +69,11 @@ class InferenceViewModel(
             try {
                 val catalog = session.catalog()
                 if (run != epoch) return@launch
+                val saved = selectedModel(catalog.credential.clientId)
+                if (run != epoch) return@launch
                 prepared = catalog
-                mutableState.value = ProofState(ProofStage.READY, catalog.models, catalog.models.first().slug)
+                mutableState.value = ProofState(ProofStage.READY, catalog.models,
+                    catalog.models.firstOrNull { it.slug == saved }?.slug ?: catalog.models.first().slug)
             } catch (cancelled: CancellationException) { throw cancelled
             } catch (failure: Exception) { failed(run, failure) }
         }

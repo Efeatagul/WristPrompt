@@ -601,3 +601,37 @@ No response content or arbitrary header text is logged or shown. Synthetic tests
 cover valid headerless completion, malformed/JSON/HTML bodies, premature EOF,
 failed/incomplete events, non-200 errors and explicitly invalid Content-Type.
 Physical completed inference remains unconfirmed until the user retries.
+
+
+## D10 — Day 2 Phase B restart persistence
+
+Keep explicit model selection per issued client ID in the existing encrypted
+WatchVault selectedModels map. It is an ordinary preference stored with its
+sensitive account association, avoiding another DataStore or module. Old vaults
+default to an empty map. Reload a current catalog after process recreation; use
+the remembered slug only if it is still listed for the selected account. Never
+reuse a persisted catalog/bearer or infer availability from a saved preference.
+Persist selection before publishing it; reject stale client/generation writes.
+
+Vault loading now validates selected-client/model references and one common host
+for saved registrations; login preparation rejects a changed host even when
+adding another account. Startup suppresses automatic catalog loading when the
+existing durable uncertain-session marker requires reauthorization. Refresh
+transport/rotation/intent/cancellation semantics are unchanged.
+
+At implementation handoff, physical A/B/C acceptance was pending. The user
+subsequently confirmed all three PASS on 2026-10-28; D2-1 is VERIFIED PHYSICALLY
+for authentication/account/reboot persistence and phone-independent discovery/
+inference. Model restoration is separately PARTIAL: Terra changed to Sol after
+restart while Terra remained listed, deferred as low-priority Day 3 debt.
+Exact steps, evidence and state inventory are in PERSISTENCE_TESTING.md. Tests use synthetic records and one encrypted JVM-file
+recreation; Android Keystore, OEM reboot persistence, actual watch internet routing
+and natural expiry remain physical evidence. No secrets/host identifiers were
+logged, and no new logging path or diagnostic payload was added.
+
+
+Phase B automated verification: both debug builds and lint passed, and all 108
+Wear tests passed with zero failures/errors/skips. Lint warnings are unchanged.
+Exact commands, evidence limitations and remaining hardware checks are recorded
+in PERSISTENCE_TESTING.md. That automated run did not itself establish physical
+A/B/C behavior; the later user confirmation above supplies that evidence.

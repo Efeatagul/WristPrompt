@@ -55,5 +55,25 @@
   required, unresolved risks, and a suggested commit message.
 - Distinguish unit, emulator, and physical-device evidence. Do not check off a
   milestone based on compilation alone. Update the roadmap only with evidence.
+- For the rest of the six-day sprint, label results VERIFIED AUTOMATICALLY,
+  VERIFIED PHYSICALLY, PENDING END-OF-DAY PHYSICAL TEST, or BLOCKED. Unit/emulator
+  evidence never establishes physical behavior. Continue automated tests, builds,
+  lint/static checks and git diff --check after implementation tasks.
+- Batch non-blocking device checks into the concise end-of-day checklist in
+  DAY2_STATUS.md (or that day's status document); do not require device tests after
+  every task. Continue within authorized scope when automated evidence is strong,
+  the next work does not depend on the result, and failure cannot risk credential
+  corruption, data loss or irreversible state. Ordinary UI/error/state/recovery
+  changes normally wait until end of day.
+- Ask for immediate manual evidence only when continuing is materially unsafe or
+  likely to waste substantial work; explain the dependency/risk. Examples include
+  signing changes, credential-format migration, destructive storage/Keystore work,
+  fundamental authentication changes, registration invalidation risk, or required
+  release/debug behavior differences. A pending physical check is not itself a blocker.
+- Never clear real app data, uninstall WristPrompt, revoke a real session, delete
+  credentials, invalidate Keystore keys or intentionally exhaust usage without
+  explicit authorization for that exact action. Never run destructive physical
+  tests automatically. Phase boundaries still apply; deferred tests do not
+  authorize starting the next task.
 - Documentation ownership: SPEC = what must ship; ROADMAP = sequence/gates;
   DECISIONS = choices, versions, risks, evidence; AGENTS = working conventions.
