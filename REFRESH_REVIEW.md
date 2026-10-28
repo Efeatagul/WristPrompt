@@ -1,5 +1,17 @@
 # Day 2 Phase C — refresh audit and recovery hardening
 
+## Final evidence update — 2026-10-29
+
+The owner has physically resolved the upgrade timing regression after the focused fix. Exact refresh telemetry was not supplied. Final Day 2 evidence and the superseding policy are in DAY2_REPORT.md / REFRESH_REGRESSION_REVIEW.md.
+
+
+> Superseded timing assessment, 2026-10-29: the blanket opaque-hint expiry guard
+> caused a real upgrade regression. See REFRESH_REGRESSION_REVIEW.md for the
+> official cookbook-linked Sign-in devkit evidence, supported numeric/ISO parsing,
+> missing-hint compatibility and focused retest. The older guard's test results
+> below are historical, not evidence that its blocking policy was correct.
+
+
 Date: 2026-10-28. Implementation scope: existing ChatGPT-plan renewal only.
 Physical refresh: **PENDING END-OF-DAY PHYSICAL TEST**. D2-1 A/B/C remain
 VERIFIED PHYSICALLY; those results do not prove refresh occurred. The Terra → Sol

@@ -47,6 +47,7 @@
     <string name="proof_permission">OpenAI did not accept this account’s permission or policy. Check the account and plan grant.</string>
     <string name="proof_temporary">OpenAI is temporarily unavailable. Credentials are preserved. Wait before retrying.</string>
     <string name="proof_configuration">OpenAI client, route or session configuration requires attention. Credentials are preserved; repeated sign-in is not an automatic fix.</string>
+    <string name="refresh_not_ready">ChatGPT session cannot refresh yet. Wait and reload models. Credentials are preserved.</string>
     <string name="session_renewed">ChatGPT session renewed on this watch.</string>
     <string name="proof_invalid_request">OpenAI rejected the request or selected model. Reload the catalog and choose a supported model.</string>
     <string name="proof_network">Could not reach OpenAI. Check the watch’s internet connection and retry explicitly.</string>

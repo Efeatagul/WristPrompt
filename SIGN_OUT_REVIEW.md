@@ -1,5 +1,22 @@
 # Day 2 Phase D — ChatGPT sign-out and renewable-session revocation
 
+## Final physical disposition — 2026-10-29
+
+**VERIFIED PHYSICALLY — PASS WITH TRANSIENT REAUTHORIZATION ANOMALY.** Normal
+sign-out was exercised. First recovery showed watch authorization failure and
+phone code-exchange failure; another setup context expired. Force-restart/reopen
+and retry eventually restored the same intended account, plan use, models and
+completed inference. Exact cause is unresolved; no clean-pass claim, no reported
+remote revocation outcome and no separate reauth client-suffix comparison.
+
+Current state/expiry/callback/exchange guards and tests disclose no concrete unsafe
+transition explaining this event. New synthetic failed-exchange -> fresh-request
+recovery test passes without product-code changes; see DAY2_REPORT.md section C.
+Track Day 3 triage / Day 5 reliability disposition, not a Day 3 blocker. Offline
+sign-out is SKIPPED / NOT REQUIRED FOR DAY 2 PHYSICAL GATE. Prior deferred-session
+instructions below are historical; no extra real sign-out cycle is requested.
+
+
 Status: implementation/test evidence is VERIFIED AUTOMATICALLY. Real sign-out,
 revocation and re-login are PENDING END-OF-DAY PHYSICAL TEST. No device sign-out,
 real revocation request, app-data deletion or credential/key manipulation was run.

@@ -237,7 +237,7 @@ class WatchRefreshTest {
     }
     @Test fun earliestUnknownConstraintStopsBeforeIntentWithoutDiscardingCredentials() = runBlocking {
         val record = Record(); val vault = WatchProfiles(record) { now }
-        val p = testProfile(now).copy(earliestRefreshAt = JsonPrimitive(123))
+        val p = testProfile(now).copy(earliestRefreshAt = JsonObject(emptyMap()))
         val req = AuthStartRequest(1, BridgeProtocol.newRequestId(), p.hostId, now)
         vault.prepare("phone", req)
         vault.accept("phone", ProfileProtocol.encode(ProfileTransfer(1, req.requestId, BridgeProtocol.newRequestId(), p)))

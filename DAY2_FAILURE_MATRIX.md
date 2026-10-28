@@ -1,5 +1,10 @@
 # Day 2 Phase G — targeted authentication/inference failure matrix
 
+## Final evidence update — 2026-10-29
+
+Final owner evidence now verifies ChatGPT success, API 401/no-fallback and cancellation, with a transient reauth anomaly. Successful real BYOK remains externally BLOCKED. Original pending rows below are historical; see DAY2_REPORT.md.
+
+
 Scope: failure handling and regression tests only, 2026-10-28. Prior Day 2 work
 remains preserved. No provider, production chat, voice, credential migration,
 signing change, external service change, real credential action, commit or push.

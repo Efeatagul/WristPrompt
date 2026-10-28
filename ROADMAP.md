@@ -1,5 +1,26 @@
 # Six-day release plan
 
+## Current Day 2 gate — 2026-10-29
+
+**PASS WITH KNOWN DEBT.** Owner-confirmed physical refresh-regression restoration,
+ChatGPT-plan completed proof, normal sign-out/reauthorization with a transient
+anomaly, API 401/no-ChatGPT-fallback, explicit mode switching/back-to-plan and
+cancellation are recorded in DAY2_PHYSICAL_ACCEPTANCE.md and DAY2_REPORT.md.
+Remote revocation result, precise refresh telemetry and an exact per-mode restart
+matrix are not inferred. Offline sign-out is SKIPPED / NOT REQUIRED FOR DAY 2
+PHYSICAL GATE. D2-1 prior physical PASS remains valid and is not repeated.
+
+Successful real BYOK inference: **BLOCKED — no funded OpenAI API credential
+available for physical verification**. External testing constraint accepted for
+this stage; synthetic successful-BYOK coverage remains mandatory. No purchase or
+real API key required. Day 2 does not fail for this constraint, and physical paid
+API success is not claimed.
+
+Day 3 has NOT started. Follow DAY2_REPORT.md section N when explicitly authorized:
+readability -> model restoration -> native text/in-memory chat -> streaming/Stop
+-> safe account/mode/context transitions -> combined validation. Reauth anomaly
+triage remains known debt; Day 5 must disposition it before release freeze.
+
 Day numbers are execution stages, not a claim that work has started. A failed
 release gate blocks progression; retain evidence without credentials. Scope and
 security requirements live in PROJECT_SPEC.md; choices and risks in DECISIONS.md.
@@ -114,16 +135,19 @@ guidance requires an architecture change, stop and explain it before proceeding.
 
 ## Day 2 — harden authentication and recovery
 
-- [ ] Watch-only serialized refresh, atomic rotation, expiry/clock-skew tests,
+- [x] Watch-only serialized refresh, atomic rotation, expiry/clock-skew tests,
   restart recovery, terminal vs transient errors, and sign-out/revocation.
-- [ ] Test rejected state/nonce/signatures/scopes/identity, registration isolation,
+- [x] Test rejected state/nonce/signatures/scopes/identity, registration isolation,
   key loss, transfer replay, lost ACK, disconnect, and late-profile results.
 - [x] Add protected BYOK with explicit mode choice; reuse streaming transport.
-  VERIFIED AUTOMATICALLY; real BYOK acceptance PENDING END-OF-DAY PHYSICAL TEST.
-- [ ] Handle admission errors, eligibility, model failures, and usage limits.
+  VERIFIED AUTOMATICALLY; physical API 401/no-fallback PASS; real successful BYOK BLOCKED by no funded credential.
+- [x] Handle admission errors, eligibility, model failures, and usage limits (VERIFIED AUTOMATICALLY; do not exhaust real usage).
 
-Gate: both billing paths work independently; refresh/revocation and backup
-exclusions have evidence; no secret leakage or silent billing fallback.
+Gate: PASS WITH KNOWN DEBT for Day 2. Both paths are tested automatically;
+ChatGPT success and API-failure isolation are physically verified. Successful paid
+API physical inference is externally BLOCKED and explicitly exempted for this
+stage. Refresh/sign-out/backup safeguards have source/test evidence; remote
+revocation outcome and exact refresh telemetry are not claimed as physical facts.
 
 ## Day 3 — watch chat
 
@@ -247,7 +271,7 @@ status update.
 - [x] VERIFIED AUTOMATICALLY: current official contracts reviewed; existing rotating-grant state machine mapped.
 - [x] VERIFIED AUTOMATICALLY: per-registration refresh locking, atomic latest-vault patching and stale-account protection.
 - [x] VERIFIED AUTOMATICALLY: shared fakeable clock, definitely-unsent transport distinction, conservative uncertain outcomes and terminal/configuration failure matrix.
-- [ ] BLOCKED: actual earliest_refresh_at scheduling semantics; official docs do not define its encoding/units. Unknown non-null constraints are never guessed.
+- [x] VERIFIED AUTOMATICALLY: numeric Unix-seconds / ISO hint handling checked against the official cookbook-linked Sign-in devkit; malformed values remain conservative. Focused upgrade regression physically RESOLVED; see REFRESH_REGRESSION_REVIEW.md.
 - [ ] PENDING END-OF-DAY PHYSICAL TEST: natural renewal with same registration, no phone consent/new client and successful inference.
 
 See REFRESH_REVIEW.md and DAY2_STATUS.md. No immediate device gate, credential
@@ -259,7 +283,7 @@ schema migration, real token manipulation, sign-out, BYOK or model-restoration f
 - [x] VERIFIED AUTOMATICALLY: authoritative discovery-backed revocation, bounded retries and honest confirmed/unconfirmed outcomes.
 - [x] VERIFIED AUTOMATICALLY: durable sign-out gate, refresh/inference/catalog cancellation coordination, token clearing and metadata/host retention.
 - [x] VERIFIED AUTOMATICALLY: same-client reauthorization without retained ID hint; idempotence, storage-failure and process-recreation cases.
-- [ ] PENDING END-OF-DAY PHYSICAL TEST: normal sign-out, same-account/client re-login and offline local-only sign-out.
+- [x] VERIFIED PHYSICALLY: normal sign-out / intended-account reauthorization PASS WITH TRANSIENT REAUTHORIZATION ANOMALY. Exact post-reauth client suffix/remote result not supplied. Offline sign-out SKIPPED / NOT REQUIRED FOR DAY 2 PHYSICAL GATE.
 
 See SIGN_OUT_REVIEW.md and the combined DAY2_STATUS.md checklist. No immediate
 real sign-out or revocation was performed. No BYOK, Day 3 chat or model-debt fix.
@@ -298,3 +322,11 @@ whitespace checks pass. Physical transfer/storage/recovery/billing acceptance is
 PENDING END-OF-DAY PHYSICAL TEST in DAY2_STATUS.md; no physical gate is checked
 off. Existing earliest_refresh_at interpretation remains BLOCKED. No Day 3 chat,
 voice or model-restoration work is authorized by this phase.
+
+
+## Final Day 2 evidence attribution
+
+The earlier dated Phase C–G pending statements above are implementation handoff
+history. Current owner-supplied results and evidence limits are authoritative in
+DAY2_REPORT.md / DAY2_PHYSICAL_ACCEPTANCE.md. No repeat acceptance session or
+Day 3 implementation is authorized by recording this stage result.

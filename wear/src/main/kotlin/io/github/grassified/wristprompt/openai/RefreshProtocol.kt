@@ -8,6 +8,9 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
+import java.math.RoundingMode
+import java.time.Instant
 
 /** Shared wall-clock source for session expiry, receipt timestamps and retry gates. */
 fun interface SessionClock {
@@ -19,18 +22,38 @@ object TokenExpiry {
     const val MARGIN_MS = 60_000L
     fun needsRefresh(profile: CredentialProfile, now: Long): Boolean {
         if (profile.savedAtEpochMs > now + 30_000) throw ApiFailure(ApiProblem.REAUTHORIZE)
-        val expiry = profile.expiresAtEpochMs ?: return true
+        val expiry = profile.expiresAtEpochMs ?: throw timingFailure()
         val needed = now >= expiry - MARGIN_MS
-        // Official docs name the field but define neither encoding nor units. Do not
-        // guess a timestamp and potentially send a rotating grant before permitted.
-        if (needed && profile.earliestRefreshAt != null && profile.earliestRefreshAt != JsonNull) {
-            // The current bearer can still be used until expiry without submitting
-            // an early rotating grant. Expiry itself does not resolve unknown units.
+        if (!needed) return false
+        val hint = profile.earliestRefreshAt
+        // Missing/null is a supported legacy record, not an unsafe rotation marker.
+        if (hint == null || hint == JsonNull) return true
+        val earliest = earliestMillis(hint)
+        if (earliest == null) {
             if (now < expiry) return false
-            throw ApiFailure(ApiProblem.CONFIGURATION, protocolDetail = ProtocolDetail.REFRESH_TIMING_UNDOCUMENTED)
+            throw timingFailure()
+        }
+        if (now < earliest) {
+            if (now < expiry) return false
+            throw ApiFailure(ApiProblem.REFRESH_NOT_READY, protocolDetail = ProtocolDetail.REFRESH_NOT_READY)
         }
         return needed
     }
+    private fun timingFailure() = ApiFailure(ApiProblem.CONFIGURATION, protocolDetail = ProtocolDetail.REFRESH_TIMING_UNDOCUMENTED)
+
+    // OpenAI's Sign-in devkit packages/local/src/index.ts uses numeric Unix
+    // seconds or a date string. Do not guess milliseconds or relative delays.
+    // Accept only ISO instants for strings, stricter than JavaScript Date.parse.
+    private fun earliestMillis(value: JsonElement): Long? { return try {
+        val primitive = value as? JsonPrimitive ?: return null
+        if (primitive.isString) {
+            val instant = Instant.parse(primitive.content)
+            Math.addExact(Math.multiplyExact(instant.epochSecond, 1000L), (instant.nano + 999_999L) / 1_000_000L)
+        } else {
+            primitive.content.toBigDecimal().multiply(1000.toBigDecimal())
+                .setScale(0, RoundingMode.CEILING).longValueExact()
+        }.takeIf { it >= 0 }
+    } catch (_: Exception) { null } }
 }
 
 object RefreshProtocol {

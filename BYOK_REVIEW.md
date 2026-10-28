@@ -1,5 +1,10 @@
 # Day 2 Phase E — explicit OpenAI API-key mode
 
+## Final evidence update — 2026-10-29
+
+VERIFIED PHYSICALLY: fake-key handoff/configuration, explicit separate API billing, HTTP 401 and API -> ChatGPT no-fallback; explicit return to plan succeeds. Fake configuration is not a valid key. Successful real BYOK: BLOCKED — no funded OpenAI API credential available for physical verification. This is an external constraint, not code failure. Automated successful-BYOK evidence remains required; see DAY2_REPORT.md. No purchase requested.
+
+
 Implemented 2026-10-28. This phase adds protected BYOK setup and the fixed proof
 flow, not production chat. Physical BYOK results remain PENDING END-OF-DAY
 PHYSICAL TEST in DAY2_STATUS.md. No real key was used by automated tests, and no

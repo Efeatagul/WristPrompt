@@ -68,6 +68,7 @@ private fun problemText(problem: ApiProblem?): Int = when (problem) {
     ApiProblem.USAGE_UNAVAILABLE -> R.string.proof_usage_unavailable
     ApiProblem.NOT_ELIGIBLE -> R.string.proof_not_eligible
     ApiProblem.PERMISSION -> R.string.proof_permission
+    ApiProblem.REFRESH_NOT_READY -> R.string.refresh_not_ready
     ApiProblem.TEMPORARY -> R.string.proof_temporary
     ApiProblem.CONFIGURATION -> R.string.proof_configuration
     ApiProblem.INVALID_REQUEST -> R.string.proof_invalid_request

@@ -43,7 +43,7 @@ class PhoneAuthViewModelTest {
         RegistrationIdentity("oaiapp_test", OpenAiAuth.ISSUER, "subject"), hostId, null, null, false,
         "synthetic-id", "synthetic-access", "synthetic-refresh", "Bearer", 3600, System.currentTimeMillis(),
         if (plan) OpenAiAuth.scopes(OpenAiAuth.REQUESTED_SCOPES) else setOf("openid"))
-    private fun CoroutineScope.browser(): (String) -> Unit = { url ->
+    private fun CoroutineScope.browser(code: String = "synthetic-code"): (String) -> Unit = { url ->
         val params = URI(url).rawQuery.split('&').associate { part ->
             val pair = part.split('=', limit = 2)
             URLDecoder.decode(pair[0], "UTF-8") to URLDecoder.decode(pair[1], "UTF-8")
@@ -52,7 +52,7 @@ class PhoneAuthViewModelTest {
         launch(Dispatchers.IO) {
             Socket("127.0.0.1", port).use { socket ->
                 socket.soTimeout = 3000
-                val target = "/auth/callback?state=${params.getValue("state")}&code=synthetic-code&client_id=oaiapp_test"
+                val target = "/auth/callback?state=${params.getValue("state")}&code=$code&client_id=oaiapp_test"
                 socket.getOutputStream().write("GET $target HTTP/1.1\r\nHost: 127.0.0.1:$port\r\n\r\n".encodeToByteArray())
                 socket.getInputStream().readBytes()
             }
@@ -190,6 +190,55 @@ class PhoneAuthViewModelTest {
         withTimeout(5000) { model.state.first { it.stage == PhoneStage.READY } }
         model.start(browser()); withTimeout(5000) { model.state.first { it.stage == PhoneStage.FAILED } }
         assertEquals(0, transfers)
+    }
+
+    @Test fun exchangeFailureThenFreshWatchRequestRecoversWithNewOAuthTransaction(): Unit = runBlocking {
+        val first = AuthStartRequest(1, BridgeProtocol.newRequestId(), BridgeProtocol.newHostId(), System.currentTimeMillis())
+        val source = inbox(first)
+        val identity = RegistrationIdentity("oaiapp_test", OpenAiAuth.ISSUER, "subject")
+        val transactions = mutableListOf<OAuthTransaction>()
+        val codes = mutableListOf<String>()
+        val transfers = mutableListOf<ProfileTransfer>()
+        val failureNotified = CompletableDeferred<Unit>()
+        val model = PhoneAuthViewModel(source, { _, path, bytes ->
+            when (path) {
+                ProfileProtocol.CONTEXT_PATH -> {
+                    val r = ProfileProtocol.decode<ContextRequest>(bytes)
+                    ProfileProtocol.encode(LoginContext(1, r.requestId, identity, null, hasSavedAccounts = true))
+                }
+                ProfileProtocol.FAILURE_PATH -> {
+                    assertEquals(first.requestId, ProfileProtocol.decode<AuthFailure>(bytes).requestId)
+                    failureNotified.complete(Unit); byteArrayOf(1)
+                }
+                else -> {
+                    val t = ProfileProtocol.decodeTransfer(bytes); transfers += t
+                    ProfileProtocol.encode(ProfileAck(1, t.requestId, t.transferId))
+                }
+            }
+        }, IssuedRegistrationStore(Record())) { transaction, code ->
+            transactions += transaction; codes += code.code
+            if (codes.size == 1) throw AuthException(AuthProblem.EXCHANGE)
+            profile(first.hostId, true)
+        }.also { vm = it }
+        withTimeout(5000) { model.state.first { it.stage == PhoneStage.READY } }
+        model.start(browser("synthetic-first-code"))
+        withTimeout(5000) { failureNotified.await() }
+        assertEquals(PhoneStage.FAILED, model.state.value.stage)
+        assertEquals(AuthProblem.EXCHANGE, model.state.value.problem)
+        assertTrue(transfers.isEmpty())
+        val next = first.copy(requestId = BridgeProtocol.newRequestId())
+        source.accept("watch", next)
+        withTimeout(5000) { model.state.first { it.stage == PhoneStage.READY } }
+        model.start(browser("synthetic-second-code"))
+        withTimeout(5000) { model.state.first { it.stage == PhoneStage.CONNECTED } }
+        assertEquals(listOf("synthetic-first-code", "synthetic-second-code"), codes)
+        assertEquals(2, transactions.size)
+        assertNotEquals(transactions[0].state, transactions[1].state)
+        assertNotEquals(transactions[0].nonce, transactions[1].nonce)
+        assertNotEquals(transactions[0].verifier, transactions[1].verifier)
+        assertTrue(transactions.all { it.registration == identity && it.selectedClient == identity.clientId && it.retainedIdToken == null })
+        assertEquals(next.requestId, transfers.single().requestId)
+        assertEquals(identity, transfers.single().profile.identity)
     }
 
 }

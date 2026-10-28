@@ -757,3 +757,26 @@ security review, final validation and consolidated end-of-day physical checks.
 Actual Android Keystore/AtomicFile faults are not established by fake-store/JVM
 AES-GCM tests. Never destructively test key loss on the real watch. Prior unknown
 refresh metadata and Terra → Sol debt remain unchanged.
+
+
+## D16 — repair the D2-2 legacy refresh-timing regression (2026-10-29)
+
+D11's blanket non-null earliest-metadata expiry guard regressed a real previously
+working registration. Missing/null timing was already compatible; the reported
+category implies a non-null hint and clock at/beyond known access expiry, not
+proof that the real field was missing. No real record was extracted.
+
+Follow first-party Sign-in devkit evidence linked by the official OpenAI cookbook:
+numeric earliestRefreshAt is Unix seconds; date strings may encode an absolute
+time. Accept ISO instants only for string values, round sub-ms precision upward,
+and never guess ms or relative offsets. Known future constraints defer refresh;
+expired-but-prohibited state reports REFRESH_NOT_READY. Unknown non-null values
+remain conservative at expiry. No hint means ordinary known-expiry policy; no
+new mandatory local metadata or vault migration. Missing known expiry is unsafe.
+
+Keep per-registration locks, durable intent, atomic rotating-token replacement,
+conservative uncertain outcomes and all sign-out/BYOK behavior. Only timing
+interpretation/static error classification changed. Full evidence, source links
+and exact registration-preserving retest: REFRESH_REGRESSION_REVIEW.md.
+Broad acceptance is STOPPED pending that physical result. Real BYOK completion
+is BLOCKED by no funded API credential, not a product failure; no purchase required.

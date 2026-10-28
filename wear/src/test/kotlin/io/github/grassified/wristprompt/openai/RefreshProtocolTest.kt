@@ -53,7 +53,7 @@ class RefreshProtocolTest {
     }
     @Test fun undocumentedEarliestMetadataNeverTriggersAnOptimisticRefresh() {
         val old = testProfile()
-        for (metadata in listOf(kotlinx.serialization.json.JsonPrimitive(123), kotlinx.serialization.json.JsonPrimitive("2099-01-01T00:00:00Z"),
+        for (metadata in listOf(kotlinx.serialization.json.JsonPrimitive(true), kotlinx.serialization.json.JsonPrimitive("not-a-timestamp"),
             kotlinx.serialization.json.JsonObject(emptyMap()))) {
             val constrained = old.copy(earliestRefreshAt = metadata)
             assertFalse(TokenExpiry.needsRefresh(constrained, 4_000_000))
