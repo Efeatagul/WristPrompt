@@ -53,7 +53,7 @@ class SseReader(input: InputStream) {
 }
 
 /** A terminal event, not received text or [DONE], decides the stream result. */
-class StreamResult {
+class StreamResult(private val expected: String = ResponsesProtocol.EXPECTED_TEXT) {
     var output: String = ""; private set
     var sawTextDelta: Boolean = false; private set
     var completed: Boolean = false; private set
@@ -76,5 +76,5 @@ class StreamResult {
         }
     }
     fun end() { if (!completed) throw ApiFailure(ApiProblem.INTERRUPTED) }
-    val proofPassed: Boolean get() = completed && sawTextDelta && output == ResponsesProtocol.EXPECTED_TEXT
+    val proofPassed: Boolean get() = completed && sawTextDelta && output == expected
 }

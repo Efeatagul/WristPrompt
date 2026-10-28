@@ -21,42 +21,20 @@ is the physical evidence source; no new agent device action was performed.
 Model restoration is separately PARTIAL, not a blocker or a claimed success.
 Detailed evidence and repeatable procedures: [PERSISTENCE_TESTING.md](PERSISTENCE_TESTING.md).
 
-## End-of-day physical acceptance checklist
+## End-of-day physical acceptance — single procedure
 
-Batch non-blocking requirements here as authorized implementation progresses.
-Do not stop after every task for routine physical checks. Immediate safety
-exceptions and exact result labels are defined in [AGENTS.md](AGENTS.md).
+Use only [DAY2_PHYSICAL_ACCEPTANCE.md](DAY2_PHYSICAL_ACCEPTANCE.md) for the
+remaining Galaxy Watch 7 + paired-phone session. It consolidates the earlier
+Phase C–G checklists; do not execute those historical lists as additional tests.
+D2-1 remains PASS — VERIFIED PHYSICALLY and is not repeated.
 
-- [ ] PENDING END-OF-DAY PHYSICAL TEST — NATURAL REFRESH: keep the current
-  registration and record its saved account/client suffix. With the phone off and
-  watch on working Wi-Fi, allow sufficient real token ageing, reload models and
-  complete one inference. Observe the static "ChatGPT session renewed on this
-  watch" indication (runtime-only; distinguish a previously displayed success).
-  Require completed inference without phone authorization, no new registration
-  and unchanged account/client mapping. Do not change clock/token files, force
-  expiry or destructively manipulate credentials. Record static failures, including
-  REFRESH_TIMING_UNDOCUMENTED, rather than looping sign-in. Elapsed time alone or
-  fresh-token inference does not prove refresh.
-
-- [ ] PENDING END-OF-DAY PHYSICAL TEST — NORMAL SIGN-OUT: after the natural-refresh
-  check, explicitly tap Sign out of ChatGPT for the saved account. Verify inference
-  is unavailable and the UI honestly reports confirmed remote revocation or REMOTE
-  REVOCATION NOT CONFIRMED. Record the account/client suffix before signing out.
-- [ ] PENDING END-OF-DAY PHYSICAL TEST — REAUTHORIZE SAME ACCOUNT: select that saved
-  registration and Continue with ChatGPT. Verify the existing client/account mapping
-  is reused, browser authorization succeeds and inference completes again.
-- [ ] PENDING END-OF-DAY PHYSICAL TEST — OFFLINE SIGN-OUT: manually make watch
-  networking unavailable, explicitly sign out, and verify bounded local completion
-  plus REMOTE REVOCATION NOT CONFIRMED and ChatGPT disconnect guidance. No false
-  remote-success claim. Restore networking manually; optionally reauthorize the
-  same saved account afterward to leave the app usable.
-
-A/B/C are already VERIFIED PHYSICALLY; no immediate repeat is required. Model
-restoration is deferred to Day 3 and should be retested after its authorized fix.
-The sign-out items above are explicit manual end-of-day actions; do not trigger
-real sign-out/revocation now. Never clear app data, uninstall, delete Keystore
-keys or exhaust usage to run this checklist. Destructive actions must never be
-performed automatically and require explicit authorization for that exact action.
+The procedure uses no watch reboot or phone power cycle, two targeted app-process
+restarts for the new billing-mode setting, fake-key testing before one real-key
+entry, and one planned same-account reauthorization. Natural refresh is
+conditional on real token state; offline sign-out is optional because it adds
+another recovery login. Exact prerequisites/actions/expected results/evidence
+and PASS/FAIL criteria, plus the paste-back template, are in that one document.
+No physical result is added by preparing this procedure.
 
 ## Deferred defect and scope
 
@@ -102,7 +80,117 @@ unchanged. APKs retain Day 1 signing; git diff --check passes. Full state machin
 sources and limitations: [SIGN_OUT_REVIEW.md](SIGN_OUT_REVIEW.md).
 
 Normal sign-out, same-registration reauthorization and offline local-only sign-out
-remain PENDING END-OF-DAY PHYSICAL TEST in the checklist above. No real session
+remain PENDING END-OF-DAY PHYSICAL TEST in DAY2_PHYSICAL_ACCEPTANCE.md. No real session
 was signed out/revoked, and no data/key/network action was performed by the agent.
 No BYOK, Day 3 chat, model-restoration fix, commit or push. Earlier Phase C pending
 changes remain preserved.
+
+## Day 2 Phase E — BYOK
+
+Implementation scope and security/test matrix are in [BYOK_REVIEW.md](BYOK_REVIEW.md).
+Two independent modes are now explicit: CHATGPT_PLAN and OPENAI_API_KEY. Protected
+receipt of an API key does not activate API billing. Only a watch mode button
+changes the persisted active mode; errors and credential removal never fall back.
+OAuth registration/token/host storage is unchanged. No real API key or credential
+was used by automated tests, and no physical operation was performed by the agent.
+
+### Combined end-of-day checks
+
+Superseded for execution by [DAY2_PHYSICAL_ACCEPTANCE.md](DAY2_PHYSICAL_ACCEPTANCE.md).
+BYOK, billing-mode visibility/persistence, failure recovery, cancellation,
+sign-out and registration reuse remain pending physical results. Precise replay,
+Keystore-loss and storage-fault tests retain their synthetic evidence; never
+provoke destructive key loss on the real watch.
+
+### Phase E final validation
+
+VERIFIED AUTOMATICALLY: 161 Wear tests and 64 mobile tests pass, with zero
+failures/errors/skips. Both assembleDebug builds and both lintDebug tasks pass;
+zero lint errors, three existing warning categories per app. Both APKs verify
+with the unchanged Day 1 certificate SHA-256
+`fd8491b6238368a04d58bd0653c35ff54a3a17fc9b31e53a6af7110579d37061`.
+Git diff whitespace validation passes; no private signing/encrypted/local.properties
+artifact is tracked or stageable. Full commands and changed-file manifest are
+in BYOK_REVIEW.md. No real-key requests/device tests, commit or push were run.
+
+Gradle still emits the existing missing SDK Platform-Tools/license warning;
+unit tests, compilation, lint and APK assembly do not require that package and
+succeeded. No SDK/license/signing configuration was modified. Physical Data Layer,
+protected storage and billed BYOK acceptance remain pending as listed in DAY2_PHYSICAL_ACCEPTANCE.md.
+
+## Day 2 Phase F — connection and billing clarity
+
+VERIFIED AUTOMATICALLY: Wear connection/settings groups safe ChatGPT account
+metadata, plan availability/usage, Manage usage and sign-out independently from
+API-key configured state, change/remove actions and separate API billing. The
+persisted active mode is fixed above the scrolling list; credentials do not
+choose it. The selector remains available even when a selected mode has no
+credential, so missing-key/sign-out states remain explicit without fallback.
+Proof controls are hidden if their catalog mode does not match settings.
+
+The companion remains setup-only, with an explicit billing explanation, short
+BYOK notice, secure transfer/retry/result states and a direct ChatGPT usage URL.
+The watch retains its instructional usage hook; automatic browser launch from
+watch to phone is deferred. The phone text field is process-memory only and is
+now cleared once the bounded transfer envelope is prepared, then remains cleared
+on ACK; retry uses only the existing expiring envelope. No SavedStateHandle,
+plaintext persistence, OAuth/storage/signing/protocol redesign or migration.
+
+Model preferences remain per ChatGPT registration and separately per API key.
+A new mode-switch regression rejects a stale preference absent from the current
+mode's catalog and restores independent preferences on subsequent switches.
+The Terra → Sol physical restart defect is still deferred to Day 3.
+
+Final command actually run (existing JDK/SDK environment from BYOK_REVIEW.md):
+
+```sh
+./gradlew :wear:testDebugUnitTest :mobile:testDebugUnitTest :wear:lintDebug :mobile:lintDebug :wear:assembleDebug :mobile:assembleDebug
+git diff --check
+```
+
+Result: BUILD SUCCESSFUL; 162 Wear and 64 mobile tests, zero failures/errors/skips.
+Both debug APKs assemble; both lint tasks pass with zero errors and the same three
+prior warning categories per app. The initial sandboxed attempt could not write
+an external Gradle cache lock; the authorized validation rerun succeeded. No SDK,
+dependency, signing or external-service changes. No device/emulator test, real
+credential action, commit or push. Physical acceptance remains PENDING END-OF-DAY
+PHYSICAL TEST in DAY2_PHYSICAL_ACCEPTANCE.md; Day 2's physical gate is open.
+
+Phase F changed files (in addition to preserved earlier uncommitted work):
+- wear MainActivity.kt, openai/InferenceProofUi.kt, res/values/strings.xml,
+  openai/InferenceViewModelTest.kt.
+- mobile MainActivity.kt, auth/ApiKeySetupUi.kt, auth/PhoneApiKeyViewModel.kt,
+  auth/PhoneApiKeyTest.kt.
+- DAY2_STATUS.md, DECISIONS.md and ROADMAP.md.
+
+Suggested commit: `feat: clarify connection settings and explicit billing modes`.
+
+## Day 2 Phase G — targeted failure matrix
+
+Audit, source references, all eleven case results, changed-file manifest and
+security findings: [DAY2_FAILURE_MATRIX.md](DAY2_FAILURE_MATRIX.md).
+The fixes close late phone result publication, expired retry state, stale proof
+retargeting across account/billing contexts, and current plan-error diagnostic
+classification. No authentication redesign or new product feature.
+
+VERIFIED AUTOMATICALLY: final required Gradle validation passed with 172 Wear
+and 69 mobile tests, zero failures/errors/skips. Both debug builds and both lint
+tasks pass, with zero lint errors and the same three prior warning categories
+per app. git diff --check passes. Fifteen new test methods expand deterministic
+fake-transport/store/clock failure coverage. The source security search found no
+secret logger or plaintext secret persistence; only allowlisted BridgeLog output.
+
+No physical/emulator action, real OpenAI request, paid usage, quota manipulation,
+credential deletion/revocation, commit or push. Existing end-of-day checks remain
+pending, with disconnect/cancellation/stale-result checks consolidated in DAY2_PHYSICAL_ACCEPTANCE.md.
+Existing earliest_refresh_at interpretation remains BLOCKED; no new Phase G
+hardware blocker. Terra → Sol, Day 3 chat and voice remain deferred.
+
+Suggested commit: `fix: close Day 2 auth and inference failure matrix`.
+
+## Consolidated physical procedure preparation
+
+VERIFIED AUTOMATICALLY: git diff --check and product/test/build-source hash
+comparison. Only this status document and DAY2_PHYSICAL_ACCEPTANCE.md changed in
+this task. No source edits, builds/tests/lint rerun, device actions, real requests,
+commit or push. Earlier automated and physical results retain their attribution.

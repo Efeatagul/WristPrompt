@@ -4,7 +4,7 @@ import io.github.grassified.wristprompt.bridge.SafeDiagnostics
 import kotlinx.serialization.json.*
 
 enum class ApiProblem {
-    REAUTHORIZE, PLAN_DISABLED, REAUTHORIZING, USAGE_LIMIT, USAGE_UNAVAILABLE, NOT_ELIGIBLE,
+    API_KEY_MISSING, INVALID_API_KEY, API_LIMIT, REAUTHORIZE, PLAN_DISABLED, REAUTHORIZING, USAGE_LIMIT, USAGE_UNAVAILABLE, NOT_ELIGIBLE,
     PERMISSION, TEMPORARY, CONFIGURATION, INVALID_REQUEST, NETWORK, NO_MODELS,
     INTERRUPTED, INCOMPLETE, PROTOCOL, STORAGE, STALE_ACCOUNT,
 }
@@ -43,13 +43,30 @@ object ApiErrors {
             code == "subscription_sharing_usage_unavailable" -> ApiProblem.USAGE_UNAVAILABLE
             code == "subscription_sharing_user_not_eligible" -> ApiProblem.NOT_ELIGIBLE
             code in setOf("chatpass_v2_scope_not_authorized", "chatpass_v2_invalid_authorization_context", "subscription_sharing_invalid_user") -> ApiProblem.PERMISSION
+            code == "subscription_sharing_unsupported_capability" -> ApiProblem.INVALID_REQUEST
+            code == "subscription_sharing_route_not_supported" -> ApiProblem.CONFIGURATION
+            code in setOf("subscription_sharing_user_unavailable", "server_error") -> ApiProblem.TEMPORARY
             status == 401 -> if (refresh) ApiProblem.CONFIGURATION else ApiProblem.PERMISSION
             status == 403 -> ApiProblem.PERMISSION
             status != null && status >= 500 -> ApiProblem.TEMPORARY
-            code in setOf("subscription_sharing_user_unavailable", "server_error") -> ApiProblem.TEMPORARY
             else -> ApiProblem.INVALID_REQUEST
         }
-        return ApiFailure(problem, status, code, requestId?.takeIf { Regex("req_[A-Za-z0-9_-]{1,100}").matches(it) }, shape)
+        return ApiFailure(problem, status, code, safeRequestId(requestId), shape)
     }
+    fun forMode(failure: ApiFailure, mode: io.github.grassified.wristprompt.auth.CredentialMode): ApiFailure {
+        if (mode != io.github.grassified.wristprompt.auth.CredentialMode.OPENAI_API_KEY) return failure
+        val problem = when {
+            failure.status == 401 || failure.code == "invalid_api_key" -> ApiProblem.INVALID_API_KEY
+            failure.status == 429 || failure.problem == ApiProblem.USAGE_LIMIT || failure.code in setOf("insufficient_quota", "rate_limit_exceeded", "credit_balance_exhausted", "slow_down") -> ApiProblem.API_LIMIT
+            failure.problem in setOf(ApiProblem.USAGE_UNAVAILABLE, ApiProblem.NOT_ELIGIBLE) -> ApiProblem.TEMPORARY
+            else -> failure.problem
+        }
+        return ApiFailure(problem, failure.status, failure.code, failure.requestId, failure.shape, failure.protocolDetail, failure.requestNotSent)
+    }
+    fun withResponseContext(failure: ApiFailure, status: Int, requestId: String?): ApiFailure = ApiFailure(
+        failure.problem, failure.status ?: status, failure.code, failure.requestId ?: safeRequestId(requestId),
+        failure.shape, failure.protocolDetail, failure.requestNotSent,
+    )
+    private fun safeRequestId(value: String?): String? = value?.takeIf { Regex("req_[A-Za-z0-9_-]{1,100}").matches(it) }
     private fun safeCode(value: String?): String? = value?.takeIf { Regex("[a-zA-Z0-9_]{1,100}").matches(it) }
 }

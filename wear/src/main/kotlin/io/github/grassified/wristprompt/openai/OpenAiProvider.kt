@@ -1,6 +1,7 @@
 package io.github.grassified.wristprompt.openai
 
 import io.github.grassified.wristprompt.auth.CredentialProfile
+import io.github.grassified.wristprompt.auth.CredentialMode
 import io.github.grassified.wristprompt.auth.OpenAiAuth
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
@@ -20,9 +21,12 @@ class OpenAiProvider(private val http: OpenAiHttp) : AiProvider {
         Request.Builder().url(ResponsesProtocol.MODELS_URL).header("Authorization", "Bearer ${credential.accessToken}")
             .header("Accept", "application/json").build(), 30,
     ) { response ->
-        if (response.code != 200) throw http.failure(response)
+        if (response.code != 200) throw http.failure(response, mode = credential.mode)
         val context = currentCoroutineContext()
-        ModelCatalog.read(response.body.byteStream()) { context.ensureActive() }
+        when (credential.mode) {
+            CredentialMode.CHATGPT_PLAN -> ModelCatalog.read(response.body.byteStream()) { context.ensureActive() }
+            CredentialMode.OPENAI_API_KEY -> ApiModelCatalog.read(http.body(response))
+        }
     }
 
     override suspend fun stream(credential: CredentialLease, model: String, onEvent: suspend (ResponseEvent) -> Unit) {
@@ -30,8 +34,8 @@ class OpenAiProvider(private val http: OpenAiHttp) : AiProvider {
         try {
             http.execute(Request.Builder().url(ResponsesProtocol.RESPONSES_URL)
                 .header("Authorization", "Bearer ${credential.accessToken}").header("Accept", "text/event-stream")
-                .post(ResponsesProtocol.request(model).toRequestBody("application/json".toMediaType())).build()) { response ->
-                if (response.code != 200) throw http.failure(response)
+                .post(ResponsesProtocol.request(model, credential.mode).toRequestBody("application/json".toMediaType())).build()) { response ->
+                if (response.code != 200) throw http.failure(response, mode = credential.mode)
                 val mediaType = response.body.contentType()?.let { "${it.type}/${it.subtype}" }
                 // An observed 200 response omitted Content-Type. In that case validate
                 // the body as bounded SSE; missing metadata never establishes success.
@@ -49,7 +53,8 @@ class OpenAiProvider(private val http: OpenAiHttp) : AiProvider {
                 while (true) {
                     currentCoroutineContext().ensureActive()
                     val event = events.next() ?: throw ApiFailure(ApiProblem.INTERRUPTED)
-                    onEvent(event)
+                    onEvent(if (event is ResponseEvent.Failed) ResponseEvent.Failed(ApiErrors.forMode(ApiErrors.withResponseContext(event.failure, response.code,
+                        response.header("openai-request-id") ?: response.header("x-request-id")), credential.mode)) else event)
                     if (event is ResponseEvent.Completed || event is ResponseEvent.Failed || event == ResponseEvent.Incomplete) break
                 }
             }

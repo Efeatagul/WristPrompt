@@ -16,6 +16,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -28,15 +31,20 @@ import io.github.grassified.wristprompt.auth.*
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
         enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT), navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT))
         setContent {
             val auth: PhoneAuthViewModel = viewModel(factory = viewModelFactory {
                 initializer {
                     val app = application as WristPromptApplication
-                    PhoneAuthViewModel(app.authInbox, app.connectivity::request, app.issuedRegistrations, app.authorization::exchange)
+                    PhoneAuthViewModel(app.authInbox, app.connectivity::request, app.issuedRegistrations, exchange = app.authorization::exchange)
                 }
             })
+            val api: PhoneApiKeyViewModel = viewModel(factory = viewModelFactory {
+                initializer { val app = application as WristPromptApplication; PhoneApiKeyViewModel(app.apiKeyInbox, app.connectivity::request) }
+            })
             val state by auth.state.collectAsStateWithLifecycle()
+            var usageBrowserUnavailable by remember { mutableStateOf(false) }
             MaterialTheme(colorScheme = darkColorScheme()) {
                 Scaffold { contentPadding ->
                     Column(Modifier.fillMaxSize().padding(contentPadding).verticalScroll(rememberScrollState()).padding(24.dp),
@@ -44,6 +52,14 @@ class MainActivity : ComponentActivity() {
                         Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineLarge)
                         Text(stringResource(R.string.companion_setup), style = MaterialTheme.typography.titleLarge)
                         Text(stringResource(R.string.companion_explanation))
+                        Text("Continue with ChatGPT", style = MaterialTheme.typography.titleMedium)
+                        Text("Use an eligible ChatGPT plan. OpenAI API keys use separate API billing.")
+                        TextButton(onClick = {
+                            try {
+                                startActivity(Intent(Intent.ACTION_VIEW, "https://chatgpt.com/settings/usage".toUri()).addCategory(Intent.CATEGORY_BROWSABLE))
+                            } catch (_: android.content.ActivityNotFoundException) { usageBrowserUnavailable = true }
+                        }) { Text("Manage ChatGPT usage") }
+                        if (usageBrowserUnavailable) Text("Open ChatGPT → Settings → Usage in a browser on your phone.")
                         Text(stringResource(when (state.stage) {
                             PhoneStage.WAITING -> R.string.waiting_for_watch
                             PhoneStage.READY -> R.string.sign_in_requested
@@ -70,6 +86,8 @@ class MainActivity : ComponentActivity() {
                             Text(stringResource(R.string.retry_transfer))
                         }
                         Text(stringResource(R.string.no_inference))
+                        HorizontalDivider()
+                        ApiKeySetupUi(api)
                     }
                 }
             }

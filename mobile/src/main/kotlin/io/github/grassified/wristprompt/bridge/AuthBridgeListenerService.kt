@@ -1,5 +1,6 @@
 package io.github.grassified.wristprompt.bridge
 
+import io.github.grassified.wristprompt.auth.ApiKeyProtocol
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.wearable.WearableListenerService
 import io.github.grassified.wristprompt.WristPromptApplication
@@ -16,11 +17,13 @@ class AuthBridgeListenerService : WearableListenerService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onRequest(nodeId: String, path: String, request: ByteArray): Task<ByteArray>? {
-        if (path != BridgeProtocol.AUTH_START_PATH) return null
+        if (path !in setOf(BridgeProtocol.AUTH_START_PATH, ApiKeyProtocol.START_PATH)) return null
         return scope.async {
             try {
                 withTimeout(BridgeProtocol.TIMEOUT_MS) {
-                    (application as WristPromptApplication).authReceiver.receive(nodeId, request)
+                    val app = application as WristPromptApplication
+                    if (path == ApiKeyProtocol.START_PATH) app.apiKeyInbox.receive(nodeId, request)
+                    else app.authReceiver.receive(nodeId, request)
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled

@@ -118,7 +118,8 @@ guidance requires an architecture change, stop and explain it before proceeding.
   restart recovery, terminal vs transient errors, and sign-out/revocation.
 - [ ] Test rejected state/nonce/signatures/scopes/identity, registration isolation,
   key loss, transfer replay, lost ACK, disconnect, and late-profile results.
-- [ ] Add protected BYOK with explicit mode choice; reuse streaming transport.
+- [x] Add protected BYOK with explicit mode choice; reuse streaming transport.
+  VERIFIED AUTOMATICALLY; real BYOK acceptance PENDING END-OF-DAY PHYSICAL TEST.
 - [ ] Handle admission errors, eligibility, model failures, and usage limits.
 
 Gate: both billing paths work independently; refresh/revocation and backup
@@ -262,3 +263,38 @@ schema migration, real token manipulation, sign-out, BYOK or model-restoration f
 
 See SIGN_OUT_REVIEW.md and the combined DAY2_STATUS.md checklist. No immediate
 real sign-out or revocation was performed. No BYOK, Day 3 chat or model-debt fix.
+
+## Day 2 Phase E — protected BYOK and explicit billing mode
+
+VERIFIED AUTOMATICALLY: separate protected API-key vault, explicit persisted mode,
+phone-to-watch versioned context-bound transfer and persistence ACK, API model-list
+test/decoder, shared Responses stream and no automatic billing fallback. Scope
+and test matrix: BYOK_REVIEW.md. Real API request, invalid-key/no-fallback and mode
+restart checks are PENDING END-OF-DAY PHYSICAL TEST in DAY2_STATUS.md. No production
+chat, provider, vision or Day 3 model-restoration work was included. Do not treat
+API model listing alone as a completed inference or physical acceptance gate.
+
+
+## Day 2 Phase F — connection and billing clarity
+
+VERIFIED AUTOMATICALLY: explicit fixed active-mode indicator, separate account
+and API-key settings, plan/API billing explanations, setup-only companion and
+usage-management guidance/action. Existing per-mode model preferences are
+validated against current catalogs; mode-switch regression coverage added.
+162 Wear / 64 mobile tests, both debug builds, both lint tasks and git diff
+whitespace checks pass. PENDING END-OF-DAY PHYSICAL TEST: consolidated connection,
+transfer/usage and independent-billing acceptance in DAY2_STATUS.md.
+No physical gate is checked off; Terra → Sol restoration, final chat UI and voice
+remain deferred. This does not authorize Day 3 implementation.
+
+
+## Day 2 Phase G — targeted failure matrix
+
+VERIFIED AUTOMATICALLY: all eleven targeted cases have synthetic audit/test
+coverage, with stale phone-result, expired retry, cross-context proof and current
+plan-error diagnostic fixes. Full matrix/security findings: DAY2_FAILURE_MATRIX.md.
+172 Wear / 69 mobile tests, both debug builds, both lint tasks and git diff
+whitespace checks pass. Physical transfer/storage/recovery/billing acceptance is
+PENDING END-OF-DAY PHYSICAL TEST in DAY2_STATUS.md; no physical gate is checked
+off. Existing earliest_refresh_at interpretation remains BLOCKED. No Day 3 chat,
+voice or model-restoration work is authorized by this phase.

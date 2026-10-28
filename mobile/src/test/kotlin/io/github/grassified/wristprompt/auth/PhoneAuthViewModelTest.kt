@@ -36,7 +36,7 @@ class PhoneAuthViewModelTest {
         override fun write(plaintext: ByteArray) { bytes = plaintext.clone() }
     }
     private suspend fun inbox(request: AuthStartRequest): AuthRequestInbox {
-        val store = PreferenceDataStoreFactory.create(scope = storeScope) { File(temporary.root, "request.preferences_pb") }
+        val store = PreferenceDataStoreFactory.create(scope = storeScope) { File(temporary.root, "request-${BridgeProtocol.newRequestId()}.preferences_pb") }
         return AuthRequestInbox(store).also { it.accept("watch", request) }
     }
     private fun profile(hostId: String, plan: Boolean) = CredentialProfile(
@@ -111,4 +111,85 @@ class PhoneAuthViewModelTest {
         withTimeout(5000) { while (ProfileProtocol.FAILURE_PATH !in paths) delay(10) }
         assertFalse(ProfileProtocol.TRANSFER_PATH in paths)
     }
+    @Test fun supersededExchangeOrLostAckCannotPublishLateSuccess(): Unit = runBlocking {
+        for (lateAck in listOf(false, true)) {
+            val first = AuthStartRequest(1, BridgeProtocol.newRequestId(), BridgeProtocol.newHostId(), System.currentTimeMillis())
+            val source = inbox(first)
+            val entered = CompletableDeferred<Unit>(); val release = CompletableDeferred<Unit>(); val returned = CompletableDeferred<Unit>()
+            var transfers = 0
+            val endpoint: suspend (String, String, ByteArray) -> ByteArray = { _, path, bytes ->
+                if (path == ProfileProtocol.CONTEXT_PATH) ProfileProtocol.encode(LoginContext(1, first.requestId, null, null))
+                else {
+                    transfers++
+                    val t = ProfileProtocol.decodeTransfer(bytes)
+                    if (lateAck) {
+                        entered.complete(Unit)
+                        withContext(NonCancellable) { release.await() }
+                        returned.complete(Unit)
+                    }
+                    ProfileProtocol.encode(ProfileAck(1, t.requestId, t.transferId))
+                }
+            }
+            val model = PhoneAuthViewModel(source, endpoint, IssuedRegistrationStore(Record())) { _, _ ->
+                if (!lateAck) {
+                    entered.complete(Unit)
+                    withContext(NonCancellable) { release.await() }
+                    returned.complete(Unit)
+                }
+                profile(first.hostId, true)
+            }.also { vm = it }
+            withTimeout(5000) { model.state.first { it.stage == PhoneStage.READY } }
+            model.start(browser()); withTimeout(5000) { entered.await() }
+            source.accept("watch", first.copy(requestId = BridgeProtocol.newRequestId()))
+            withTimeout(5000) { model.state.first { it.stage == PhoneStage.READY } }
+            release.complete(Unit); withTimeout(5000) { returned.await() }; yield()
+            assertEquals(PhoneStage.READY, model.state.value.stage)
+            assertEquals(if (lateAck) 1 else 0, transfers)
+            model.viewModelScope.cancel()
+        }
+    }
+    @Test fun disconnectedSetupHasBoundedFailureAndNoTransfer(): Unit = runBlocking {
+        val request = AuthStartRequest(1, BridgeProtocol.newRequestId(), BridgeProtocol.newHostId(), System.currentTimeMillis())
+        var transfers = 0
+        val model = PhoneAuthViewModel(inbox(request), { _, path, _ ->
+            if (path == ProfileProtocol.TRANSFER_PATH) transfers++
+            withTimeout(1) { awaitCancellation() }
+        }, IssuedRegistrationStore(Record())) { _, _ -> error("Must not exchange") }.also { vm = it }
+        withTimeout(5000) { model.state.first { it.stage == PhoneStage.READY } }
+        model.start { error("Must not open browser") }
+        withTimeout(5000) { model.state.first { it.stage == PhoneStage.FAILED } }
+        assertEquals(0, transfers)
+    }
+
+    @Test fun expiredLostAckRetryCannotSendAgainOrClaimSuccess(): Unit = runBlocking {
+        var now = System.currentTimeMillis()
+        val request = AuthStartRequest(1, BridgeProtocol.newRequestId(), BridgeProtocol.newHostId(), now)
+        var transfers = 0
+        val endpoint: suspend (String, String, ByteArray) -> ByteArray = { _, path, _ ->
+            if (path == ProfileProtocol.CONTEXT_PATH) ProfileProtocol.encode(LoginContext(1, request.requestId, null, null))
+            else if (path == ProfileProtocol.TRANSFER_PATH) { transfers++; throw java.io.IOException("Synthetic disconnect") }
+            else byteArrayOf(1)
+        }
+        val model = PhoneAuthViewModel(inbox(request), endpoint, IssuedRegistrationStore(Record()), now = { now }) { _, _ -> profile(request.hostId, true) }.also { vm = it }
+        withTimeout(5000) { model.state.first { it.stage == PhoneStage.READY } }
+        model.start(browser()); withTimeout(5000) { model.state.first { it.stage == PhoneStage.RETRY_TRANSFER } }
+        yield(); now += OpenAiAuth.ATTEMPT_MS + 1
+        model.retryTransfer()
+        withTimeout(5000) { model.state.first { it.stage == PhoneStage.FAILED } }
+        assertEquals(AuthProblem.TIMEOUT, model.state.value.problem); assertEquals(1, transfers)
+    }
+    @Test fun exchangeForDifferentClientCannotBeTransferred(): Unit = runBlocking {
+        val request = AuthStartRequest(1, BridgeProtocol.newRequestId(), BridgeProtocol.newHostId(), System.currentTimeMillis())
+        var transfers = 0
+        val model = PhoneAuthViewModel(inbox(request), { _, path, _ ->
+            if (path == ProfileProtocol.CONTEXT_PATH) ProfileProtocol.encode(LoginContext(1, request.requestId, null, null))
+            else { if (path == ProfileProtocol.TRANSFER_PATH) transfers++; byteArrayOf(1) }
+        }, IssuedRegistrationStore(Record())) { _, _ ->
+            profile(request.hostId, true).let { it.copy(identity = it.identity.copy(clientId = "different_client")) }
+        }.also { vm = it }
+        withTimeout(5000) { model.state.first { it.stage == PhoneStage.READY } }
+        model.start(browser()); withTimeout(5000) { model.state.first { it.stage == PhoneStage.FAILED } }
+        assertEquals(0, transfers)
+    }
+
 }

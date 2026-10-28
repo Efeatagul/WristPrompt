@@ -10,15 +10,17 @@ object ResponsesProtocol {
     const val MANAGE_USAGE_URL = "https://chatgpt.com/settings/usage"
     const val TEST_PROMPT = "Reply with exactly: WristPrompt works."
     const val EXPECTED_TEXT = "WristPrompt works."
+    const val API_EXPECTED_TEXT = "BYOK path works."
+    fun expected(mode: io.github.grassified.wristprompt.auth.CredentialMode) = if (mode == io.github.grassified.wristprompt.auth.CredentialMode.OPENAI_API_KEY) API_EXPECTED_TEXT else EXPECTED_TEXT
     const val MAX_BODY_BYTES = 262_144L
     const val MAX_TEXT_CHARS = 65_536
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     fun models(body: String): List<AiModel> = ModelCatalog.read(body.byteInputStream())
 
-    fun request(model: String): String {
+    fun request(model: String, mode: io.github.grassified.wristprompt.auth.CredentialMode = io.github.grassified.wristprompt.auth.CredentialMode.CHATGPT_PLAN): String {
         require(model.isNotBlank() && model.length <= 256 && model.none(Char::isISOControl))
-        return json.encodeToString(ResponsesRequest(model, listOf(InputMessage("user", TEST_PROMPT))))
+        return json.encodeToString(ResponsesRequest(model, listOf(InputMessage("user", if (mode == io.github.grassified.wristprompt.auth.CredentialMode.OPENAI_API_KEY) "Reply exactly: BYOK path works." else TEST_PROMPT))))
     }
 }
 

@@ -2,14 +2,26 @@
 
 Your key. Your model. Your watch.
 
-Day 1 Phase D implementation for a lightweight Wear OS AI client. Continue with ChatGPT
-requests setup on the paired phone. An explicit phone action opens OpenAI OAuth
-in the browser; verified credentials are transferred to protected watch storage.
-Watch can now discover account models and stream a fixed Responses API proof prompt,
-with serialized token refresh when needed. The user confirmed the physical
-Galaxy Watch 7 sign-in-to-completed-inference proof on 2026-10-28. Refresh and
-recovery hardening remain open; see [DAY1_REPORT.md](DAY1_REPORT.md).
-The API-key action stays disabled. There is no mobile chat interface.
+Lightweight Wear OS OpenAI client with two explicit credential/billing modes:
+**CHATGPT_PLAN** uses a saved ChatGPT registration; **OPENAI_API_KEY** uses your
+own key and separate OpenAI API billing. Select the mode on the watch; storing a
+second credential never changes it. Errors never fall back to the other mode.
+
+Continue with ChatGPT authorizes through the phone browser. API-key setup is
+requested on the watch, entered in the companion's masked field and transferred
+to protected watch storage; the phone clears the entry after storage ACK.
+Both paths share the Responses transport and fixed streaming proof UI. There
+is no production chat interface. Day 1 and D2-1 ChatGPT persistence/direct Wi-Fi
+inference are physically accepted; new refresh, sign-out and BYOK checks remain
+pending in [DAY2_STATUS.md](DAY2_STATUS.md).
+
+API keys use a separate Android Keystore AES-GCM atomic no-backup record. The
+phone does not persist the key. Client-side BYOK is an advanced backend-free
+tradeoff: local encryption does not provide server-side key isolation, and a
+compromised/unlocked client or input method may expose the key. No key goes to a
+WristPrompt server. API model listing verifies that operation only; returned IDs
+are not a promise of Responses/text support or sufficient quota. See
+[BYOK_REVIEW.md](BYOK_REVIEW.md) for the security boundary and validation.
 
 ## Build
 

@@ -2,7 +2,7 @@ package io.github.grassified.wristprompt.openai
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.github.grassified.wristprompt.auth.WatchAccountState
+import io.github.grassified.wristprompt.auth.CredentialMode
 import io.github.grassified.wristprompt.storage.SecureStorageException
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -13,17 +13,17 @@ data class ProofState(
     val selectedSlug: String? = null, val output: String = "", val completedObserved: Boolean = false,
     val problem: ApiProblem? = null, val usageHint: Boolean = false,
     val protocolDetail: ProtocolDetail? = null, val httpStatus: Int? = null,
+    val errorCode: String? = null, val requestId: String? = null, val errorShape: ErrorShape? = null,
+    val mode: CredentialMode = CredentialMode.CHATGPT_PLAN,
 ) {
     val busy: Boolean get() = stage == ProofStage.LOADING || stage == ProofStage.STREAMING
 }
 
-private data class ActiveAccount(val client: String?, val generation: Long, val plan: Boolean, val pending: Boolean, val storageError: Boolean)
-
 class InferenceViewModel(
-    accounts: StateFlow<WatchAccountState>,
+    accounts: StateFlow<InferenceAccessState>,
     private val session: InferenceSession,
-    private val selectedModel: suspend (String) -> String? = { null },
-    private val saveModel: suspend (String, Long, String) -> Unit = { _, _, _ -> },
+    private val selectedModel: suspend (CredentialLease) -> String? = { null },
+    private val saveModel: suspend (CredentialLease, String) -> Unit = { _, _ -> },
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ProofState())
     val state = mutableState.asStateFlow()
@@ -32,20 +32,12 @@ class InferenceViewModel(
     @Volatile private var epoch = 0L
     init {
         viewModelScope.launch {
-            accounts.map { ActiveAccount(it.activeClientId, it.generation, it.planEnabled,
-                it.pendingExpiresAt?.let { expiry -> expiry >= System.currentTimeMillis() } == true, it.storageError) }
-                .distinctUntilChanged().collect { account ->
-                    cancelOperation()
-                    prepared = null
-                    mutableState.value = ProofState(problem = when {
-                        account.storageError -> ApiProblem.STORAGE
-                        accounts.value.reauthorizationRequired -> ApiProblem.REAUTHORIZE
-                        account.pending -> ApiProblem.REAUTHORIZING
-                        account.client != null && !account.plan -> ApiProblem.PLAN_DISABLED
-                        else -> null
-                    })
-                    if (account.client != null && account.plan && !account.pending && !account.storageError && !accounts.value.reauthorizationRequired) loadModels()
-                }
+            accounts.distinctUntilChanged { old, next -> old == next }.collect { account ->
+                cancelOperation()
+                prepared = null
+                mutableState.value = ProofState(problem = account.problem, mode = account.mode)
+                if (account.usable) loadModels()
+            }
         }
     }
     fun select(slug: String) {
@@ -54,7 +46,7 @@ class InferenceViewModel(
         val run = epoch
         operation = viewModelScope.launch {
             try {
-                saveModel(catalog.credential.clientId, catalog.credential.generation, slug)
+                saveModel(catalog.credential, slug)
                 if (run == epoch) mutableState.value = state.value.copy(selectedSlug = slug, output = "", completedObserved = false,
                     stage = if (state.value.stage == ProofStage.FAILED) ProofStage.FAILED else ProofStage.READY)
             } catch (cancelled: CancellationException) { throw cancelled
@@ -64,16 +56,16 @@ class InferenceViewModel(
     fun loadModels() {
         if (operation?.isActive == true) return
         val run = ++epoch
-        mutableState.value = ProofState(stage = ProofStage.LOADING)
+        mutableState.value = ProofState(stage = ProofStage.LOADING, mode = state.value.mode)
         operation = viewModelScope.launch {
             try {
                 val catalog = session.catalog()
                 if (run != epoch) return@launch
-                val saved = selectedModel(catalog.credential.clientId)
+                val saved = selectedModel(catalog.credential)
                 if (run != epoch) return@launch
                 prepared = catalog
                 mutableState.value = ProofState(ProofStage.READY, catalog.models,
-                    catalog.models.firstOrNull { it.slug == saved }?.slug ?: catalog.models.first().slug)
+                    catalog.models.firstOrNull { it.slug == saved }?.slug ?: catalog.models.first().slug, mode = catalog.credential.mode)
             } catch (cancelled: CancellationException) { throw cancelled
             } catch (failure: Exception) { failed(run, failure) }
         }
@@ -83,7 +75,7 @@ class InferenceViewModel(
         val catalog = prepared ?: return
         val selected = state.value.selectedSlug ?: return
         val run = ++epoch
-        mutableState.value = state.value.copy(stage = ProofStage.LOADING, output = "", completedObserved = false, problem = null, protocolDetail = null, httpStatus = null)
+        mutableState.value = state.value.copy(stage = ProofStage.LOADING, output = "", completedObserved = false, problem = null, protocolDetail = null, httpStatus = null, errorCode = null, requestId = null, errorShape = null)
         operation = viewModelScope.launch {
             try {
                 val result = session.test(catalog, selected, onCatalog = { fresh ->
@@ -120,6 +112,8 @@ class InferenceViewModel(
         mutableState.update { it.copy(stage = ProofStage.FAILED, problem = problem,
             protocolDetail = (failure as? ApiFailure)?.protocolDetail
                 ?: ProtocolDetail.CLIENT_RESPONSE.takeIf { problem == ApiProblem.PROTOCOL },
-            httpStatus = (failure as? ApiFailure)?.status?.takeIf { status -> status in 100..599 }) }
+            httpStatus = (failure as? ApiFailure)?.status?.takeIf { status -> status in 100..599 },
+            errorCode = (failure as? ApiFailure)?.code, requestId = (failure as? ApiFailure)?.requestId,
+            errorShape = (failure as? ApiFailure)?.shape) }
     }
 }

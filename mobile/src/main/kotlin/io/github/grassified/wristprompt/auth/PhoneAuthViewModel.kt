@@ -18,6 +18,7 @@ class PhoneAuthViewModel(
     private val inbox: AuthRequestInbox,
     private val rpc: suspend (String, String, ByteArray) -> ByteArray,
     private val registrations: IssuedRegistrationStore,
+    private val now: () -> Long = System::currentTimeMillis,
     private val exchange: suspend (OAuthTransaction, AuthorizationCode) -> CredentialProfile,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(PhoneAuthState())
@@ -57,6 +58,7 @@ class PhoneAuthViewModel(
                     ProfileProtocol.decode<LoginContext>(send(received.nodeId, ProfileProtocol.CONTEXT_PATH, ProfileProtocol.encode(request)))
                 } catch (cancelled: CancellationException) { throw cancelled
                 } catch (_: Exception) { throw AuthException(AuthProblem.WATCH_UNAVAILABLE) }
+                requireCurrent(request.requestId)
                 require(context.version == 1 && context.requestId == request.requestId)
                 context.identity?.validate()
                 require(context.idTokenHint == null || (context.identity != null && context.idTokenHint.length <= 24_000))
@@ -69,15 +71,19 @@ class PhoneAuthViewModel(
                     try { openBrowser(transaction.authorizationUrl()) } catch (_: Exception) { throw AuthException(AuthProblem.BROWSER) }
                     result = listener.await(transaction)
                 }
+                requireCurrent(request.requestId)
                 try { registrations.save(request.hostId, result.clientId) }
                 catch (cancelled: CancellationException) { throw cancelled
                 } catch (_: Exception) { throw AuthException(AuthProblem.STORAGE) }
                 val profile = exchange(transaction, result)
+                requireCurrent(received.request.requestId)
+                require(profile.identity.clientId == result.clientId && profile.hostId == request.hostId)
                 pending = PendingTransfer(received.nodeId,
                     ProfileTransfer(1, request.requestId, BridgeProtocol.newRequestId(), profile),
                     received.request.createdAtEpochMs + OpenAiAuth.ATTEMPT_MS)
+                val expiresAt = pending!!.expiresAt
                 expiryJob = viewModelScope.launch {
-                    delay((pending!!.expiresAt - System.currentTimeMillis()).coerceAtLeast(0))
+                    delay((expiresAt - now()).coerceAtLeast(0))
                     pending = null
                     if (mutableState.value.stage == PhoneStage.RETRY_TRANSFER) {
                         mutableState.value = PhoneAuthState(PhoneStage.FAILED, AuthProblem.TIMEOUT)
@@ -85,12 +91,15 @@ class PhoneAuthViewModel(
                 }
                 transfer()
             } catch (_: TimeoutCancellationException) {
+                received?.let { requireCurrent(it.request.requestId) }
                 mutableState.value = PhoneAuthState(PhoneStage.FAILED, AuthProblem.WATCH_UNAVAILABLE)
             } catch (cancelled: CancellationException) { throw cancelled
             } catch (e: AuthException) {
+                received?.let { requireCurrent(it.request.requestId) }
                 mutableState.value = PhoneAuthState(PhoneStage.FAILED, e.problem)
                 received?.let { notifyFailure(it) }
             } catch (_: Exception) {
+                received?.let { requireCurrent(it.request.requestId) }
                 mutableState.value = PhoneAuthState(PhoneStage.FAILED, AuthProblem.STORAGE)
                 received?.let { notifyFailure(it) }
             }
@@ -102,7 +111,7 @@ class PhoneAuthViewModel(
     }
     private suspend fun transfer() {
         val value = pending ?: return
-        if (value.expiresAt < System.currentTimeMillis()) {
+        if (value.expiresAt < now()) {
             pending = null
             mutableState.value = PhoneAuthState(PhoneStage.FAILED, AuthProblem.TIMEOUT)
             return
@@ -113,6 +122,8 @@ class PhoneAuthViewModel(
             val ack = try {
                 ProfileProtocol.decode<ProfileAck>(send(value.nodeId, ProfileProtocol.TRANSFER_PATH, bytes))
             } finally { bytes.fill(0) }
+            requireCurrent(value.envelope.requestId)
+            require(value.expiresAt >= now() && pending === value)
             require(ack == ProfileAck(1, value.envelope.requestId, value.envelope.transferId))
             // ACK is the durable handoff boundary. The phone never refreshes/revokes this session.
             pending = null
@@ -123,11 +134,23 @@ class PhoneAuthViewModel(
                 BridgeLog.warn(BridgeDiagnostic.STORAGE_UNAVAILABLE)
             }
         } catch (_: TimeoutCancellationException) {
-            mutableState.value = PhoneAuthState(PhoneStage.RETRY_TRANSFER, AuthProblem.TRANSFER)
+            requireCurrent(value.envelope.requestId)
+            transferFailed(value)
         } catch (cancelled: CancellationException) { throw cancelled
         } catch (_: Exception) {
-            mutableState.value = PhoneAuthState(PhoneStage.RETRY_TRANSFER, AuthProblem.TRANSFER)
+            requireCurrent(value.envelope.requestId)
+            transferFailed(value)
         }
+    }
+    private fun transferFailed(value: PendingTransfer) {
+        if (pending !== value || value.expiresAt <= now()) {
+            pending = null
+            mutableState.value = PhoneAuthState(PhoneStage.FAILED, AuthProblem.TIMEOUT)
+        } else mutableState.value = PhoneAuthState(PhoneStage.RETRY_TRANSFER, AuthProblem.TRANSFER)
+    }
+    private suspend fun requireCurrent(requestId: String) {
+        currentCoroutineContext().ensureActive()
+        if (currentRequestId != requestId) throw CancellationException("Setup superseded")
     }
     private suspend fun send(node: String, path: String, payload: ByteArray): ByteArray =
         withTimeout(BridgeProtocol.TIMEOUT_MS) { rpc(node, path, payload) }

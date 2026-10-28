@@ -1,6 +1,7 @@
 package io.github.grassified.wristprompt.openai
 
 import io.github.grassified.wristprompt.auth.CredentialProfile
+import io.github.grassified.wristprompt.auth.CredentialMode
 import io.github.grassified.wristprompt.auth.OpenAiAuth
 import io.github.grassified.wristprompt.bridge.SafeDiagnostics
 import kotlinx.serialization.Serializable
@@ -53,7 +54,7 @@ private data class RefreshTokens(
     val expires_in: Long, val scope: String? = null, val earliest_refresh_at: JsonElement? = null,
 ) { override fun toString() = SafeDiagnostics.REDACTED }
 
-class CredentialLease(val clientId: String, val generation: Long, val accessToken: String, val expiresAt: Long) {
+class CredentialLease(val clientId: String, val generation: Long, val accessToken: String, val expiresAt: Long, val mode: CredentialMode = CredentialMode.CHATGPT_PLAN, val modeRevision: Long = 0) {
     override fun toString() = SafeDiagnostics.REDACTED
 }
 

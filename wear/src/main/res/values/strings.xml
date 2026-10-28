@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">WristPrompt</string>
-    <string name="tagline">Your key. Your model. Your watch.</string>
+    <string name="connection">Connection</string>
     <string name="continue_with_chatgpt">Continue with ChatGPT</string>
     <string name="use_api_key">Use OpenAI API key</string>
     <string name="bridge_idle">Continue with ChatGPT using your paired phone.</string>
@@ -18,10 +18,10 @@
     <string name="connected">Connected</string>
     <string name="plan_disabled">Identity connected. ChatGPT plan usage disabled.</string>
     <string name="add_account">Add another ChatGPT account</string>
-    <string name="setup_storage_error">Protected storage unavailable. Sign-in is blocked.</string>
+    <string name="setup_storage_error">Protected credentials unavailable. Requests are blocked. Secrets cannot be recovered here; reauthorization or API-key reconfiguration is required once protected storage is available.</string>
     <string name="authorization_failed">Authorization failed on phone. Open WristPrompt there for details, then retry from watch.</string>
     <string name="authorization_expired">Authorization expired. Try Continue with ChatGPT again.</string>
-    <string name="plan_welcome">ChatGPT plan usage is enabled. Eligible AI requests will use your plan. Manage usage in ChatGPT settings.</string>
+    <string name="plan_welcome">ChatGPT plan usage is enabled. When ChatGPT plan is selected, eligible AI requests use your plan. OpenAI API mode uses separate API billing. Manage ChatGPT usage in ChatGPT settings.</string>
     <string name="got_it">Got it</string>
     <string name="connected_chatgpt">Connected with ChatGPT</string>
     <string name="using_chatgpt_plan">Using ChatGPT plan</string>
@@ -31,7 +31,7 @@
     <string name="test_inference">Test inference</string>
     <string name="stop_generation">Stop</string>
     <string name="manage_usage">Manage usage</string>
-    <string name="manage_usage_hint">On your phone, open ChatGPT → Settings → Usage. Review WristPrompt’s limit before retrying.</string>
+    <string name="manage_usage_hint">On your phone, open WristPrompt and tap Manage ChatGPT usage, or open ChatGPT → Settings → Usage. Review your plan or WristPrompt’s limit.</string>
     <string name="proof_idle">Load the account model catalog to begin.</string>
     <string name="proof_loading">Checking credentials and loading…</string>
     <string name="proof_ready">Ready. Test inference sends: Reply with exactly: WristPrompt works.</string>
@@ -46,7 +46,7 @@
     <string name="proof_not_eligible">ChatGPT plan usage is unavailable for this account, workspace, or policy.</string>
     <string name="proof_permission">OpenAI did not accept this account’s permission or policy. Check the account and plan grant.</string>
     <string name="proof_temporary">OpenAI is temporarily unavailable. Credentials are preserved. Wait before retrying.</string>
-    <string name="proof_configuration">This session cannot refresh with the current client configuration or token metadata. Credentials are preserved; repeated sign-in is not an automatic fix.</string>
+    <string name="proof_configuration">OpenAI client, route or session configuration requires attention. Credentials are preserved; repeated sign-in is not an automatic fix.</string>
     <string name="session_renewed">ChatGPT session renewed on this watch.</string>
     <string name="proof_invalid_request">OpenAI rejected the request or selected model. Reload the catalog and choose a supported model.</string>
     <string name="proof_network">Could not reach OpenAI. Check the watch’s internet connection and retry explicitly.</string>
@@ -62,4 +62,12 @@
     <string name="signed_out">Signed out of ChatGPT. Select this saved account and Continue with ChatGPT to sign in again.</string>
     <string name="signout_confirmed">Signed out locally. Remote renewable-session revocation confirmed.</string>
     <string name="signout_unconfirmed">Signed out locally. REMOTE REVOCATION NOT CONFIRMED. Disconnect WristPrompt in your ChatGPT account settings if needed.</string>
+    <string name="api_key_configured">OpenAI API key configured</string>
+    <string name="api_key_missing">API key not configured. Enter it on the paired phone; no ChatGPT fallback.</string>
+    <string name="api_key_invalid">OpenAI rejected API authentication (401). Check the key and API account access. ChatGPT was not used.</string>
+    <string name="api_limit">OpenAI API rate, credit or quota limit. Review your API billing account; ChatGPT was not used.</string>
+    <string name="using_api_billing">Using OpenAI API billing. This is separate from your ChatGPT plan.</string>
+    <string name="api_model_warning">Listed model IDs do not guarantee Responses text support. Choose a compatible model.</string>
+    <string name="test_api_key">Test API key / reload API models</string>
+    <string name="api_key_accepted">API key accepted for model listing. Test inference sends: Reply exactly: BYOK path works. Inference uses API billing.</string>
 </resources>

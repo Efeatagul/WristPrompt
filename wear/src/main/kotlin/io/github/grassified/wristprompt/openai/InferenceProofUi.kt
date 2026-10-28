@@ -1,5 +1,6 @@
 package io.github.grassified.wristprompt.openai
 
+import io.github.grassified.wristprompt.auth.CredentialMode
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -9,8 +10,9 @@ import androidx.wear.compose.material3.Text
 import io.github.grassified.wristprompt.R
 
 fun TransformingLazyColumnScope.inferenceProofItems(state: ProofState, viewModel: InferenceViewModel) {
-    item { Text(stringResource(R.string.connected_chatgpt)) }
-    item { Text(stringResource(R.string.using_chatgpt_plan)) }
+    item { Text(stringResource(if (state.mode == CredentialMode.CHATGPT_PLAN) R.string.connected_chatgpt else R.string.api_key_configured)) }
+    item { Text(stringResource(if (state.mode == CredentialMode.CHATGPT_PLAN) R.string.using_chatgpt_plan else R.string.using_api_billing)) }
+    if (state.mode == CredentialMode.OPENAI_API_KEY) item { Text(stringResource(R.string.api_model_warning)) }
     item {
         val selected = state.models.firstOrNull { it.slug == state.selectedSlug }
         Text(stringResource(R.string.selected_model, selected?.displayName ?: stringResource(R.string.model_not_selected)))
@@ -25,7 +27,7 @@ fun TransformingLazyColumnScope.inferenceProofItems(state: ProofState, viewModel
         Text(stringResource(when (state.stage) {
             ProofStage.IDLE -> R.string.proof_idle
             ProofStage.LOADING -> R.string.proof_loading
-            ProofStage.READY -> R.string.proof_ready
+            ProofStage.READY -> if (state.mode == CredentialMode.CHATGPT_PLAN) R.string.proof_ready else R.string.api_key_accepted
             ProofStage.STREAMING -> R.string.proof_streaming
             ProofStage.SUCCEEDED -> R.string.proof_success
             ProofStage.OUTPUT_MISMATCH -> R.string.proof_mismatch
@@ -38,13 +40,12 @@ fun TransformingLazyColumnScope.inferenceProofItems(state: ProofState, viewModel
     }
     state.httpStatus?.let { status -> item { Text(stringResource(R.string.proof_http_status, status)) } }
     if (state.problem != null && state.stage == ProofStage.IDLE) item { Text(stringResource(problemText(state.problem))) }
-    if (state.problem in setOf(ApiProblem.USAGE_LIMIT, ApiProblem.USAGE_UNAVAILABLE, ApiProblem.NOT_ELIGIBLE)) {
+    if (state.mode == CredentialMode.CHATGPT_PLAN && state.problem in setOf(ApiProblem.USAGE_LIMIT, ApiProblem.USAGE_UNAVAILABLE, ApiProblem.NOT_ELIGIBLE)) {
         item { Button(onClick = viewModel::manageUsage, label = { Text(stringResource(R.string.manage_usage)) }) }
     }
-    if (state.usageHint) item { Text(stringResource(R.string.manage_usage_hint)) }
     item {
         Button(onClick = viewModel::loadModels, enabled = !state.busy, modifier = Modifier.fillMaxWidth(),
-            label = { Text(stringResource(R.string.load_models)) })
+            label = { Text(stringResource(if (state.mode == CredentialMode.CHATGPT_PLAN) R.string.load_models else R.string.test_api_key)) })
     }
     item {
         Button(onClick = viewModel::test,
@@ -57,6 +58,9 @@ fun TransformingLazyColumnScope.inferenceProofItems(state: ProofState, viewModel
 }
 
 private fun problemText(problem: ApiProblem?): Int = when (problem) {
+    ApiProblem.API_KEY_MISSING -> R.string.api_key_missing
+    ApiProblem.INVALID_API_KEY -> R.string.api_key_invalid
+    ApiProblem.API_LIMIT -> R.string.api_limit
     ApiProblem.REAUTHORIZE -> R.string.proof_reauthorize
     ApiProblem.PLAN_DISABLED -> R.string.plan_disabled
     ApiProblem.REAUTHORIZING -> R.string.authorizing

@@ -50,6 +50,6 @@ class OpenAiHttp(private val client: OkHttpClient = OkHttpClient.Builder()
             catch (_: CharacterCodingException) { throw ApiFailure(ApiProblem.PROTOCOL, protocolDetail = ProtocolDetail.INVALID_UTF8) }
         } finally { bytes.fill(0) }
     }
-    fun failure(response: Response, refresh: Boolean = false): ApiFailure = ApiErrors.parse(
-        response.code, body(response), response.header("openai-request-id") ?: response.header("x-request-id"), refresh)
+    fun failure(response: Response, refresh: Boolean = false, mode: io.github.grassified.wristprompt.auth.CredentialMode = io.github.grassified.wristprompt.auth.CredentialMode.CHATGPT_PLAN): ApiFailure = ApiErrors.forMode(ApiErrors.parse(
+        response.code, body(response), response.header("openai-request-id") ?: response.header("x-request-id"), refresh), mode)
 }

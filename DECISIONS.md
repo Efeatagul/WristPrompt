@@ -686,3 +686,74 @@ as current docs specify after sign-out. No billing/account fallback.
 See SIGN_OUT_REVIEW.md for sources, state/race review and test evidence. Device
 sign-out/re-login/revocation is PENDING END-OF-DAY PHYSICAL TEST; no real session
 was revoked by the agent. Prior model-selection and earliest-refresh issues remain.
+
+## D13 — independent explicit ChatGPT-plan and API-key billing
+
+Use a single OpenAiProvider/Responses/SSE transport with explicit mode-bearing
+leases. Persist mode and API-specific preference in a separate api_key encrypted
+record/Keystore alias; preserve the existing OAuth vault and stable host ID.
+Never infer the active billing path from credential availability. Mode revisions
+invalidate old work, including switches away and back. API receipt/removal and
+ChatGPT sign-out never choose another mode. API work requires no OAuth state.
+
+Prefer masked, process-memory-only phone entry in a watch-requested, short-lived,
+node/request/host-bound v1 Data Layer handoff. ACK follows protected durable watch
+storage; identical retries do not rewrite the key. Real Test API key uses GET
+/v1/models with the API data[].id decoder, separate from the account catalog.
+Listing is not proof of Responses support or quota; unsupported models fail safely.
+Local BYOK is an advanced user-owned client-side tradeoff, not server isolation.
+See BYOK_REVIEW.md for current official sources, security/race boundaries and
+limits; DAY2_STATUS.md owns pending end-of-day device checks.
+
+
+## D14 — Phase F connection settings and explicit usage language
+
+Keep the existing persisted credential router, protected stores and per-mode
+model preferences. Expose a fixed active billing indicator above Wear's scrolling
+connection settings; show both available credentials independently, with manual
+mode selection even when credentials are missing. Never infer mode on receipt,
+removal, sign-out or failure. Render proof catalogs only under their matching
+mode. Revalidate preferences against the current mode's catalog; Terra → Sol
+restart restoration stays Day 3 debt.
+
+Rechecked official [OpenAI UI/UX guidance](https://developers.openai.com/siwc/ui-ux-guidelines)
+on 2026-10-28: eligible plan wording, connected identity, Using ChatGPT plan,
+first-use confirmation and Manage usage. The notice now qualifies plan usage by
+explicit selection; API billing is separate. Retain the watch usage instructions
+and add a phone action opening https://chatgpt.com/settings/usage with a no-browser
+fallback. Automatic watch-to-phone browser opening remains deferred; no usage
+numbers or reset times are inferred.
+
+Keep mobile setup-only. Clear the redundant key text once the existing bounded
+retry envelope is prepared, hide the field during transfer/retry, and leave it
+cleared after acknowledged protected storage. No plaintext field persistence or
+new transfer/authentication contract. Existing wrong-ACK/expiry coverage now also
+checks cleared entry during retry. Final automated evidence and the consolidated
+physical checklist live in DAY2_STATUS.md. No Day 3 chat or voice implementation.
+
+
+## D15 — Phase G failure isolation and stale action rejection
+
+Reject inference started with a prepared catalog from another account,
+generation, billing mode or mode revision before rediscovery/POST. A shared model
+ID is not authorization to retarget a stale user action. Same-registration token
+renewal may still rediscover with the fresh bearer and revalidate membership.
+
+Guard phone OAuth context/result/ACK publication with cancellation and the current
+request ID; validate exchanged client/host, keep expiry independent of mutable
+pending state, and turn expired retry into a terminal timeout. Apply cancellation
+checks to late API-key transfer exceptions too. No OAuth/transfer/store contract
+or billing-selection rule changes.
+
+Use current official OpenAI error categories: unsupported capability is an invalid
+request; unsupported route is configuration; invalid_user/direct 401/403 is not
+by itself terminal refresh/revocation proof; user/usage unavailability preserves
+credentials. Keep actual HTTP status (including 200 with response.failed), bounded
+code/shape/request ID and static UI messages, excluding provider text. No reset
+estimate, automatic billing fallback or generation replay.
+
+See DAY2_FAILURE_MATRIX.md and DAY2_STATUS.md for synthetic failure coverage,
+security review, final validation and consolidated end-of-day physical checks.
+Actual Android Keystore/AtomicFile faults are not established by fake-store/JVM
+AES-GCM tests. Never destructively test key loss on the real watch. Prior unknown
+refresh metadata and Terra → Sol debt remain unchanged.
