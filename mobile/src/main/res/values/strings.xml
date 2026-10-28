@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WristPrompt</string>
+    <string name="companion_setup">Companion setup</string>
+    <string name="companion_explanation">Use this companion to authorize ChatGPT for your watch. Your browser handles sign-in; the connection is saved securely on watch.</string>
+    <string name="waiting_for_watch">Waiting for a sign-in request from your watch.</string>
+    <string name="sign_in_requested">ChatGPT sign-in requested by your watch.</string>
+    <string name="setup_storage_error">Protected setup storage is unavailable. No new connection was saved. Restart WristPrompt and retry from watch.</string>
+    <string name="local_capability" translatable="false">wristprompt_mobile</string>
+    <string-array name="android_wear_capabilities">
+        <item>@string/local_capability</item>
+    </string-array>
+    <string name="continue_with_chatgpt">Continue with ChatGPT</string>
+    <string name="authorizing">Authorizing… Finish authorization in your browser, then return here.</string>
+    <string name="transferring">Securely saving the connection on your watch…</string>
+    <string name="transfer_failed">Watch confirmation was not received. It may already be connected. Retry this same transfer before starting another sign-in.</string>
+    <string name="retry_transfer">Retry watch transfer</string>
+    <string name="connected">Connected on your watch. ChatGPT plan usage enabled.</string>
+    <string name="identity_only">Connected on your watch. ChatGPT plan usage disabled: permission was not granted.</string>
+    <string name="no_inference">WristPrompt is an independent app. AI requests run directly on your watch.</string>
+    <string name="error_browser">Could not open a browser. Install or enable one, then retry from your watch.</string>
+    <string name="error_listener">Could not start the local callback listener. Retry from your watch.</string>
+    <string name="error_timeout">Sign-in timed out. Start a fresh attempt from your watch.</string>
+    <string name="error_denied">Access was declined. No connection was saved. Retry from your watch when ready.</string>
+    <string name="error_callback">The authorization callback was rejected. Start a fresh attempt from your watch.</string>
+    <string name="error_exchange">OpenAI could not exchange the code. Check your network and retry from your watch.</string>
+    <string name="error_identity">OpenAI identity could not be verified. Nothing was saved on watch. Retry from your watch.</string>
+    <string name="error_scopes">OpenAI returned an incomplete permission or token set. Retry from your watch.</string>
+    <string name="error_watch">Watch request is unavailable or expired. Keep the watch connected and retry from it.</string>
+</resources>

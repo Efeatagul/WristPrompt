@@ -1,0 +1,49 @@
+# Build output and machine-specific state
+.gradle/
+.kotlin/
+**/build/
+local.properties
+.idea/
+*.iml
+.vscode/
+*.local.properties
+.DS_Store
+.cxx/
+.externalNativeBuild/
+captures/
+.tools/
+
+# Signing material and credentials
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
+key.properties
+keystore.properties
+signing.properties
+*.keystore.*
+*.jks.*
+secrets.properties
+credentials*.json
+*token*.json
+.env
+.env.*
+/secrets/
+/private/
+/oauth-captures/
+/debug-captures/
+/oauth-callback*
+/token-response*
+/auth-response*
+*.har
+
+# Local validation artifacts
+*.apk
+*.aab
+*.hprof
+*.log
+
+# Protected runtime records must never be exported into source control
+*.enc

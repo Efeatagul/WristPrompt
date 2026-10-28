@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WristPrompt</string>
+    <string name="tagline">Your key. Your model. Your watch.</string>
+    <string name="continue_with_chatgpt">Continue with ChatGPT</string>
+    <string name="use_api_key">Use OpenAI API key</string>
+    <string name="bridge_idle">Continue with ChatGPT using your paired phone.</string>
+    <string name="looking_for_phone">Looking for phone…</string>
+    <string name="auth_request_sent">Waiting for phone… Open WristPrompt on your phone and tap Continue with ChatGPT.</string>
+    <string name="companion_unavailable">Companion unavailable. Connect your phone and install WristPrompt there.</string>
+    <string name="bridge_error">Could not confirm receipt. Check both devices and try again. Your phone may have received the request.</string>
+    <string name="multiple_phones">More than one companion is available. Connect only the intended phone and try again.</string>
+    <string name="local_capability" translatable="false">wristprompt_wear</string>
+    <string-array name="android_wear_capabilities">
+        <item>@string/local_capability</item>
+    </string-array>
+    <string name="authorizing">Authorizing… Finish in your phone’s browser.</string>
+    <string name="connected">Connected</string>
+    <string name="plan_disabled">Identity connected. ChatGPT plan usage disabled.</string>
+    <string name="add_account">Add another ChatGPT account</string>
+    <string name="setup_storage_error">Protected storage unavailable. Sign-in is blocked.</string>
+    <string name="authorization_failed">Authorization failed on phone. Open WristPrompt there for details, then retry from watch.</string>
+    <string name="authorization_expired">Authorization expired. Try Continue with ChatGPT again.</string>
+    <string name="plan_welcome">ChatGPT plan usage is enabled. Eligible AI requests will use your plan. Manage usage in ChatGPT settings.</string>
+    <string name="got_it">Got it</string>
+    <string name="connected_chatgpt">Connected with ChatGPT</string>
+    <string name="using_chatgpt_plan">Using ChatGPT plan</string>
+    <string name="selected_model">Model: %1$s</string>
+    <string name="model_not_selected">Not selected</string>
+    <string name="load_models">Reload models</string>
+    <string name="test_inference">Test inference</string>
+    <string name="stop_generation">Stop</string>
+    <string name="manage_usage">Manage usage</string>
+    <string name="manage_usage_hint">On your phone, open ChatGPT → Settings → Usage. Review WristPrompt’s limit before retrying.</string>
+    <string name="proof_idle">Load the account model catalog to begin.</string>
+    <string name="proof_loading">Checking credentials and loading…</string>
+    <string name="proof_ready">Ready. Test inference sends: Reply with exactly: WristPrompt works.</string>
+    <string name="proof_streaming">Streaming output…</string>
+    <string name="proof_success">Success: response.completed received and exact test output matched.</string>
+    <string name="proof_mismatch">response.completed received, but the streamed test output did not match exactly.</string>
+    <string name="proof_cancelled">Stopped. Partial output is not a completed proof.</string>
+    <string name="completed_observed">Observed: response.completed</string>
+    <string name="proof_reauthorize">Authorization must be renewed. Use Continue with ChatGPT for this saved account.</string>
+    <string name="proof_usage_limit">ChatGPT plan usage is limited. Pause testing and review Manage usage.</string>
+    <string name="proof_usage_unavailable">ChatGPT plan usage could not be checked. Keep this account and retry later.</string>
+    <string name="proof_not_eligible">ChatGPT plan usage is unavailable for this account, workspace, or policy.</string>
+    <string name="proof_permission">OpenAI did not accept this account’s permission or policy. Check the account and plan grant.</string>
+    <string name="proof_temporary">OpenAI is temporarily unavailable. Credentials are preserved. Wait before retrying.</string>
+    <string name="proof_configuration">OpenAI rejected the client configuration. Repeated sign-in will not fix this configuration error.</string>
+    <string name="proof_invalid_request">OpenAI rejected the request or selected model. Reload the catalog and choose a supported model.</string>
+    <string name="proof_network">Could not reach OpenAI. Check the watch’s internet connection and retry explicitly.</string>
+    <string name="proof_no_models">No displayable model is available. Reload the account catalog; select a model again if it changed.</string>
+    <string name="proof_interrupted">Stream interrupted before response.completed. Partial text is not success.</string>
+    <string name="proof_incomplete">OpenAI returned response.incomplete. Partial text is not success.</string>
+    <string name="proof_protocol">WristPrompt could not process the response. No successful proof was recorded.</string>
+    <string name="proof_stale_account">Account changed during the request. Reload models for the selected account.</string>
+    <string name="proof_protocol_detail">Failure category: %1$s. This contains no account or credential data.</string>
+    <string name="proof_http_status">HTTP status: %1$d</string>
+</resources>
