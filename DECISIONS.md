@@ -983,3 +983,20 @@ Official [errors and recovery](https://developers.openai.com/siwc/token-sharing-
 rechecked 2026-10-29. No OAuth protocol, inference request field, credential format,
 storage, production Data Layer or billing-route change. DAY3_STATUS.md owns current
 test/emulator evidence; these rules do not establish physical anomaly resolution.
+
+## D21 — offline debug scenarios and release isolation (2026-10-29)
+
+Keep deterministic Wear scenarios in debug source sets with one explicitly
+launched Activity. Reuse the production ViewModel/session/conversation and renderer;
+extract state/action presentation wiring only when needed to avoid accessing live
+repositories. Supply inert synthetic account/billing actions, a synthetic provider,
+an empty transient bearer lease and memory-only model selection. Never construct
+real serializable credential records, secure stores, HTTP clients or production
+bridge dependencies for scenarios. No production emulator fallback is permitted.
+
+Validate absence from both merged release manifest and release APK DEX, absence of
+production navigation references, and forbidden persistence/network dependencies
+with tools/check_scenario_isolation.py. Fresh ready acknowledgements are fixed,
+non-secret, debug-only developer artifacts. Activity recreation retains a VM;
+process persistence is intentionally not simulated. WEAR_SCENARIOS.md owns the
+launcher contract; DAY3_STATUS.md owns D3-F evidence, not final Day 3 acceptance.

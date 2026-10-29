@@ -2,13 +2,11 @@ package io.github.grassified.wristprompt.ui
 
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnScope
 import io.github.grassified.wristprompt.auth.*
-import io.github.grassified.wristprompt.bridge.WatchAuthViewModel
 import io.github.grassified.wristprompt.openai.InferenceViewModel
 
 internal fun TransformingLazyColumnScope.connectionItems(
     ui: ShellPresentation, accounts: WatchAccountState, key: ApiKeyState,
-    setup: KeySetupStatus, changing: Boolean, auth: WatchAuthViewModel,
-    settings: ApiKeySettingsViewModel, proof: InferenceViewModel, onUsage: () -> Unit,
+    setup: KeySetupStatus, changing: Boolean, actions: ConnectionActions, proof: InferenceViewModel, onUsage: () -> Unit,
 ) {
     item { ShellText("Connection", heading = true) }
     item { ShellText("Use for AI requests") }
@@ -16,7 +14,7 @@ internal fun TransformingLazyColumnScope.connectionItems(
         (if (key.loaded && !key.storageError && key.mode == mode) "✓ " else "") +
             if (mode == CredentialMode.CHATGPT_PLAN) "ChatGPT plan" else "OpenAI API",
         enabled = key.loaded && !key.storageError && !changing,
-        onClick = { proof.stop(); settings.selectMode(mode) },
+        onClick = { proof.stop(); actions.mode(mode) },
     )
     item { ShellText("ChatGPT account", heading = true) }
     item { ShellText(when {
@@ -33,23 +31,23 @@ internal fun TransformingLazyColumnScope.connectionItems(
     }) }
     for (account in accounts.accounts) action(
         (if (accounts.activeClientId == account.clientId) "✓ " else "") + account.label,
-        enabled = !accounts.signingOut, onClick = { auth.select(account.clientId) },
+        enabled = !accounts.signingOut, onClick = { actions.select(account.clientId) },
     )
-    if (ui.showContinue) continueAction(ui.canContinue, auth::start)
-    if (accounts.accounts.isNotEmpty()) action("Add ChatGPT account", !accounts.signingOut) { auth.select(null) }
+    if (ui.showContinue) continueAction(ui.canContinue, actions.start)
+    if (accounts.accounts.isNotEmpty()) action("Add ChatGPT account", !accounts.signingOut) { actions.select(null) }
     if (ui.showManageUsage) action("Manage usage", onClick = onUsage)
     if (ui.showSignOut) action("Sign out of ChatGPT", !accounts.signingOut && !accounts.storageError) {
         if (key.mode == CredentialMode.CHATGPT_PLAN) proof.stop()
-        auth.signOut()
+        actions.signOut()
     }
     item { ShellText("OpenAI API key", heading = true) }
     item { ShellText(if (key.configured) "Configured · separate API billing" else "Not configured · separate API billing") }
     action(if (key.configured) "Change key" else "Set up API key",
-        enabled = setup != KeySetupStatus.REQUESTING && !changing, onClick = settings::request)
+        enabled = setup != KeySetupStatus.REQUESTING && !changing, onClick = actions.request)
     if (setup != KeySetupStatus.IDLE) item { ShellText(keySetupText(setup)) }
     if (ui.showRemoveKey) action("Remove key", !changing) {
         if (key.mode == CredentialMode.OPENAI_API_KEY) proof.stop()
-        settings.remove()
+        actions.remove()
     }
 }
 

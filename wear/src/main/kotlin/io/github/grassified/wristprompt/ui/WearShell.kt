@@ -29,7 +29,7 @@ import io.github.grassified.wristprompt.bridge.WatchAuthViewModel
 import io.github.grassified.wristprompt.bridge.WatchAuthState
 import io.github.grassified.wristprompt.openai.*
 
-private enum class Surface { CHAT, COMPOSER, PROOF, MODELS, CONNECTION, DETAILS, OUTPUT }
+internal enum class Surface { CHAT, COMPOSER, PROOF, MODELS, CONNECTION, DETAILS, OUTPUT }
 
 @Composable
 internal fun WearShell(auth: WatchAuthViewModel, settings: ApiKeySettingsViewModel, proof: InferenceViewModel) {
@@ -38,6 +38,24 @@ internal fun WearShell(auth: WatchAuthViewModel, settings: ApiKeySettingsViewMod
     val key by settings.state.collectAsStateWithLifecycle()
     val setup by settings.setup.collectAsStateWithLifecycle()
     val changing by settings.busy.collectAsStateWithLifecycle()
+    WearShellContent(accounts, bridge, key, setup, changing, proof,
+        ConnectionActions(auth::start, auth::select, auth::signOut, auth::confirmPlanNotice,
+            settings::selectMode, settings::request, settings::remove))
+}
+
+internal data class ConnectionActions(
+    val start: () -> Unit, val select: (String?) -> Unit, val signOut: () -> Unit,
+    val confirm: () -> Unit, val mode: (CredentialMode) -> Unit,
+    val request: () -> Unit, val remove: () -> Unit,
+)
+
+@Composable
+internal fun WearShellContent(
+    accounts: WatchAccountState, bridge: WatchAuthState, key: ApiKeyState,
+    setup: KeySetupStatus, changing: Boolean, proof: InferenceViewModel,
+    actions: ConnectionActions, initialSurface: Surface = Surface.CHAT,
+    supplementalGuidance: String? = null,
+) {
     val state by proof.state.collectAsStateWithLifecycle()
     val chat by proof.chat.collectAsStateWithLifecycle()
     // Lazy content executes later: capture state and cached rows from the same snapshot.
@@ -45,7 +63,7 @@ internal fun WearShell(auth: WatchAuthViewModel, settings: ApiKeySettingsViewMod
     val messageChunks = remember(renderedChat.messages) {
         renderedChat.messages.associate { it.id to readableChunks(it.text) }
     }
-    var surface by remember { mutableStateOf(Surface.CHAT) }
+    var surface by remember { mutableStateOf(initialSurface) }
     var inputToken by remember { mutableStateOf<Long?>(null) }
     var inputUnavailable by remember { mutableStateOf(false) }
     val input = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -76,7 +94,7 @@ internal fun WearShell(auth: WatchAuthViewModel, settings: ApiKeySettingsViewMod
     val welcome = accounts.planWelcome
     val back = { surface = Surface.CHAT }
     BackHandler(enabled = welcome || surface != Surface.CHAT) {
-        if (welcome) auth.confirmPlanNotice() else back()
+        if (welcome) actions.confirm() else back()
     }
     AppScaffold(timeText = {}) {
         // A measured, non-overlaid header: long labels/font scaling take their own space.
@@ -109,7 +127,7 @@ internal fun WearShell(auth: WatchAuthViewModel, settings: ApiKeySettingsViewMod
                     if (welcome) {
                         item { ShellText("ChatGPT plan usage", heading = true) }
                         paragraphs(messages.getValue(R.string.plan_welcome))
-                        action(messages.getValue(R.string.got_it), onClick = auth::confirmPlanNotice)
+                        action(messages.getValue(R.string.got_it), onClick = actions.confirm)
                     } else {
                         if (surface != Surface.CHAT && surface != Surface.COMPOSER) action("Back", onClick = back)
                         if (surface == Surface.MODELS || surface == Surface.CONNECTION) item { ShellText(ui.status) }
@@ -118,6 +136,7 @@ internal fun WearShell(auth: WatchAuthViewModel, settings: ApiKeySettingsViewMod
                                 item { ShellText("Model: ${ui.model}", compact = true) }
                                 if (!ui.proofAvailable || state.selectedSlug == null) item { ShellText(ui.status) }
                                 chatItems(renderedChat, messageChunks)
+                                supplementalGuidance?.let { paragraphs(it) }
                                 action("New Chat", onClick = proof::newChat)
                                 action("Choose model", ui.proofAvailable && !state.busy && !chat.busy) { surface = Surface.MODELS }
                                 action("Connection / settings", onClick = { surface = Surface.CONNECTION })
@@ -151,9 +170,9 @@ internal fun WearShell(auth: WatchAuthViewModel, settings: ApiKeySettingsViewMod
                                     }
                                 } else if (key.loaded && !key.storageError && !changing) {
                                     if (key.mode == CredentialMode.CHATGPT_PLAN && ui.showContinue) {
-                                        continueAction(ui.canContinue, auth::start)
+                                        continueAction(ui.canContinue, actions.start)
                                     } else if (key.mode == CredentialMode.OPENAI_API_KEY && !key.configured) {
-                                        action("Set up API key", setup != KeySetupStatus.REQUESTING, settings::request)
+                                        action("Set up API key", setup != KeySetupStatus.REQUESTING, actions.request)
                                     }
                                 }
                                 if (ui.showOutput) {
@@ -177,7 +196,7 @@ internal fun WearShell(auth: WatchAuthViewModel, settings: ApiKeySettingsViewMod
                                 action("Reload models", !state.busy && !chat.busy, proof::loadModels)
                                 if (state.models.isEmpty()) item { ShellText("No models available. Reload to retry.") }
                             }
-                            Surface.CONNECTION -> connectionItems(ui, accounts, key, setup, changing, auth, settings, proof) {
+                            Surface.CONNECTION -> connectionItems(ui, accounts, key, setup, changing, actions, proof) {
                                 proof.manageUsage(); surface = Surface.DETAILS
                             }
                             Surface.DETAILS -> {

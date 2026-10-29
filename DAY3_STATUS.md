@@ -4,7 +4,8 @@ Phase A is implemented. Phase B is complete as investigation/test hardening;
 its historical physical anomaly remains unresolved. Phase C text chat/context is
 implemented below. Phase D streaming/Stop ownership is hardened below. Day 2
 remains PASS WITH KNOWN DEBT. Phase E state/error hardening is implemented below; this is not a completed Day 3
-physical/release gate.
+physical/release gate. Phase F debug scenarios and emulator automation are
+implemented below; D3-G remains unstarted.
 
 ## Phase A scope and evidence
 
@@ -760,5 +761,222 @@ D3-E completion does not authorize D3-F or establish a Day 3 physical/release ga
 ### M. Suggested commit
 
 `fix: harden chat auth model billing and error transitions`
+
+No commit or push performed.
+
+## Phase F — debug scenarios and emulator acceptance automation
+
+**D3-F implemented — VERIFIED AUTOMATICALLY / VERIFIED ON EMULATOR.** This is
+phase-local evidence, not D3-G consolidated acceptance or a physical release gate.
+D3-G remains unstarted. No commit/push, production auth, funded API request,
+physical-device test, AVD reset/re-pair or capability investigation was performed.
+
+### Harness architecture and security boundary
+
+One debug entrypoint, `openai.DebugScenarioActivity`, replaces the former
+StreamingPreviewActivity. `DebugScenarios` provides offline synthetic catalogs,
+access/display metadata and provider events to the real InferenceViewModel,
+InferenceSession and ChatConversation. Streaming, completion, exclusion, Stop and
+next-send use those production state machines. ScenarioOwner prepares once and
+retains the VM across actual Activity.recreate; final disposal cancels its scope.
+No process persistence is simulated or added.
+
+Production-only changes are the small presentation extraction in WearShell.kt
+and callback parameters in ConnectionItems.kt. The existing wrapper forwards the
+same real states/actions; debug supplies inert connection actions instead of
+constructing real auth/key ViewModels. Both use the same screen, chunking, clipping,
+model picker, composer and fixed controls. A default-null supplemental guidance
+input lets LONG_ERROR_MESSAGE stress the same renderer using repeated static
+production error/recovery copy. No production behavior, OAuth, billing decision,
+credential storage/format, inference protocol, Data Layer routing or dependency
+changed. No fake parallel UI or production emulator fallback exists.
+
+**VERIFIED AUTOMATICALLY — release/storage isolation:**
+
+- Scenario Activity and fixture/owner classes exist in debug merged manifest/APK
+  DEX and are absent from release merged manifest/APK DEX. Old preview absent too.
+- No production source references either debug entrypoint. Release cannot resolve
+  the Activity; there is no production navigation/invocation path.
+- Harness has no secure record/repository, serializable credential, HTTP-client,
+  preference-store or production Application dependency. The production Application
+  stores are lazy and not accessed by this host. No real Authorization header.
+- The transient CredentialLease required by InferenceSession has an empty bearer,
+  passed only to the synthetic provider. It is never converted to a persistable
+  CredentialProfile, API-key credential or OAuth token set.
+- Model callbacks are default memory-only/no-op; synthetic selection cannot write
+  real model preferences. Connection/account/key/sign-out actions are inert.
+- Only scenario disk write: fixed non-secret debug-scenario-ready.txt containing
+  validated launch identifier, enum, generation count and chat stage. No payload,
+  real credential, account identifier or exception diagnostics are emitted.
+- tools/check_scenario_isolation.py enforces manifest/DEX/source/dependency checks.
+  This is dependency/source/output evidence, not a claimed live Keystore trace.
+
+### Developer interface and automation
+
+Full fixture mapping and developer guide: WEAR_SCENARIOS.md.
+
+```sh
+python3 tools/wear_scenarios.py --list
+python3 tools/wear_scenarios.py --scenario STREAMING_LONG
+python3 tools/wear_scenarios.py --scenario ERROR_429 --screenshot /tmp/error_429.png
+python3 tools/wear_scenarios.py --install --scenario EMPTY_CHAT
+python3 tools/wear_scenarios.py --smoke
+```
+
+The launcher discovers online emulator serials, checks watch characteristics and
+requires exactly one watch. It prints the AVD identity; no boot-order/serial
+constant or Pixel Watch association is needed. Missing/ambiguous watch, unknown
+scenario, missing package, non-debuggable package and missing Activity/ready ACK
+fail clearly. Physical devices are excluded. Optional install is same-signed -r,
+never uninstall/data clear. Each new launch clears the old Activity task only.
+A fresh validated nonce binds the fixed app-private ready ACK to this launch;
+process liveness is also required. Smoke iterates all 23 names. It is a readiness
+check, not automatic visual recognition. Screenshots use screencap; no OCR,
+goldens, UI testing framework or new dependency was added.
+
+ERROR_401_REAUTH retains its requested public name but deliberately uses the
+production bare ChatGPT admission 401 -> PERMISSION mapping, with plan/account
+permission guidance. It does not invent terminal refresh expiry. ERROR_401_API_KEY
+uses INVALID_API_KEY and separate API billing/no fallback. LONG_ERROR_MESSAGE is
+static safe guidance repetition, not unsanitized remote error text. MODEL_UNAVAILABLE
+starts with no selection and blocked Send; explicit Reload recovers synthetically.
+MODELS_LOADING deliberately holds catalog discovery pending Stop, without a timeout.
+
+### Automated commands and exact counts
+
+Persistent JDK/SDK/signing configuration unchanged. Commands actually run:
+
+```sh
+export JAVA_HOME=$HOME/.local/share/wristprompt/jdk-17.0.21+9
+export ANDROID_USER_HOME=$HOME/.local/share/wristprompt/android
+./gradlew :wear:compileDebugKotlin --console=plain
+./gradlew :wear:testDebugUnitTest --tests '*DebugScenariosTest' --console=plain
+./gradlew :wear:testDebugUnitTest --tests '*DebugScenariosTest' \
+  --tests '*ModelRestorationIntegrationTest' --tests '*Chat*Test' \
+  --tests '*Streaming*Test' --tests '*TransitionTest' \
+  --tests '*InferenceSessionTest' --tests '*InferenceViewModelTest' \
+  --tests '*ApiKeyCancellationTest' :wear:assembleDebug --console=plain
+./gradlew :wear:testDebugUnitTest :wear:assembleDebug :wear:assembleRelease :wear:lintDebug --console=plain
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tools -p 'test_wear_scenarios.py'
+python3 tools/check_scenario_isolation.py
+python3 tools/wear_scenarios.py --install --smoke
+python3 tools/wear_scenarios.py --scenario STREAMING_LONG --screenshot /tmp/d3f-stream.png
+git diff --check
+```
+
+**VERIFIED AUTOMATICALLY:**
+
+| Check | Result |
+| --- | --- |
+| New focused DebugScenariosTest | 9 tests; zero failures/errors/skips |
+| Combined D3-B–F focused run | 101 tests; zero failures/errors/skips |
+| Final full Wear suite | 272 tests; zero failures/errors/skips (263 existing + 9 new) |
+| Restoration integration included | 15 tests PASS |
+| Chat conversation/ViewModel/transport included | 13 + 12 + 3 = 28 tests PASS |
+| Streaming race/HTTP cancellation included | 13 + 4 = 17 tests PASS |
+| Transition/error transition included | 12 + 2 = 14 tests PASS |
+| Inference session/ViewModel; API cancellation included | 5 + 10 + 3 = 18 tests PASS |
+| Python launcher unit suite | 8 tests PASS, no ADB contacted |
+| Debug/release assembly and debug lint | PASS; release APK unsigned, no signing/publishing claim |
+| Release manifest/DEX and forbidden dependency checks | PASS |
+| Three new Python files AST syntax | PASS |
+| git diff --check and changed/new text whitespace | PASS |
+
+Nine scenario tests cover enum round-trip/unknown closed failure, all 23 fixture
+preparations, distinct 401 and production 429/503/offline mapping, unavailable
+model Send guard/reload recovery, real streaming cancellation, completed history,
+partial exclusion/next context and retained-owner no-regeneration. Tests use the
+coroutine test scheduler/gates, no wall-clock sleeps. Host tests cover dynamic
+serial use, physical exclusion, no/ambiguous watches, unknown names, missing package
+and release run-as rejection. Source/output isolation checks separately cover
+credential/model persistence dependencies and release component absence.
+
+Lint: zero errors, **six warning instances** (two AGP advisories, ExportedService,
+VectorPath, two WearRecents). One new WearRecents instance is the debug scenario
+Activity: noHistory was removed so native input return/retained recreation remain
+possible. Existing diagnostic Activity has the other instance. No suppression or
+production manifest change. Initial sandbox Gradle read-only cache-lock failure
+was retried successfully with approved access to the existing cache. The initial
+isolation check ran before release assembly completed and found no release APK;
+it passed after assembly. No test failure occurred. Mobile/shared code unchanged;
+mobile suite/build/lint NOT RERUN and not claimed as current evidence.
+
+### Emulator acceptance matrix
+
+Existing WristPrompt_Watch7 was dynamically verified as a watch and selected
+(current serial emulator-5554, not encoded in the launcher). A connected physical
+ADB device was ignored. Debug APK installed in place; no app data/credentials were
+cleared. All 23 scenarios passed fresh ACK + liveness smoke, including a repeat on
+the final rebuilt debug APK. Initial/scrolled synthetic screenshots for all 23
+were reviewed, with touch scrolling and process checks after each scenario.
+
+| Scenario | Result |
+| --- | --- |
+| SIGNED_OUT | PASS — VERIFIED ON EMULATOR |
+| CHATGPT_AUTHENTICATED | PASS — VERIFIED ON EMULATOR |
+| API_KEY_CONFIGURED | PASS — VERIFIED ON EMULATOR |
+| MODELS_LOADING | PASS — VERIFIED ON EMULATOR |
+| MODELS_LOADED | PASS — VERIFIED ON EMULATOR |
+| MANY_MODELS | PASS — VERIFIED ON EMULATOR |
+| MODEL_UNAVAILABLE | PASS — VERIFIED ON EMULATOR |
+| EMPTY_CHAT | PASS — VERIFIED ON EMULATOR |
+| LONG_USER_PROMPT | PASS — VERIFIED ON EMULATOR |
+| ONE_TURN_COMPLETED | PASS — VERIFIED ON EMULATOR |
+| MULTI_TURN_CHAT | PASS — VERIFIED ON EMULATOR |
+| LONG_ASSISTANT_OUTPUT | PASS — VERIFIED ON EMULATOR |
+| STREAMING_SHORT | PASS — VERIFIED ON EMULATOR |
+| STREAMING_LONG | PASS — VERIFIED ON EMULATOR |
+| STOPPED_PARTIAL | PASS — VERIFIED ON EMULATOR |
+| ERROR_401_REAUTH | PASS — VERIFIED ON EMULATOR |
+| ERROR_401_API_KEY | PASS — VERIFIED ON EMULATOR |
+| ERROR_429 | PASS — VERIFIED ON EMULATOR |
+| ERROR_503 | PASS — VERIFIED ON EMULATOR |
+| ERROR_OFFLINE | PASS — VERIFIED ON EMULATOR |
+| LONG_ERROR_MESSAGE | PASS — VERIFIED ON EMULATOR |
+| RECREATED_COMPLETED_STATE | PASS — VERIFIED ON EMULATOR |
+| RECREATED_CANCELLED_STATE | PASS — VERIFIED ON EMULATOR |
+
+No observed crashes or serious overlap. Shared scroll viewport clips content
+below fixed Compose/Send/Stop; partial rows at viewport edges are scrollable.
+Deep picker scroll reached Synthetic model 40 and Reload models. Long error copy
+scrolled to final Connection/settings and Details actions. A direct tap on fixed
+Stop during long streaming removed Stop, restored Compose and retained partial
+output with exclusion labeling. Short stream completed normally. Both actual
+Activity recreation scenarios acknowledged generations=1 with COMPLETED/CANCELLED
+respectively; no revived Stop or duplicate send. Next-send context exclusion is
+additionally established by the production-path unit test, not inferred from a
+screenshot. No rotary/font-scale/physical behavior is inferred from touch checks.
+
+Screenshots/contact sheets are ephemeral under /tmp/d3f-acceptance,
+/tmp/d3f-top-contact.png, /tmp/d3f-scroll-contact.png and /tmp/d3f-stream.png.
+They contain synthetic content only. The deeper scrolling/Stop checks used
+throwaway /tmp helpers, not a new permanent UI automation framework.
+
+### Changed files and remaining boundary
+
+- Debug: replace StreamingPreviewActivity.kt with DebugScenarioActivity.kt and
+  DebugScenarios.kt; update debug AndroidManifest.xml entry.
+- Tools: wear_scenarios.py, check_scenario_isolation.py, test_wear_scenarios.py.
+- Tests: wear/src/testDebug/.../DebugScenariosTest.kt.
+- Production: only ui/WearShell.kt and ui/ConnectionItems.kt presentation injection
+  extraction described above; all original callbacks preserved.
+- Documentation: this status, WEAR_SCENARIOS.md, durable debug-isolation policy D21
+  in DECISIONS.md. ROADMAP.md gates unchanged.
+
+Production capability-dependent authentication remains
+**NOT VERIFIABLE ON CURRENT EMULATOR LAB**. Classification remains
+**UNRESOLVED — STRONGLY ISOLATED TO GMS/EMULATOR**; investigation not reopened.
+No physical verification, real OAuth or funded-BYOK success verification. Historical
+Terra -> Sol physical anomaly and transient reauthorization exchange/context-expiry
+anomaly remain unresolved debt, without a claimed fix. Real network/capability
+routing, large-font/rotary behavior and final consolidated acceptance remain
+outside this synthetic harness evidence.
+
+**Deferred to D3-G:** final Day 3 consolidated report/acceptance and disposition
+of its remaining checks. No D3-G work started; no next phase is authorized by this
+D3-F record. Existing consolidated physical checklist remains pending without a
+new routine physical test request.
+
+Suggested commit: `test: add debug Wear scenarios and emulator acceptance launcher`
 
 No commit or push performed.
