@@ -149,7 +149,7 @@ class DebugScenarioActivity : ComponentActivity() {
                 }
             }
             val chat by f.vm.chat.collectAsStateWithLifecycle()
-            MaterialTheme {
+            io.github.grassified.wristprompt.ui.WristPromptTheme {
                 Column(Modifier.fillMaxSize()) {
                     if (f.lifecycleScenario || f.processScenario) Text("G=${f.generations} M=${f.discoveries} ${chat.stage}\nchars=${chat.partial.length}",
                         modifier = Modifier.fillMaxWidth().padding(top = 20.dp, start = 42.dp, end = 42.dp),

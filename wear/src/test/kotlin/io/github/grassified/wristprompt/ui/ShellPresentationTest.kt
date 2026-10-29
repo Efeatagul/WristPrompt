@@ -100,6 +100,21 @@ class ShellPresentationTest {
         }
     }
 
+    @Test fun retainedIdentityAndCatalogAreHiddenDuringSignOutAndAuthenticationFailure() {
+        for (a in listOf(
+            account.copy(signingOut = true),
+            account.copy(connected = false, signedOut = true, reauthorizationRequired = true),
+            account.copy(reauthorizationRequired = true),
+            account.copy(storageError = true),
+        )) {
+            val ui = present(a = a)
+            assertNull(ui.account)
+            assertEquals("Not selected", ui.model)
+            assertFalse(ui.canTest)
+            assertFalse(ui.proofAvailable)
+        }
+    }
+
     @Test fun failedAndExpiredSetupHaveVisibleWatchRetryPath() {
         for (a in listOf(account.copy(connected = false, failed = true), account.copy(connected = false, expired = true))) {
             val ui = present(a = a)

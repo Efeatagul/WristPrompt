@@ -6,7 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import androidx.wear.compose.material3.MaterialTheme
+import io.github.grassified.wristprompt.ui.WristPromptTheme
 import io.github.grassified.wristprompt.auth.ApiKeySettingsViewModel
 import io.github.grassified.wristprompt.bridge.WatchAuthViewModel
 import io.github.grassified.wristprompt.openai.InferenceViewModel
@@ -30,7 +30,7 @@ class MainActivity : ComponentActivity() {
                     InferenceViewModel(app.credentials.state, app.inference, app.credentials::selectedModel, app.credentials::selectModel)
                 }
             })
-            MaterialTheme {
+            WristPromptTheme {
                 io.github.grassified.wristprompt.ui.WearShell(auth, settings, proof)
             }
         }

@@ -4,6 +4,24 @@ D4-F, 2026-10-29. This guide owns the current catalog and commands. Historical
 phase evidence and limitations remain in [DAY4_STATUS.md](DAY4_STATUS.md);
 [DAY3_REPORT.md](DAY3_REPORT.md) records prior presentation acceptance.
 
+## D5-A shell compatibility — 2026-10-30
+
+All 43 canonical identifiers and fixture meanings remain unchanged. The debug
+host now uses WristPromptTheme, matching production. Chat has a scrolling
+WristPrompt/model/billing/Menu header and fixed Ask/Stop; Ask opens platform input
+when no draft exists, then returns to explicit draft review/Send. Composer
+recreation still requires Write message to open another composition-owned input.
+
+Connection is labelled Account & Connection. Chat Menu reaches account actions
+and Settings & About → Diagnostics → inference proof with inline output. Back
+returns through the visited path. Reading positions are retained in the existing
+navigation owner, not restored into a fresh process. The old OUTPUT destination
+is only an internal compatibility alias to proof, with no separate menu entry.
+
+D5-A adds no scenarios or ACK fields. Readiness still does not prove visual
+correctness, rotary, input interaction or hardware behavior. D5 acceptance and
+before/after performance limitations are recorded separately in DAY5_STATUS.md.
+
 ## Prerequisites and commands
 
 Use the existing JDK/SDK/signing environment in [DEVELOPMENT.md](DEVELOPMENT.md).

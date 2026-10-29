@@ -8,7 +8,7 @@ internal fun TransformingLazyColumnScope.connectionItems(
     ui: ShellPresentation, accounts: WatchAccountState, key: ApiKeyState,
     setup: KeySetupStatus, changing: Boolean, actions: ConnectionActions, proof: InferenceViewModel, onUsage: () -> Unit,
 ) {
-    item { ShellText("Connection", heading = true) }
+    item { ShellText("Account & Connection", heading = true) }
     item { ShellText("Use for AI requests") }
     for (mode in CredentialMode.entries) action(
         (if (key.loaded && !key.storageError && key.mode == mode) "✓ " else "") +

@@ -1062,3 +1062,46 @@ Official Android [saved UI state](https://developer.android.com/develop/ui/compo
 and [process lifetime](https://developer.android.com/guide/components/activities/process-lifecycle)
 were checked. The process runner never claims force-stop is equivalent to every
 system low-memory kill. D4-C connectivity work is not authorized by this decision.
+
+## D24 — chat-first retained Wear shell (2026-10-30)
+
+D5-A supersedes D17's fixed billing header and top-level proof layout only.
+Keep AppScaffold/ScreenScaffold/TransformingLazyColumn and the existing version
+pins. A static black-first Wear Material 3 palette uses restrained teal, native
+shapes and system typography. The debug host uses the same theme.
+
+The chat header (title, model affordance, compact explicit billing disclosure,
+Menu) scrolls away naturally. Use a conventional measured Ask control, explicit
+Send in draft review, and fixed Stop on every surface while chat/proof/catalog
+work is busy. Reject EdgeButton for D5-A: its scaffold morphing/scroll-dependent
+visibility is unnecessary for the required always-reachable control; no custom
+animation or imitation. Composer billing remains visible immediately above Send.
+
+Extend ShellNavigationViewModel with a bounded unique-destination back path and
+plain reading-index/offset anchors per visited surface and a separate welcome
+anchor. Lazy-list objects remain composition-owned and report anchors on disposal;
+no old layout objects are retained by the navigation owner. Anchors never enter a
+SavedStateHandle or durable record. Navigation/back changes do not call inference,
+model reload or conversation reset. The process boundary remains D23.
+
+Ask launches the existing composition-owned platform input interaction when no
+draft exists; a retained draft returns to review. Returned text never auto-sends.
+Existing revision/single-use/disposal checks remain authoritative. ShellInteraction
+only connects shell events to those existing owners; it owns no generation.
+
+Chat → Models / Composer / Menu; Menu → New Chat / Account & Connection /
+Settings & About; Settings → Diagnostics → proof with inline output. Safe account,
+credential setup/removal, explicit mode selection, usage and sign-out actions stay
+available. D4-H signed-out identity redaction is preserved.
+
+Only a distinct chat-busy projection is observed at shell level. The current
+transcript/cache is collected in ChatScreen and draft text in ComposerScreen;
+Send eligibility has a distinct boolean projection. These additional narrow
+observers enable global Stop/Send without reading every delta into the shell.
+No timers, coalescing, parser, auto-scroll or new background work. The matching
+chat-snapshot/chunk-cache rule and existing centered 80-character renderer remain.
+
+D5-D constraint: picker rows display only the authoritative discovered name and
+selection state; raw ID when no friendly name is supplied. No inferred speed,
+quality, reasoning, capability, descriptions or ranking. D5-B/C/D/E and D6 remain
+unstarted. DAY5_STATUS.md owns evidence and physical/performance limitations.

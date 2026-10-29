@@ -24,15 +24,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnScope
-import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.wear.compose.material3.*
 import io.github.grassified.wristprompt.R
 import io.github.grassified.wristprompt.auth.*
 import io.github.grassified.wristprompt.bridge.WatchAuthViewModel
 import io.github.grassified.wristprompt.bridge.WatchAuthState
 import io.github.grassified.wristprompt.openai.*
-
-internal enum class Surface { CHAT, COMPOSER, PROOF, MODELS, CONNECTION, DETAILS, OUTPUT }
 
 @Composable
 internal fun WearShell(auth: WatchAuthViewModel, settings: ApiKeySettingsViewModel, proof: InferenceViewModel) {
@@ -60,16 +60,13 @@ internal fun WearShellContent(
     supplementalGuidance: String? = null,
 ) {
     val state by proof.state.collectAsStateWithLifecycle()
-    val chat by proof.chat.collectAsStateWithLifecycle()
-    // Lazy content executes later: capture state and cached rows from the same snapshot.
-    val renderedChat = chat
-    val messageChunks = remember(renderedChat.messages) {
-        renderedChat.messages.associate { it.id to readableChunks(it.text) }
-    }
+    // Only the low-frequency busy boundary belongs to the shell. Transcript text is read in ChatScreen.
+    val busySource = remember(proof) { proof.chat.map { it.busy }.distinctUntilChanged() to proof.chat.value.busy }
+    val chatBusy by busySource.first.collectAsStateWithLifecycle(initialValue = busySource.second)
     val navigation: ShellNavigationViewModel = viewModel(factory = viewModelFactory {
         initializer { ShellNavigationViewModel(initialSurface) }
     })
-    var surface by navigation.surface
+    val surface by navigation.surface
     val composer = remember(proof) { ComposerInteraction(proof) }
     // Marker stays in the retained owner; a fresh process has neither marker nor token.
     var inputPending by navigation.inputPending
@@ -99,82 +96,50 @@ internal fun WearShellContent(
         R.string.auth_request_sent, R.string.companion_unavailable, R.string.bridge_error, R.string.multiple_phones,
     )).associateWith { stringResource(it) }
     val welcome = accounts.planWelcome
-    val back = { surface = Surface.CHAT }
+    val back = { navigation.back() }
+    val interaction = ShellInteraction(proof, navigation, write)
     BackHandler(enabled = welcome || surface != Surface.CHAT) {
         if (welcome) actions.confirm() else back()
     }
     AppScaffold(timeText = {}) {
-        // A measured, non-overlaid header: long labels/font scaling take their own space.
         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Column(Modifier.fillMaxWidth().padding(start = 36.dp, end = 36.dp, top = 24.dp, bottom = 6.dp),
-                horizontalAlignment = Alignment.CenterHorizontally) {
-                if (surface == Surface.CHAT || surface == Surface.COMPOSER) {
-                    Text(when (ui.billing) {
-                        "ChatGPT plan" -> "Using ChatGPT plan"
-                        "OpenAI API" -> "OpenAI API · API billing"
-                        else -> ui.billing
-                    }, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center)
-                } else {
-                    Text(ui.billing, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center)
-                    Text(ui.billingNote, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
-                }
-            }
-            // Stop stays outside the scroll area on every surface, including output/details.
-            if (ui.showStop || chat.busy) Button(onClick = proof::stop,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 36.dp), label = { Text("Stop") })
-            if (!welcome && surface == Surface.CHAT) Button(
-                onClick = { surface = Surface.COMPOSER }, enabled = !state.busy && !chat.busy,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 36.dp), label = { Text("Compose") })
-            if (!welcome && surface == Surface.COMPOSER) Button(
-                onClick = { proof.send(); if (proof.chat.value.draft.isEmpty()) surface = Surface.CHAT },
-                enabled = ui.proofAvailable && state.selectedSlug != null && !state.busy && chat.canSend,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 36.dp), label = { Text("Send") })
-            androidx.compose.runtime.key(surface, welcome) {
-                ShellList(Modifier.weight(1f)) {
-                    if (welcome) {
+            Box(Modifier.weight(1f)) {
+                when {
+                    welcome -> ShellList(Modifier.fillMaxSize(), rememberShellScroll(navigation, Surface.CHAT, welcome = true)) {
                         item { ShellText("ChatGPT plan usage", heading = true) }
                         paragraphs(messages.getValue(R.string.plan_welcome))
                         action(messages.getValue(R.string.got_it), onClick = actions.confirm)
-                    } else {
-                        if (surface != Surface.CHAT && surface != Surface.COMPOSER) action("Back", onClick = back)
+                    }
+                    surface == Surface.CHAT -> ChatScreen(proof, state, ui, navigation, supplementalGuidance)
+                    surface == Surface.COMPOSER -> ComposerScreen(proof, state, ui, navigation,
+                        interruptedInput, inputUnavailable, write)
+                    else -> ShellList(Modifier.fillMaxSize(), rememberShellScroll(navigation, surface)) {
+                        action("Back", onClick = back)
                         if (surface == Surface.MODELS || surface == Surface.CONNECTION) item { ShellText(ui.status) }
                         when (surface) {
-                            Surface.CHAT -> {
-                                item { ShellText("Model: ${ui.model}", compact = true) }
-                                if (!ui.proofAvailable || state.selectedSlug == null) item { ShellText(ui.status) }
-                                chatItems(renderedChat, messageChunks)
-                                supplementalGuidance?.let { paragraphs(it) }
-                                action("New Chat", onClick = proof::newChat)
-                                action("Choose model", ui.proofAvailable && !state.busy && !chat.busy) { surface = Surface.MODELS }
-                                action("Connection / settings", onClick = { surface = Surface.CONNECTION })
-                                action("Details", onClick = { surface = Surface.DETAILS })
+                            Surface.MENU -> {
+                                item { ShellText("Menu", heading = true) }
+                                action("New Chat", onClick = interaction::newChat)
+                                action("Account & Connection") { navigation.open(Surface.CONNECTION) }
+                                action("Settings & About") { navigation.open(Surface.SETTINGS) }
                             }
-                            Surface.COMPOSER -> {
-                                action(if (chat.draft.isEmpty()) "Write message" else "Replace draft",
-                                    !chat.busy && !state.busy, write)
-                                item { ShellText("Model: ${ui.model}", compact = true) }
-                                if (!ui.proofAvailable || state.selectedSlug == null) item { ShellText(ui.status) }
-                                if (interruptedInput) item { ShellText("Text input was interrupted. Write your message again.") }
-                                if (inputUnavailable) item { ShellText("System text input unavailable. Return and try again.") }
-                                if (chat.draft.isEmpty()) item { ShellText("Enter text, review it here, then Send.") }
-                                else paragraphs(chat.draft)
-                                if (chat.draft.length > ChatConversation.MAX_PROMPT_CHARS)
-                                    item { ShellText("Message too long. Limit: ${ChatConversation.MAX_PROMPT_CHARS} characters. Replace the draft with a shorter message.") }
-                                if (chat.limitReached) item { ShellText("Conversation limit reached. Start New Chat.") }
-                                action("Back to chat", onClick = back)
-                                action("Discard draft") { proof.draft(""); surface = Surface.CHAT }
+                            Surface.SETTINGS -> {
+                                item { ShellText("Settings & About", heading = true) }
+                                item { ShellText("WristPrompt · 0.1.0") }
+                                item { ShellText("Conversation stays in memory for this session. It is cleared when the app process ends.") }
+                                action("Diagnostics") { navigation.open(Surface.DETAILS) }
                             }
                             Surface.PROOF -> {
-                                item { ShellText("WristPrompt", heading = true) }
+                                item { ShellText("Inference proof", heading = true) }
                                 item { ShellText(ui.status) }
                                 ui.account?.let { item { ShellText(it, compact = true) } }
                                 item { ShellText("Model: ${ui.model}", compact = true) }
                                 if (ui.proofAvailable) {
-                                    if (!state.busy && !chat.busy) {
+                                    if (!state.busy && !chatBusy) {
                                         if (ui.canTest) action("Test inference", onClick = proof::test)
                                         action("Reload models", onClick = proof::loadModels)
                                         action("Choose model", enabled = state.models.isNotEmpty(),
-                                            onClick = { surface = Surface.MODELS })
+                                            onClick = { navigation.open(Surface.MODELS) })
                                     }
                                 } else if (key.loaded && !key.storageError && !changing) {
                                     if (key.mode == CredentialMode.CHATGPT_PLAN && ui.showContinue) {
@@ -185,31 +150,31 @@ internal fun WearShellContent(
                                 }
                                 if (ui.showOutput) {
                                     item { ShellText(if (state.completedObserved) "Output · response.completed observed" else "Output · not completed") }
-                                    action("View output", onClick = { surface = Surface.OUTPUT })
+                                    paragraphs(state.output)
                                 }
                                 if (key.mode == CredentialMode.CHATGPT_PLAN && state.problem in
                                     setOf(ApiProblem.USAGE_LIMIT, ApiProblem.USAGE_UNAVAILABLE, ApiProblem.NOT_ELIGIBLE)) {
-                                    action("Manage usage", onClick = { proof.manageUsage(); surface = Surface.DETAILS })
+                                    action("Manage usage", onClick = { proof.manageUsage(); navigation.open(Surface.DETAILS) })
                                 }
                                 if (setup != KeySetupStatus.IDLE) item { ShellText(keySetupText(setup)) }
-                                action("Connection / settings", onClick = { surface = Surface.CONNECTION })
-                                action("Details", onClick = { surface = Surface.DETAILS })
+                                action("Account & Connection", onClick = { navigation.open(Surface.CONNECTION) })
+                                action("Diagnostics", onClick = { navigation.open(Surface.DETAILS) })
                             }
                             Surface.MODELS -> {
                                 item { ShellText("Choose model", heading = true) }
                                 item { ShellText("Selected: ${ui.model}", compact = true) }
                                 if (state.mode == key.mode) for (model in state.models) action(
                                     (if (model.slug == state.selectedSlug) "✓ " else "") + model.displayName,
-                                    enabled = !state.busy && !chat.busy, onClick = { proof.select(model.slug) })
-                                action("Reload models", !state.busy && !chat.busy, proof::loadModels)
+                                    enabled = !state.busy && !chatBusy, onClick = { proof.select(model.slug) })
+                                action("Reload models", !state.busy && !chatBusy, proof::loadModels)
                                 if (state.models.isEmpty()) item { ShellText("No models available. Reload to retry.") }
                             }
                             Surface.CONNECTION -> connectionItems(ui, accounts, key, setup, changing, actions, proof) {
-                                proof.manageUsage(); surface = Surface.DETAILS
+                                proof.manageUsage(); navigation.open(Surface.DETAILS)
                             }
                             Surface.DETAILS -> {
-                                item { ShellText("Details", heading = true) }
-                                action("Inference proof", !chat.busy) { surface = Surface.PROOF }
+                                item { ShellText("Diagnostics", heading = true) }
+                                action("Inference proof", !chatBusy) { navigation.open(Surface.PROOF) }
                                 ui.account?.let { paragraphs(it) }
                                 paragraphs("Model: ${ui.model}")
                                 item { ShellText(ui.status) }
@@ -246,19 +211,57 @@ internal fun WearShellContent(
                                 item { ShellText(ui.status) }
                                 if (ui.showOutput) paragraphs(state.output)
                             }
+                            Surface.CHAT, Surface.COMPOSER -> Unit
                         }
                     }
                 }
             }
+            PrimaryControl(surface, welcome, state, chatBusy, ui, proof, interaction)
         }
     }
 }
 
 @Composable
-internal fun ShellList(modifier: Modifier, content: TransformingLazyColumnScope.() -> Unit) {
-    val scroll = rememberTransformingLazyColumnState()
+private fun PrimaryControl(
+    surface: Surface, welcome: Boolean, state: ProofState, chatBusy: Boolean,
+    ui: ShellPresentation, proof: InferenceViewModel, interaction: ShellInteraction,
+) {
+    val action = primaryAction(surface, state.busy || chatBusy, welcome) ?: return
+    val canSend = if (action == PrimaryAction.SEND) {
+        val sendSource = remember(proof) { proof.chat.map { it.canSend }.distinctUntilChanged() to proof.chat.value.canSend }
+        val ready by sendSource.first.collectAsStateWithLifecycle(initialValue = sendSource.second)
+        ready && ui.proofAvailable && state.selectedSlug != null
+    } else true
+    if (action == PrimaryAction.SEND) Text(billingDisclosure(ui.billing),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 36.dp),
+        style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
+    // Measured, non-overlaid and reachable at any scroll position; native font scaling.
+    Button(onClick = when (action) {
+        PrimaryAction.ASK -> interaction::ask
+        PrimaryAction.SEND -> interaction::send
+        PrimaryAction.STOP -> interaction::stop
+    }, enabled = canSend, modifier = Modifier.fillMaxWidth().padding(start = 36.dp, end = 36.dp, bottom = 16.dp)
+        .heightIn(min = 48.dp), label = { Text(action.label) })
+}
+
+@Composable
+internal fun rememberShellScroll(
+    navigation: ShellNavigationViewModel, surface: Surface, welcome: Boolean = false,
+): TransformingLazyColumnState {
+    val scroll = remember(navigation, surface, welcome) {
+        navigation.position(surface, welcome)?.let { TransformingLazyColumnState(it.index, it.offset) }
+            ?: TransformingLazyColumnState()
+    }
+    DisposableEffect(navigation, surface, welcome, scroll) {
+        onDispose { navigation.rememberPosition(surface, scroll.anchorItemIndex, scroll.anchorItemScrollOffset, welcome) }
+    }
+    return scroll
+}
+
+@Composable
+internal fun ShellList(modifier: Modifier, scroll: TransformingLazyColumnState, content: TransformingLazyColumnScope.() -> Unit) {
     ScreenScaffold(scrollState = scroll, modifier = modifier.clipToBounds(), timeText = {},
-        contentPadding = PaddingValues(top = 8.dp, bottom = 40.dp)) { padding ->
+        contentPadding = PaddingValues(top = 24.dp, bottom = 40.dp)) { padding ->
         TransformingLazyColumn(state = scroll, modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 24.dp, end = 24.dp,
                 top = padding.calculateTopPadding(), bottom = padding.calculateBottomPadding()),

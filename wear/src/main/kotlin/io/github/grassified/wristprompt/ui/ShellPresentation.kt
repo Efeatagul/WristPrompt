@@ -60,8 +60,9 @@ internal fun shellPresentation(
     return ShellPresentation(
         billing = when { key.storageError -> "Billing mode unavailable"; !key.loaded -> "Loading billing mode…"; plan -> "ChatGPT plan"; else -> "OpenAI API" },
         billingNote = when { key.storageError || !key.loaded -> "Requests blocked"; plan -> "Eligible plan usage"; else -> "Separate API billing" },
-        account = if (plan) accounts.accounts.firstOrNull { it.clientId == accounts.activeClientId }?.label else null,
-        model = if (proof.mode == key.mode) proof.models.firstOrNull { it.slug == proof.selectedSlug }?.displayName ?: "Not selected" else "Not selected",
+        account = if (plan && accounts.connected && !accounts.signingOut && !accounts.signedOut &&
+            !accounts.reauthorizationRequired && !accounts.storageError) accounts.accounts.firstOrNull { it.clientId == accounts.activeClientId }?.label else null,
+        model = if (available) proof.models.firstOrNull { it.slug == proof.selectedSlug }?.displayName ?: "Not selected" else "Not selected",
         status = status, proofAvailable = available,
         canTest = available && !proof.busy && proof.selectedSlug != null && proof.stage != ProofStage.FAILED,
         showStop = proof.busy,

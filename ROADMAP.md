@@ -52,8 +52,9 @@ Paired-emulator CapabilityClient synchronization remains a GMS/emulator limitati
 production physical Data Layer handoff works. Destructive Keystore/AtomicFile
 interruption tests were intentionally not physically performed.
 
-Recommended next focus: **DAY 5 — release / RC hardening**. Defer the exact D5
-phase plan to a fresh Day 5 read-only audit. No Day 5 implementation has started.
+Historical Day 4 recommendation was release/RC hardening. The explicit D5
+authorization below supersedes that schedule: UX 2.0 + Markdown, followed by
+D6 persistence architecture/implementation and later release hardening.
 
 Day numbers are execution stages, not a claim that work has started. A failed
 release gate blocks progression; retain evidence without credentials. Scope and
@@ -284,31 +285,55 @@ optional voice are not open Day 4 closure gates.
 Gate: reliable foreground text chat without voice; no hidden phone dependency
 for inference/refresh after setup. Document intentional lifecycle limits.
 
-## Day 5 — release / RC hardening — NOT STARTED
+## Day 5 — WristPrompt UX 2.0 + Markdown
 
-The items below are existing roadmap candidates, not an approved exact phase plan.
-Begin only with a fresh Day 5 read-only audit; no implementation is authorized by
-Day 4 closure.
+D5-0 read-only audit completed in chat. Only D5-A implementation is authorized.
+DAY5_STATUS.md owns current phase evidence; Day 4 remains PASS WITH KNOWN DEBT.
 
-- [ ] Complete focused protocol/security regression tests and both-app lint/build.
-- [ ] Review manifests, exported components, diagnostics, backups, crypto, signing,
-  dependency provenance/licenses, and release shrinker behavior.
-- [ ] Add README, Apache-2.0 LICENSE, privacy policy, branding/store assets, setup
-  instructions, known limits, and accurate Play Data safety declarations.
-- [ ] Verify current Play/Wear requirements and final delivery signing relationship.
+- [x] D5-0: read-only UX/performance architecture audit and phase plan.
+- [x] D5-A: chat-first shell, shallow retained navigation, static Wear theme,
+  compact billing disclosure and reachable Ask/Send/Stop. PASS WITH KNOWN DEBT;
+  358 Wear tests, debug/release builds, lint and isolation pass; 43/43 emulator
+  launches, targeted routes/rotary/2x font pass. Native confirmation and memory
+  comparison limits remain explicit in DAY5_STATUS.md; hardware deferred to D5-G.
+- [ ] D5-B: dense answer rendering, replace 80-character chunks, presentation
+  coalescing and explicit Latest action. NOT STARTED / NOT AUTHORIZED HERE.
+- [ ] D5-C: native bounded Markdown; no WebView/HTML renderer. NOT STARTED.
+- [ ] D5-D: model/account/settings presentation. Model rows show ONLY discovered
+  display name (raw ID when that is all the service supplies) and selected state.
+  No speed/quality/reasoning/capability/description/ranking metadata. NOT STARTED.
+- [ ] D5-E: error/loading/recovery copy polish. NOT STARTED.
+- [ ] D5-F: consolidated accessibility/performance/scenario acceptance. NOT STARTED.
+- [ ] D5-G: targeted owner-authorized physical UX acceptance. PENDING.
 
-Gate: no unresolved security blockers; reproducible release candidates locally;
-physical-device results and unverified items clearly listed.
+Gate: preserve inference/auth/account/billing/composer safety; verify automated
+and emulator results separately from physical evidence. D5 is not release freeze.
+No persistent conversation storage or new background infrastructure in D5.
 
-## Day 6 — feature freeze
+## Day 6 — persistent conversations — NOT STARTED
 
-- [ ] Bug fixes only; rerun relevant tests/lint/build after changes.
-- [ ] Physical-device acceptance on both auth paths and release-build smoke test.
-- [ ] Prepare local release notes, release artifacts, and Play submission checklist.
+- [ ] D6-0 read-only architecture audit: transcript versus Responses replay,
+  bounded off-main persistence, transaction boundaries, queries/indexes and storage
+  choice. Reconcile PROJECT_SPEC.md's existing memory-only release scope then.
+- [ ] Separately authorize/implement conversation list, New Chat, reopen/continue,
+  rename/delete and process/reboot persistence after D6-0 acceptance.
+- [ ] No database writes per streaming token; lazy/bounded retrieval; no cloud sync.
 
-Gate: required features and security pass; optional voice may be absent. Publishing,
-uploading, signing with production credentials, and external releases require
-explicit authorization. Preparation is not publication or store acceptance.
+This schedule is not permission to implement D6 now. No database technology or
+schema has been selected, and persistence is not implemented.
+
+## Later phase — RC / release hardening and freeze — NOT STARTED
+
+- [ ] Focused protocol/security regressions, both-app lint/build and release smoke.
+- [ ] Manifests, exported components, diagnostics, backups, crypto, signing,
+  dependency provenance/licenses, R8/shrinking/profile review.
+- [ ] README, Apache-2.0 LICENSE, privacy policy, store assets/setup instructions,
+  known limits and accurate Play Data safety declarations.
+- [ ] Current Play/Wear requirements and delivery signing relationship.
+- [ ] Physical release acceptance, remaining known-debt disposition and release notes.
+
+Publishing/uploading/production signing/external releases require explicit
+permission. Automated or debug-emulator acceptance does not close hardware gates.
 
 ## Schedule and evidence policy
 

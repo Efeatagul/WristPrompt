@@ -98,8 +98,14 @@ class WatchProfiles(private val record: SecretRecord, private val dispatcher: Co
         val signedOut = value.selectedClientId in value.signOutResults
         val signingOut = value.selectedClientId in value.signOutPending || value.selectedClientId in blockedSignOuts
         mutableState.value = WatchAccountState(
-            value.profiles.map { AccountLabel(it.identity.clientId,
-                (it.name ?: it.email ?: "ChatGPT account") + " · " + it.identity.clientId.takeLast(6)) },
+            value.profiles.map {
+                val client = it.identity.clientId
+                // Retained registration metadata is not a currently authenticated account.
+                val signedOutRegistration = client in value.signOutResults ||
+                    client in value.signOutPending || client in blockedSignOuts
+                AccountLabel(client, if (signedOutRegistration) "Signed-out ChatGPT account" else
+                    (it.name ?: it.email ?: "ChatGPT account") + " · " + client.takeLast(6))
+            },
             value.selectedClientId, selected != null && !signedOut && !signingOut, selected?.planUsageEnabled == true && !signingOut, authorizing,
             pendingExpiresAt = value.pending?.expiresAt, expired = value.pending?.let { it.expiresAt < now() } == true,
             planWelcome = !signingOut && !signedOut && selected?.let { it.planUsageEnabled && it.identity.clientId !in value.confirmedPlanClients } == true,
