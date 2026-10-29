@@ -36,7 +36,10 @@ D4-E is PASS WITH KNOWN DEBT — VERIFIED AUTOMATICALLY: 340 Wear / 70 mobile /
 required. D4-F harness consolidation is PASS WITH KNOWN DEBT: 340 Wear / 70 mobile /
 40 Python tests, 11 smoke / 43 full emulator fixtures, separate process and synthetic
 connectivity runners, strengthened release isolation. Physical persistence/reboot
-acceptance and D4-G remain pending.
+acceptance remains pending. D4-G automated/emulator consolidation passes: 340 Wear /
+70 mobile / 40 Python tests, both apps debug/release builds and lint, 11/11 smoke,
+43/43 catalog, 4/4 am-kill, 4/4 force-stop, 6/6 connectivity and 6/6 phone absence.
+See DAY4_REPORT.md for final evidence and the P1–P10 physical matrix.
 Reauthorization debt still requires Day 5 disposition before freeze.
 
 Day numbers are execution stages, not a claim that work has started. A failed
@@ -207,7 +210,7 @@ dependent production auth is NOT VERIFIABLE ON CURRENT EMULATOR LAB. D3-G's pair
 Data Layer smoke was BLOCKED — ENVIRONMENT (required pair unavailable); earlier
 capability isolation evidence remains unchanged. No production fallback.
 
-## Day 4 — optional voice and device edge cases
+## Day 4 — lifecycle, resilience and device acceptance
 
 - [x] D4-0 ownership audit (supplied complete) and D4-A retained Activity/background/
   final ViewModel-clear hardening: 288 Wear / 8 Python tests, Wear debug/release
@@ -237,7 +240,9 @@ capability isolation evidence remains unchanged. No production fallback.
 - [x] D4-F harness consolidation: VERIFIED AUTOMATICALLY / VERIFIED ON EMULATOR;
   43-name catalog, bounded 11-case smoke, shared safe ADB helpers and separate
   specialized runners. See WEAR_SCENARIOS.md and DAY4_STATUS.md; physical gate open.
-- [ ] D4-G final Day 4 acceptance; not begun.
+- [x] D4-G consolidated automated/emulator validation and DAY4_REPORT.md.
+- [ ] D4-G physical acceptance: P1–P9 pending; P10 optional. Day 4 is not yet
+  fully physically accepted; see DAY4_REPORT.md section 11.
 
 - [ ] Add platform voice input only if earlier gates are green; otherwise cut it.
 - [ ] Check permission denial, recognizer absence, phone absence, process death,

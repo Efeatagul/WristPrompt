@@ -1,11 +1,14 @@
 # Day 4 status — 2026-10-29
 
-**Current D4-F result: PASS WITH KNOWN DEBT — VERIFIED AUTOMATICALLY / VERIFIED ON EMULATOR.**
-340 Wear / 70 mobile / 40 Python tests pass; Wear debug/release builds, lint and
-strengthened release isolation pass. Bounded smoke 11/11 and full non-destructive
-catalog 43/43 pass; specialized evidence is recorded in D4-F below. No production
-code change. No physical Day 4 acceptance; D4-G remains unstarted. Earlier sections
-preserve historical phase counts and handoff statements.
+**Current D4-G result: PASS WITH KNOWN DEBT — PHYSICAL PENDING.**
+Final current-tree validation: 340 Wear / 70 mobile / 40 Python tests pass;
+116 focused Day 4 tests pass (subset of 340). Both apps' debug/release builds and
+lint pass (Wear 0 errors/6 warnings; mobile 0 errors/3 warnings). Release/source
+isolation and all 13 Python syntax checks pass. Final sequential emulator evidence:
+11/11 smoke, 43/43 catalog, 4/4 am-kill, 4/4 force-stop, 6/6 synthetic connectivity,
+6/6 synthetic phone absence. No physical Day 4 acceptance has been supplied.
+See [DAY4_REPORT.md](DAY4_REPORT.md) for the consolidated report and single final
+P1–P10 physical matrix. Earlier phase sections below preserve historical evidence.
 
 # D4-A handoff — historical phase record
 
@@ -1665,4 +1668,52 @@ runtime sources changed.
 
 Suggested commit: `test: consolidate Day 4 Wear scenario acceptance tooling`
 
+No commit or push performed.
+
+# D4-G final acceptance — 2026-10-29
+
+**PASS WITH KNOWN DEBT — PHYSICAL PENDING.** VERIFIED AUTOMATICALLY /
+VERIFIED ON EMULATOR; PENDING PHYSICAL ACCEPTANCE. Documentation-only consolidation;
+no production, debug, tooling, security protocol, credential storage, signing or
+Data Layer changes. No physical actions, commit or push. Day 5 not started.
+
+## Current automated evidence
+
+Full suites explicitly rerun: Wear 340/44 suites; mobile 70/11 suites;
+zero failures/errors/skips. Focused D4-A–E rerun: 116/13 suites, zero failures/
+errors/skips (included in full count). Python tool tests 40/40; AST syntax 13/13.
+Both apps assembleDebug/assembleRelease PASS; lint Wear 0 errors/6 existing
+warnings, mobile 0 errors/3 existing warnings. Source/manifest/DEX isolation PASS.
+Both debug APK signatures match the preserved certificate ending 79d37061.
+Git diff and changed/new-text whitespace/conflict/final-newline checks PASS.
+Exact commands and focused-suite breakdown are in DAY4_REPORT.md section 9.
+Initial restricted cache/ADB attempts failed; authorized host runs passed, with no
+cache migration or signing identity changes.
+
+## Current emulator evidence
+
+All acceptance runners executed sequentially against dynamically selected
+WristPrompt_Watch7 (emulator-5554); physical serials excluded by shared discovery.
+Smoke 11/11; full catalog 43/43; am-kill 4/4; force-stop 4/4; synthetic connectivity
+6/6; synthetic phone absence 6/6; final isolation checker PASS. Fresh live-PID/ACK
+readiness is not visual acceptance; synthetic connectivity is not real radio loss;
+phone fixtures are not production paired OAuth/handoff. The D4-A interaction matrix
+remains prior phase evidence, not claimed as rerun by the generic catalog.
+
+## Physical gate / debt / handoff
+
+The authoritative concise final matrix is DAY4_REPORT.md section 11, P1–P10.
+All rows remain NOT EXERCISED. P1–P9 must complete without a new critical/high defect;
+P10 optional. Update both physical debug APKs with same-signature install -r only;
+no uninstall/data clear or destructive credential/key actions. User performs actions.
+Natural refresh: NOT PHYSICALLY OBSERVED — AUTOMATED WATCH-ONLY REFRESH COVERAGE PASSES.
+Historical Terra -> Sol and transient reauthorization anomalies remain unresolved;
+funded BYOK remains externally blocked; emulator/GMS capability limitation remains;
+physical Keystore/AtomicFile interruption is not destructively tested. Hardware
+lifecycle/network/watch-only acceptance remains pending. Historical Day 3 untouched.
+Release-build/reboot/context-boundary/revocation checks remain deferred RC items.
+Day 5 release hardening is a recommendation only; no optional voice work started.
+
+Changed files: DAY4_REPORT.md, DAY4_STATUS.md, ROADMAP.md.
+Suggested commit: `docs: consolidate Day 4 acceptance and physical test matrix`.
 No commit or push performed.
