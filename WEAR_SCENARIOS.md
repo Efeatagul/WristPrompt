@@ -1,4 +1,4 @@
-# Offline Wear scenarios — Day 3 Phase F / Day 4 Phases A–C
+# Offline Wear scenarios — Day 3 Phase F / Day 4 Phases A–D
 
 The explicitly launched `DebugScenarioActivity` replaces `StreamingPreviewActivity`.
 All 37 fixtures live under `wear/src/debug`; the Activity is declared only in the
@@ -278,3 +278,41 @@ network dependency, so toggling the AVD would not exercise production transport.
 There is no claim of real radio/interface transition acceptance. The existing
 production transport remains reachability-driven, without ConnectivityManager,
 automatic inference/model-discovery replay or credential fallback.
+
+
+## Day 4 Phase D — phone independence
+
+Six consolidated fixtures added, **43 total**. Existing production UI/ViewModel,
+session and chat conversation; empty transient bearer, synthetic provider only.
+No installed credentials/preferences, real network or Data Layer clients.
+
+| Scenario | Presentation/state |
+| --- | --- |
+| WATCH_ONLY_AUTHENTICATED | Usable local plan state, companion unavailable, normal model/Compose access |
+| PHONE_ABSENT | Same valid authenticated state with no inappropriate phone blocker |
+| WATCH_ONLY_CHAT | Two completed synthetic turns; follow-up includes completed context |
+| WATCH_ONLY_REFRESHED | One synthetic lease-renewal marker before catalog; normal authenticated state |
+| REAUTH_REQUIRED_PHONE_ABSENT | REAUTHORIZE, no model/inference; existing Authentication required / Connection recovery UI |
+| API_KEY_WATCH_ONLY | Configured API route, visible separate billing, completed synthetic chat |
+
+The unavailable companion spy fails immediately and counts lookup/request attempts.
+Normal rows require both counts zero. A negative JVM scenario test proves the spy
+actually counts/fails. The presentation harness keeps setup/account/key actions
+inert; it cannot perform OAuth/handoff or alter installed credentials.
+WATCH_ONLY_REFRESHED is presentation-only; actual OpenAiRefresh/HTTP/durable
+intent/rotation is proven in PhoneIndependenceTest, not simulated Android storage.
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 python3 tools/wear_phone_absence.py --install --screenshots /tmp/wristprompt-d4d
+```
+
+Runner requires exactly one watch emulator named WristPrompt_Watch7, validates
+watch characteristics and debug access, then starts a fresh emulator app process
+per fixture without clearing data and checks fresh launch-ID state,
+provider/work/bridge counts, rendered billing/authentication text and stable
+screenshots. Physical devices are ignored. Safe acknowledgement includes only
+bridgeLookups/bridgeRequests/refreshes plus existing bounded state/count fields;
+no credential, account identity, prompt or response. Optional screenshot polling
+waits for settled compositor frames, not a transport race. All six pass emulator
+acceptance; no production capability discovery, real refresh or hardware
+phone-disconnection result is inferred. See DAY4_STATUS.md D4-D for exact evidence.

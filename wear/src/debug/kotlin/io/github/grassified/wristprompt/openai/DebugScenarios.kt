@@ -1,6 +1,7 @@
 package io.github.grassified.wristprompt.openai
 
 import io.github.grassified.wristprompt.auth.*
+import io.github.grassified.wristprompt.bridge.*
 import io.github.grassified.wristprompt.ui.Surface
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -17,15 +18,18 @@ internal enum class DebugScenario {
     PROCESS_RESTART_IDLE, PROCESS_RESTART_AFTER_COMPLETED,
     PROCESS_RESTART_DURING_ACTIVE, PROCESS_RESTART_AFTER_PARTIAL,
     NETWORK_LOST_BEFORE_SEND, NETWORK_LOST_DURING_STREAM, NETWORK_RECOVERED,
-    MODEL_DISCOVERY_OFFLINE, MODEL_DISCOVERY_RECOVERED, STOP_NETWORK_RACE;
+    MODEL_DISCOVERY_OFFLINE, MODEL_DISCOVERY_RECOVERED, STOP_NETWORK_RACE,
+    PHONE_ABSENT, WATCH_ONLY_AUTHENTICATED, WATCH_ONLY_CHAT, WATCH_ONLY_REFRESHED,
+    REAUTH_REQUIRED_PHONE_ABSENT, API_KEY_WATCH_ONLY;
     companion object { fun parse(name: String?): DebugScenario? = entries.singleOrNull { it.name == name } }
 }
 
 /** No Context, repository, preference store, HTTP client or serializable credential record. */
 internal class DebugScenarios(val scenario: DebugScenario) {
-    val mode = if (scenario in setOf(DebugScenario.API_KEY_CONFIGURED, DebugScenario.ERROR_401_API_KEY))
+    val mode = if (scenario in setOf(DebugScenario.API_KEY_CONFIGURED, DebugScenario.ERROR_401_API_KEY, DebugScenario.API_KEY_WATCH_ONLY))
         CredentialMode.OPENAI_API_KEY else CredentialMode.CHATGPT_PLAN
-    val accounts = WatchAccountState(connected = scenario != DebugScenario.SIGNED_OUT, planEnabled = true,
+    private val reauth = scenario == DebugScenario.REAUTH_REQUIRED_PHONE_ABSENT
+    val accounts = WatchAccountState(reauthorizationRequired = reauth, connected = scenario != DebugScenario.SIGNED_OUT, planEnabled = true,
         accounts = if (scenario == DebugScenario.SIGNED_OUT) emptyList() else listOf(AccountLabel("debug", "Synthetic account")),
         activeClientId = "debug".takeUnless { scenario == DebugScenario.SIGNED_OUT })
     val key = ApiKeyState(loaded = true, mode = mode, configured = mode == CredentialMode.OPENAI_API_KEY)
@@ -33,13 +37,27 @@ internal class DebugScenarios(val scenario: DebugScenario) {
         DebugScenario.MANY_MODELS, DebugScenario.MODELS_LOADED, DebugScenario.MODEL_UNAVAILABLE,
         DebugScenario.MODEL_DISCOVERY_OFFLINE, DebugScenario.MODEL_DISCOVERY_RECOVERED -> Surface.MODELS
         DebugScenario.LONG_USER_PROMPT, DebugScenario.COMPOSER_RECREATION -> Surface.COMPOSER
-        DebugScenario.SIGNED_OUT -> Surface.CONNECTION
+        DebugScenario.SIGNED_OUT, DebugScenario.REAUTH_REQUIRED_PHONE_ABSENT -> Surface.CONNECTION
         else -> Surface.CHAT
     }
-    private val access = MutableStateFlow(InferenceAccessState(client = "debug", usable = scenario != DebugScenario.SIGNED_OUT, mode = mode))
+    private val access = MutableStateFlow(InferenceAccessState(client = "debug", usable = scenario != DebugScenario.SIGNED_OUT && !reauth, mode = mode,
+        problem = if (reauth) ApiProblem.REAUTHORIZE else null))
     // Transient lease required by InferenceSession; empty bearer cannot be an API key/token.
     // It is passed only to this synthetic provider, never to a persistence or HTTP boundary.
     private val lease = CredentialLease("debug", 0, "", Long.MAX_VALUE, mode)
+    val phoneScenario get() = scenario in setOf(DebugScenario.PHONE_ABSENT, DebugScenario.WATCH_ONLY_AUTHENTICATED,
+        DebugScenario.WATCH_ONLY_CHAT, DebugScenario.WATCH_ONLY_REFRESHED,
+        DebugScenario.REAUTH_REQUIRED_PHONE_ABSENT, DebugScenario.API_KEY_WATCH_ONLY)
+    var bridgeLookups = 0; private set
+    var bridgeRequests = 0; private set
+    var refreshes = 0; private set
+    val authState get() = if (phoneScenario) WatchAuthState.COMPANION_UNAVAILABLE else WatchAuthState.IDLE
+    // No Android/Data Layer client: a normal path touching this companion fails immediately.
+    private val absentPhone = object : AuthBridgeTransport {
+        override suspend fun reachablePeers(): List<WearPeer> { bridgeLookups++; error("Companion touched") }
+        override suspend fun requestStart(nodeId: String, payload: ByteArray): ByteArray { bridgeRequests++; error("Companion touched") }
+    }
+    val authBridge = WatchAuthBridge({ "urn:uuid:00000000-0000-4000-8000-000000000001" }, absentPhone)
     var generations = 0; private set
     var discoveries = 0; private set
     var completions = 0; private set
@@ -122,7 +140,12 @@ internal class DebugScenarios(val scenario: DebugScenario) {
             completions++; onEvent(ResponseEvent.Completed(text))
         }
     }
-    val vm = InferenceViewModel(access, InferenceSession({ lease }, provider) { it === lease })
+    val vm = InferenceViewModel(access, InferenceSession({
+        if (reauth) throw ApiFailure(ApiProblem.REAUTHORIZE)
+        // Presentation-only renewal boundary. Real rotation/storage/HTTP is covered in PhoneIndependenceTest.
+        if (scenario == DebugScenario.WATCH_ONLY_REFRESHED && refreshes == 0) refreshes++
+        lease
+    }, provider) { it === lease })
     fun failure(): ApiFailure? = when (scenario) {
         // A bare plan admission 401 means permission, not terminal refresh failure (D3-E).
         DebugScenario.ERROR_401_REAUTH -> ApiErrors.parse(401, "{}")
@@ -134,6 +157,7 @@ internal class DebugScenarios(val scenario: DebugScenario) {
     }
     suspend fun prepare() {
         if (scenario == DebugScenario.SIGNED_OUT) return
+        if (reauth) { vm.state.first { it.problem == ApiProblem.REAUTHORIZE }; return }
         if (scenario == DebugScenario.MODELS_LOADING) { vm.state.first { it.stage == ProofStage.LOADING }; return }
         if (scenario == DebugScenario.MODEL_UNAVAILABLE) { vm.state.first { it.problem == ApiProblem.NO_MODELS }; vm.draft("Blocked until models reload"); return }
         if (scenario in setOf(DebugScenario.MODEL_DISCOVERY_OFFLINE, DebugScenario.MODEL_DISCOVERY_RECOVERED)) {
@@ -148,7 +172,8 @@ internal class DebugScenarios(val scenario: DebugScenario) {
         when (scenario) {
             DebugScenario.LONG_USER_PROMPT -> vm.draft("Long synthetic question with readable words. ".repeat(190).take(ChatConversation.MAX_PROMPT_CHARS))
             DebugScenario.ONE_TURN_COMPLETED, DebugScenario.RECREATED_COMPLETED_STATE,
-            DebugScenario.MULTI_TURN_CHAT, DebugScenario.LONG_ASSISTANT_OUTPUT -> repeat(if (scenario == DebugScenario.MULTI_TURN_CHAT) 4 else 1) {
+            DebugScenario.MULTI_TURN_CHAT, DebugScenario.LONG_ASSISTANT_OUTPUT,
+            DebugScenario.WATCH_ONLY_CHAT, DebugScenario.API_KEY_WATCH_ONLY -> repeat(if (scenario == DebugScenario.MULTI_TURN_CHAT) 4 else if (scenario == DebugScenario.WATCH_ONLY_CHAT) 2 else 1) {
                 vm.draft("Synthetic question ${it + 1}"); vm.send(); vm.chat.first { chat -> chat.stage == ChatStage.COMPLETED }
             }
             DebugScenario.STOPPED_PARTIAL, DebugScenario.RECREATED_CANCELLED_STATE -> {

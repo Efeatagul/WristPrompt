@@ -1,9 +1,10 @@
 # Day 4 status — 2026-10-29
 
-**Current D4-C result: PASS WITH KNOWN DEBT.** See the D4-C section below for
-317 Wear / 22 Python tests and all six synthetic connectivity scenarios verified
-on WristPrompt_Watch7. Real radio transitions remain pending hardware acceptance.
-D4-D is unstarted. Earlier sections preserve their historical handoff counts.
+**Current D4-D result: PASS WITH KNOWN DEBT.** See the D4-D section below:
+326 Wear / 26 Python tests, both Wear builds/lint/release isolation, and six
+synthetic phone-absence scenarios verified on WristPrompt_Watch7. No production
+change required. Physical updated-build phone-off/refresh acceptance remains
+pending. D4-E is not begun. Earlier sections preserve historical handoff counts.
 
 # D4-A handoff — historical phase record
 
@@ -875,3 +876,289 @@ ConnectivityCredentialTest.kt; StreamingHttpCancellationTest.kt;
 ProcessReconstructionTest.kt; DebugScenarios.kt; DebugScenarioActivity.kt;
 DebugScenariosTest.kt; wear_connectivity.py; test_wear_connectivity.py;
 test_wear_scenarios.py; DAY4_STATUS.md; WEAR_SCENARIOS.md; ROADMAP.md.
+
+# D4-D — phone absence / watch-independent normal operation
+
+## A. Executive result
+
+**PASS WITH KNOWN DEBT — VERIFIED AUTOMATICALLY; six synthetic presentation
+scenarios PASS — VERIFIED ON EMULATOR.** Starting tree clean; D4-A/B/C complete,
+317 Wear baseline tests. Final **326 Wear tests**, **26 Python tests**, both Wear
+builds, lint and release isolation pass. **NO PRODUCTION CHANGE REQUIRED.**
+The phone is not an inference proxy. No physical testing, real credentials,
+production OpenAI requests, data clearing, commit or push. D4-E is not begun.
+
+## B. Definitive phone-dependency matrix
+
+Classifications describe the operation itself, after successful setup where
+applicable. OpenAI operations still require watch internet and eligible credentials.
+An unusable plan grant adds a separate, conditional authentication-recovery step;
+it does not make the phone an inference transport.
+
+| Operation | Phone dependency | Concrete production owner/path |
+| --- | --- | --- |
+| Initial Continue with ChatGPT | REQUIRED | WatchAuthViewModel.start -> WatchAuthBridge.request -> reachablePeers/requestStart |
+| Browser OAuth | REQUIRED | PhoneAuthViewModel.start -> LoopbackListener/OAuthTransaction -> phone browser -> OpenAiAuthorization.exchange |
+| Initial credential handoff | REQUIRED | PhoneAuthViewModel.transfer -> selected-node CONTEXT/TRANSFER RPC -> ProfileListenerService -> WatchProfiles.accept -> ACK |
+| Local credential storage | NOT REQUIRED | WatchProfiles / ApiKeyRepository -> EncryptedRecord; Keystore/GCM/AtomicFile on watch |
+| Access-token refresh | NOT REQUIRED | CredentialRouter.current -> WatchProfiles.credential -> OpenAiRefresh.refresh -> OpenAiHttp -> trusted token endpoint |
+| Model discovery | NOT REQUIRED | InferenceViewModel.loadModels -> InferenceSession.catalog -> router -> OpenAiProvider.models -> OpenAiHttp |
+| Normal ChatGPT-plan inference | NOT REQUIRED | InferenceSession.chat -> selected plan lease -> OpenAiProvider.stream -> HTTPS Responses |
+| API-key inference | NOT REQUIRED | Same session/provider; explicit API-key lease from ApiKeyRepository |
+| Arbitrary multi-turn chat | NOT REQUIRED | ChatConversation completed-only in-memory input -> direct provider |
+| Stop | NOT REQUIRED | InferenceViewModel.stop -> local operation Job cancellation -> session/provider HTTP cancellation |
+| New Chat | NOT REQUIRED | InferenceViewModel.newChat -> cancelOperation/ChatConversation.reset |
+| Model reload | NOT REQUIRED | Explicit loadModels -> fresh direct provider catalog; saved preference reconciliation |
+| App restart | NOT REQUIRED | MainActivity reconstructs UI owners over application repositories/router/session |
+| Process restart | NOT REQUIRED | WristPromptApplication fresh protected repositories -> CredentialRouter -> fresh session/ViewModel/catalog; no chat replay |
+| Sign-out | NOT REQUIRED | WatchAuthViewModel.signOut -> WatchProfiles.signOut(session.cancel, revocation.revoke); local durable gate/cleanup |
+| Remote token revocation | NOT REQUIRED | OpenAiRevocation -> direct trusted discovery -> HTTPS revocation endpoint; network uncertainty reported honestly |
+| Reauthentication | REQUIRED | Explicit WatchAuthViewModel.start -> existing companion capability/selected-node setup; browser OAuth and protected handoff |
+| Watch reboot | NOT REQUIRED | Same fresh-process durable reconstruction path; hardware Keystore/reboot acceptance remains pending |
+| Initial API-key setup | REQUIRED | ApiKeySettingsViewModel.request -> ApiKeySetupBridge -> phone entry -> protected selected-node transfer |
+| Continued plan use after terminal/uncertain refresh | CONDITIONALLY REQUIRED | Safe operation stops with REAUTHORIZE; phone is required again only to complete explicit authentication recovery |
+
+Reboot classification is production dependency tracing plus reconstruction tests,
+not new physical reboot evidence. Existing historical Day 2 owner-reported
+phone-off model/inference evidence remains separate from this phase's verification.
+
+## C. Production data flow
+
+```text
+MainActivity / InferenceViewModel / ChatConversation
+  -> InferenceSession
+  -> CredentialRouter
+     -> WatchProfiles (ChatGPT plan; direct OpenAiRefresh if needed)
+     OR ApiKeyRepository (explicit API billing)
+  -> OpenAiProvider
+  -> OpenAiHttp / OkHttp
+  -> https://api.openai.com/v1/models or /responses
+```
+
+WristPromptApplication supplies this graph without passing connectivity or either
+setup bridge to router/session/provider. MainActivity also constructs auth/key
+settings ViewModels; their initializers load local repositories, not peers.
+Only explicit setup actions invoke the bridge. Watch-only startup does not need
+capability discovery even though Data Layer client wrappers may be constructed
+for the separate setup UI. No production NodeClient exists.
+
+## D. Production Data Layer call-site audit
+
+Searched all main Kotlin source roots for Wearable, CapabilityClient, NodeClient,
+MessageClient, listeners, connectivity callbacks and auth/setup bridge use.
+
+| Call site | Classification / purpose |
+| --- | --- |
+| shared/bridge/WearConnectivity.kt: getCapabilityClient/getMessageClient | Construct setup transport clients; not an OpenAI dependency |
+| WearConnectivity.reachablePeers: getCapability(FILTER_REACHABLE).await | Setup/reauth eligibility discovery; no cached/fallback nodes |
+| WearConnectivity.requestStart -> request -> MessageClient.sendRequest | Bounded selected-node setup RPC; same adapter also carries handoff messages |
+| wear/WristPromptApplication.authBridge | Wire host/reachable transport/profiles.prepare for explicit plan setup/reauth |
+| wear/WristPromptApplication.apiKeyBridge | Wire peers/request/keys.prepare for initial or changed API-key setup |
+| wear/bridge/WatchAuthViewModel.start -> WatchAuthBridge.request | Explicit Continue with ChatGPT only; request selects one eligible companion before prepare/send |
+| wear/auth/ApiKeySettingsViewModel.request -> ApiKeySetupBridge.request | Explicit API-key setup only; no runtime inference routing |
+| wear/auth/ProfileListenerService.onRequest | CONTEXT/TRANSFER/FAILURE and API transfer receiver; validates pending bindings, persists before ACK; no inference proxy |
+| mobile/WristPromptApplication: AuthStartReceiver and ApiKeyInbox eligibility callbacks | Reciprocal watch capability validation of incoming setup requests |
+| mobile/bridge/AuthBridgeListenerService.onRequest | Plan/API setup-start receipt routing |
+| mobile/MainActivity: app.connectivity::request for PhoneAuthViewModel / PhoneApiKeyViewModel | Setup/handoff dependency injection only |
+| mobile/auth/PhoneAuthViewModel.send and its context/transfer/failure callers | Selected watch context, protected plan transfer/ACK and setup failure notification |
+| mobile/auth/PhoneApiKeyViewModel.transfer/retry | Selected watch protected API-key transfer/ACK; no inference |
+
+No unexpected production call site. No capability lookup/message client in normal
+model/inference/refresh/revocation code. NodeClient and capability timing experiments
+are existing **shared/debug** diagnostics, excluded from this production audit and
+not executed or changed. No emulator capability investigation was reopened.
+
+## E–F. Baseline defects / production changes
+
+No production phone-dependency defect reproduced. Coverage and presentation
+fixtures were missing; production behavior already satisfies the boundary.
+**NO PRODUCTION CHANGE REQUIRED.** No main/shared/mobile source changes or new
+production abstraction. DECISIONS.md unchanged: D03/D04 and existing refresh,
+routing and revocation decisions already own this architecture.
+
+The new emulator runner initially expected FAILED for an already-known unusable
+auth state. Actual production VM resets to IDLE with REAUTHORIZE and no catalog;
+the assertion was corrected. Early screenshots captured Activity transitions;
+rendered-text checks and stable compositor-frame polling now precede captures.
+The authenticated/refreshed final images are byte-identical as expected; original-
+resolution review confirms the same normal authenticated UI.
+These were acceptance-tool issues, not demonstrated product regressions.
+
+## G. Watch-only refresh
+
+PhoneIndependenceTest uses fresh real repositories/router/session/ViewModel over
+the existing encrypted GCM disk fixture. The actual OpenAiRefresh/OpenAiHttp path
+uses a controlled OkHttp interceptor; no OpenAI network access. Expiring a purely
+synthetic clock/credential drives direct refresh during Send. At the endpoint,
+the test observes durable refreshPending before returning a valid replacement.
+After commit it checks both rotated token fields, cleared intent, a fresh direct
+catalog using the renewed bearer and completed inference. Another fresh graph
+reads the replacement without refreshing or involving a companion.
+
+Bridge capability lookups **0**, requests **0**. Terminal invalid_grant and
+malformed-success uncertainty separately require reauthentication, cannot reuse
+the old grant, cannot discover/infer and never choose an available API key.
+Explicit Continue then finds no companion: one lookup, zero sends, no protected
+record mutation. No automatic OAuth launch or inference proxy attempt.
+
+Production refresh is unchanged: per-registration serialization, durable intent,
+bounded NonCancellable rotation/atomic latest-vault commit, no possibly consumed
+old-token reuse. All **35** existing refresh tests pass. Android Keystore and
+power-loss atomicity are not established by the JVM disk fixture.
+
+## H. Sign-out / revocation
+
+Real WatchAuthViewModel.signOut -> WatchProfiles.signOut -> OpenAiRevocation with
+controlled direct HTTP proves both confirmed and unconfirmed remote outcomes.
+One direct discovery and one direct POST in each integrated case; bridge lookups
+**0**, requests **0**. Local cleanup works in both cases; fresh graphs remain
+signed out, cannot obtain a lease or load models, and retain honest revocation
+outcomes. Existing 13 sign-out and 5 revocation tests cover interrupted operations,
+network failures, bounded existing revocation retry and trust rejection. No new
+retry was introduced. Phone absence is not a revocation failure condition.
+
+## I. Debug scenarios and diagnostics
+
+Six consolidated additions, **43 total scenarios**:
+PHONE_ABSENT, WATCH_ONLY_AUTHENTICATED, WATCH_ONLY_CHAT, WATCH_ONLY_REFRESHED,
+REAUTH_REQUIRED_PHONE_ABSENT, API_KEY_WATCH_ONLY.
+
+All use production InferenceViewModel/InferenceSession/ChatConversation with
+synthetic providers and an empty, transient bearer. No credential record, installed
+vault, real HTTP or preferences are accessed. The unavailable companion transport
+counts lookups/requests and throws if touched. A negative debug unit test invokes
+it deliberately and proves the counter/failure. Normal setup actions remain inert
+in this presentation harness; real setup/reauth is covered by production bridge
+and integrated repository tests.
+
+WATCH_ONLY_REFRESHED is explicitly a **presentation-only synthetic lease renewal
+boundary**, not production rotation on Android: one renewal marker, then direct
+synthetic catalog and usable authenticated UI. Real refresh intent/HTTP/commit
+proof is the integrated JVM test in section G. No fake credentials are persisted.
+The safe acknowledgement adds bridgeLookups, bridgeRequests and refreshes alongside
+existing provider/work counts; no credential, account ID, prompt or response added.
+
+## J. Automated results — VERIFIED AUTOMATICALLY
+
+| Check | Exact result |
+| --- | --- |
+| Focused D4-D + bridge/router/refresh/revocation/model/chat/inference/D4-A/B/C | **180 tests**, 0 failures/errors/skips |
+| Full Wear unit suite | **326 tests**, 0 failures/errors/skips; 317 baseline + 6 independence + 3 scenario methods |
+| PhoneIndependenceTest | **6 tests**, with plan/API and terminal/uncertain/confirmed-unconfirmed subcase matrices |
+| DebugScenariosTest | **16 tests**, including every fixture preparing and 3 new independence/spy methods |
+| WatchAuthBridge / CredentialRouter | **6 / 4 tests**; included above |
+| WatchRefresh / RefreshUpgrade / RefreshProtocol / RefreshTransport | **21 / 6 / 6 / 2 = 35**; included above |
+| WatchSignOut / OpenAiRevocation | **13 / 5**; included above |
+| ModelRestorationIntegration / ModelCatalog | **15 / 7**; included above |
+| LifecycleOwnership / ProcessReconstruction / ConnectivityCredential + Transitions | **8 / 11 / 9**; included above |
+| Python launcher/process/connectivity/phone-absence suites | **26 tests**, 0 failures/errors/skips; 4 new fail-closed acceptance methods |
+| Wear assembleDebug / assembleRelease | PASS / PASS; unsigned release, no publication |
+| Wear lintDebug | PASS; 0 errors, same 6 warnings as baseline |
+| Scenario manifest/DEX/source/dependency release-isolation checker | PASS |
+| Python syntax | All **10** tools/*.py parse successfully |
+| git diff --check / changed-new text whitespace | PASS; **10** changed/new text files |
+| Mobile unit/build/lint | Not rerun; no shared/mobile code changed; no historical mobile result claimed as current |
+
+Commands executed (DEVELOPMENT.md's preserved JDK/signing environment):
+
+```sh
+export JAVA_HOME="$HOME/.local/share/wristprompt/jdk-17.0.21+9"
+export ANDROID_USER_HOME="$HOME/.local/share/wristprompt/android"
+./gradlew :wear:testDebugUnitTest --tests '*PhoneIndependenceTest' --console=plain
+./gradlew :wear:testDebugUnitTest --tests '*PhoneIndependenceTest' \
+  --tests '*DebugScenariosTest' --tests '*WatchAuthBridgeTest' \
+  --tests '*CredentialRouterTest' --tests '*Refresh*Test' \
+  --tests '*WatchSignOutTest' --tests '*OpenAiRevocationTest' \
+  --tests '*Model*Test' --tests '*Chat*Test' --tests '*Inference*Test' \
+  --tests '*LifecycleOwnershipTest' --tests '*ProcessReconstructionTest' \
+  --tests '*Connectivity*Test' --console=plain
+./gradlew :wear:testDebugUnitTest :wear:assembleDebug :wear:assembleRelease :wear:lintDebug --console=plain
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tools -p 'test_wear*.py'
+python3 tools/check_scenario_isolation.py
+PYTHONDONTWRITEBYTECODE=1 python3 tools/wear_phone_absence.py --install --screenshots /tmp/wristprompt-d4d
+PYTHONDONTWRITEBYTECODE=1 python3 tools/wear_phone_absence.py --screenshots /tmp/wristprompt-d4d
+git diff --check
+```
+
+Python ast.parse and changed/new-text checks also run separately. Initial sandbox
+Gradle-cache and ADB-socket restrictions required authorized execution outside that
+restriction; no cache/signing/toolchain migration. No sleep-based JVM tests:
+controlled deferreds/flows bound each operation. Emulator polling is only readiness,
+rendering and acknowledgement synchronization, not transport race evidence.
+
+## K. Emulator acceptance
+
+Dynamically verified **WristPrompt_Watch7 / emulator-5554**, matching watch
+characteristics; same-signed install -r retained app data. Final fixture runs use
+a fresh emulator app process per row, preserving protected app data. No phone/physical device
+target, pairing action, capability probe, radio toggle or real authentication.
+
+| Scenario | Observed safe assertions | Classification |
+| --- | --- | --- |
+| WATCH_ONLY_AUTHENTICATED | READY, one catalog, selected debug-1, Compose and ChatGPT-plan billing, no companion blocker | PASS — VERIFIED ON EMULATOR |
+| PHONE_ABSENT | Same usable normal UI despite COMPANION_UNAVAILABLE presentation | PASS — VERIFIED ON EMULATOR |
+| WATCH_ONLY_CHAT | Two generations/completions, four messages, follow-up input=3, direct synthetic provider | PASS — VERIFIED ON EMULATOR |
+| WATCH_ONLY_REFRESHED | One synthetic renewal marker, one catalog, READY, remains plan-authenticated | PASS — VERIFIED ON EMULATOR |
+| REAUTH_REQUIRED_PHONE_ABSENT | IDLE/REAUTHORIZE, no model, zero discoveries/generations, Authentication required and existing Connection recovery UI | PASS — VERIFIED ON EMULATOR |
+| API_KEY_WATCH_ONLY | API billing visible, READY, one catalog/generation/completion, two messages | PASS — VERIFIED ON EMULATOR |
+
+Each row: bridgeLookups=**0**, bridgeRequests=**0**. Platform UI hierarchy checks
+confirm expected billing/auth text; stable screenshots visually reviewed. Recovery
+controls/guidance are existing production UI, not an implemented OAuth interaction
+in this inert fixture. Production capability discovery/handoff remains **NOT
+VERIFIABLE ON CURRENT EMULATOR LAB** and is not claimed verified here.
+
+## L. Bridge-access evidence and its scope
+
+The companion spy is wired to the real WatchAuthBridge/WatchAuthViewModel beside
+the reconstructed inference graph. Normal startup/discovery/reload/chat/follow-up/
+Stop/New Chat/refresh/API/sign-out subcases assert **0 lookups / 0 requests**.
+Explicit initial setup or reauth with no eligible companion asserts **1 lookup /
+0 requests** and no unauthorized state mutation. Existing WatchAuthBridgeTest and
+WatchProfiles/ProfileProtocol suites separately prove selected-node setup/handoff,
+wrong-node/replay/unsolicited rejection; a new unsolicited handoff negative case
+cannot establish authentication. This is not global Android GMS instrumentation:
+production call tracing independently closes the boundary around the graph.
+
+## M. Security / architecture invariants
+
+Phone is not an inference proxy. No credential/billing fallback, Data Layer bypass,
+production NodeClient, refresh redesign, sensitive logging or fake credential
+persistence. No credential/storage format, OAuth, handoff, production transport,
+dependency or signing changes. Debug-only scenarios/diagnostics excluded from
+release manifest/DEX; no production references. No foreground service, WorkManager,
+wake lock, automatic retry/replay or persistent chat history. Account/generation/
+mode-revision/context safety and all D4-A/B/C suites remain passing.
+
+## N. Remaining debt / later targeted physical session
+
+**PENDING END-OF-DAY PHYSICAL TEST / RC:** reconnect phone/watch ADB, deploy updated
+APKs to the Galaxy Watch and phone, authenticate while companion available, verify
+normal model/chat operation, then disconnect Bluetooth/power phone off while watch
+stays independently online over Wi-Fi. Reload models, real plan inference,
+multi-turn, Stop and New Chat. Observe a natural safe refresh if it occurs;
+**do not force expiry, manipulate tokens or damage credentials**. No part of this
+session was performed now. Updated-build phone-off/watch-Wi-Fi acceptance and
+natural real-token renewal without phone remain physically unestablished here.
+
+Terra -> Sol anomaly remains unreproduced/unresolved; passing synthetic restoration
+is not a fix. Transient reauthorization anomaly remains for Day 5 disposition.
+Funded BYOK physical inference constraint persists; no funded key/purchase required.
+Emulator CapabilityClient limitation unchanged. D4-A/B/C hardware and release-candidate
+debt remains. Historical phone-off success does not close these updated-build gates.
+
+## O. Deferred to D4-E
+
+Persistence/recovery edge-case work remains pending and **not begun**. This phase
+only reconstructs ordinary durable watch state to establish phone independence;
+it adds no new recovery/persistence behavior or later-phase milestone.
+
+## P. Changed files / suggested commit
+
+PhoneIndependenceTest.kt; DebugScenarios.kt; DebugScenarioActivity.kt;
+DebugScenariosTest.kt; wear_phone_absence.py; test_wear_phone_absence.py;
+test_wear_scenarios.py; DAY4_STATUS.md; WEAR_SCENARIOS.md; ROADMAP.md.
+
+Suggested message: `test: verify watch-only operation without phone companion`
+
+No commit or push performed.

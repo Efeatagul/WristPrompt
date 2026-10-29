@@ -93,6 +93,7 @@ class DebugScenarioActivity : ComponentActivity() {
         val chat = f.vm.chat.value
         openFileOutput("debug-scenario-ready.txt", MODE_PRIVATE).bufferedWriter().use {
             it.write("${launchId} ${f.scenario.name} READY generations=${f.generations} stage=${chat.stage}" +
+                " bridgeLookups=${f.bridgeLookups} bridgeRequests=${f.bridgeRequests} refreshes=${f.refreshes}" +
                 " commandRevision=$commandRevision discoveries=${f.discoveries} completions=${f.completions} chars=${chat.partial.length}" +
                 " draftChars=${chat.draft.length} messages=${chat.messages.size} owner=${o.identity} creations=${o.creations}" +
                 " collecting=$collecting observedChars=$observedLength lifecycle=${lifecycle.currentState}" +
@@ -154,7 +155,7 @@ class DebugScenarioActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxWidth().padding(top = 20.dp, start = 42.dp, end = 42.dp),
                         style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
                     Box(Modifier.weight(1f)) {
-                        WearShellContent(f.accounts, WatchAuthState.IDLE, f.key, KeySetupStatus.IDLE, false, f.vm,
+                        WearShellContent(f.accounts, f.authState, f.key, KeySetupStatus.IDLE, false, f.vm,
                             ConnectionActions({}, {}, {}, {}, {}, {}, {}), f.surface,
                             if (scenario == DebugScenario.LONG_ERROR_MESSAGE)
                                 (getString(problemText(ApiProblem.TEMPORARY)) + " " + chatRecovery(ApiProblem.TEMPORARY) + " ").repeat(15) else null)

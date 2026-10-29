@@ -28,8 +28,10 @@ PASS WITH KNOWN DEBT: 303 Wear / 16 Python tests, both Wear builds/lint, release
 isolation and all four am-kill/task-resume scenarios pass. Hardware process/reboot
 acceptance remains pending. D4-C network transitions are PASS WITH KNOWN DEBT:
 317 Wear / 22 Python tests and six synthetic emulator scenarios pass; real radio
-transitions remain pending hardware evidence. D4-D is unstarted; reauthorization
-debt still requires Day 5 disposition before freeze.
+transitions remain pending hardware evidence. D4-D is PASS WITH KNOWN DEBT:
+326 Wear / 26 Python tests, six synthetic emulator phone-absence scenarios, no
+production change required. Updated-build hardware acceptance remains pending;
+D4-E is not begun. Reauthorization debt still requires Day 5 disposition before freeze.
 
 Day numbers are execution stages, not a claim that work has started. A failed
 release gate blocks progression; retain evidence without credentials. Scope and
@@ -215,6 +217,13 @@ capability isolation evidence remains unchanged. No production fallback.
   deferred to the consolidated Day 4/RC hardware checklist.
 - [x] D4-C network transitions: VERIFIED AUTOMATICALLY and six synthetic scenarios
   VERIFIED ON EMULATOR; real Galaxy Watch radio transitions pending. See DAY4_STATUS.md.
+
+- [x] D4-D phone-independence audit/integrated regression and six synthetic
+  presentation scenarios: VERIFIED AUTOMATICALLY / VERIFIED ON EMULATOR.
+  No production change required; phone is setup/reauth companion, not inference proxy.
+- [ ] D4-D updated-build physical phone-off/watch-Wi-Fi and natural refresh
+  acceptance, deferred to DAY4_STATUS.md's targeted hardware session; no forced expiry.
+- [ ] D4-E persistence/recovery edge-case work; not begun.
 
 - [ ] Add platform voice input only if earlier gates are green; otherwise cut it.
 - [ ] Check permission denial, recognizer absence, phone absence, process death,

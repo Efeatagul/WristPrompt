@@ -14,7 +14,7 @@ class DebugScenariosTest {
     @After fun cleanup() { fixtures.forEach { it.vm.viewModelScope.cancel() }; Dispatchers.resetMain() }
     private fun fixture(s: DebugScenario) = DebugScenarios(s).also { fixtures += it }
     @Test fun namesAreUniqueAndRoundTrip() {
-        assertEquals(37, DebugScenario.entries.size)
+        assertEquals(43, DebugScenario.entries.size)
         DebugScenario.entries.forEach { assertSame(it, DebugScenario.parse(it.name)) }
     }
     @Test fun unknownFailsClosed() { listOf(null, "", "streaming_long", "../SIGNED_OUT").forEach { assertNull(DebugScenario.parse(it)) } }
@@ -126,6 +126,37 @@ class DebugScenariosTest {
             assertEquals(ProofStage.READY, f.vm.state.value.stage); assertEquals("debug-1", f.vm.state.value.selectedSlug)
             assertEquals(2, f.discoveries); assertEquals(0, f.generations)
         }
+    }
+
+    @Test fun phoneAbsentFixturesKeepNormalRoutesAvailableAndBridgeUntouched(): Unit = runTest {
+        for (s in listOf(DebugScenario.PHONE_ABSENT, DebugScenario.WATCH_ONLY_AUTHENTICATED,
+            DebugScenario.WATCH_ONLY_CHAT, DebugScenario.WATCH_ONLY_REFRESHED, DebugScenario.API_KEY_WATCH_ONLY)) {
+            val f = fixture(s); launch { f.prepare() }; runCurrent()
+            assertEquals(ProofStage.READY, f.vm.state.value.stage)
+            val shell = io.github.grassified.wristprompt.ui.shellPresentation(f.accounts, f.key, f.vm.state.value, f.authState, false)
+            assertTrue(shell.proofAvailable); assertFalse(shell.status.contains("Phone"))
+            assertEquals(0, f.bridgeLookups); assertEquals(0, f.bridgeRequests)
+            assertEquals(if (s == DebugScenario.WATCH_ONLY_REFRESHED) 1 else 0, f.refreshes)
+            if (s == DebugScenario.WATCH_ONLY_CHAT) assertEquals(listOf(1, 3), f.inputs.map { it.size })
+            f.vm.newChat(); f.vm.loadModels(); runCurrent(); f.vm.draft("Explicit watch request"); f.vm.send(); runCurrent()
+            assertEquals(ChatStage.COMPLETED, f.vm.chat.value.stage)
+            assertEquals(0, f.bridgeLookups); assertEquals(0, f.bridgeRequests)
+        }
+    }
+    @Test fun reauthAbsentPhoneFixtureCannotInferOrChangeBilling(): Unit = runTest {
+        val f = fixture(DebugScenario.REAUTH_REQUIRED_PHONE_ABSENT); launch { f.prepare() }; runCurrent()
+        assertEquals(ApiProblem.REAUTHORIZE, f.vm.state.value.problem)
+        f.vm.draft("Blocked"); f.vm.send(); f.vm.loadModels(); runCurrent()
+        assertEquals(0, f.generations); assertEquals(0, f.discoveries)
+        assertEquals(CredentialMode.CHATGPT_PLAN, f.mode)
+        val shell = io.github.grassified.wristprompt.ui.shellPresentation(f.accounts, f.key, f.vm.state.value, f.authState, false)
+        assertEquals("Authentication required", shell.status); assertTrue(shell.showContinue); assertFalse(shell.proofAvailable)
+        assertEquals(0, f.bridgeLookups); assertEquals(0, f.bridgeRequests)
+    }
+    @Test fun debugCompanionSpyActuallyFailsAndCountsLookup(): Unit = runTest {
+        val f = fixture(DebugScenario.WATCH_ONLY_AUTHENTICATED)
+        try { f.authBridge.request(); fail("Expected fail-if-touched") } catch (_: IllegalStateException) { }
+        assertEquals(1, f.bridgeLookups); assertEquals(0, f.bridgeRequests)
     }
 
 }
