@@ -18,6 +18,16 @@ object ResponsesProtocol {
 
     fun models(body: String): List<AiModel> = ModelCatalog.read(body.byteInputStream())
 
+    fun request(model: String, input: List<JsonObject>): String {
+        require(model.isNotBlank() && model.length <= 256 && model.none(Char::isISOControl))
+        require(input.isNotEmpty())
+        val body = buildJsonObject {
+            put("model", model); put("input", JsonArray(input)); put("store", false); put("stream", true)
+        }.toString()
+        require(body.encodeToByteArray().size <= MAX_BODY_BYTES)
+        return body
+    }
+
     fun request(model: String, mode: io.github.grassified.wristprompt.auth.CredentialMode = io.github.grassified.wristprompt.auth.CredentialMode.CHATGPT_PLAN): String {
         require(model.isNotBlank() && model.length <= 256 && model.none(Char::isISOControl))
         return json.encodeToString(ResponsesRequest(model, listOf(InputMessage("user", if (mode == io.github.grassified.wristprompt.auth.CredentialMode.OPENAI_API_KEY) "Reply exactly: BYOK path works." else TEST_PROMPT))))
@@ -30,7 +40,9 @@ data class AiModel(val slug: String, val displayName: String)
 
 sealed interface ResponseEvent {
     data class Delta(val text: String) : ResponseEvent
-    data class Completed(val finalText: String?) : ResponseEvent
+    data class Completed(val finalText: String?, val outputItems: List<JsonObject>? = null) : ResponseEvent {
+        override fun toString() = io.github.grassified.wristprompt.bridge.SafeDiagnostics.REDACTED
+    }
     data class Failed(val failure: ApiFailure) : ResponseEvent
     data object Incomplete : ResponseEvent
     data object Ignored : ResponseEvent
@@ -56,10 +68,13 @@ object ResponseEvents {
                     val text = response["output"]?.jsonArray?.flatMap { item ->
                         val obj = item.jsonObject
                         if (obj["type"]?.jsonPrimitive?.content == "message") obj["content"]?.jsonArray.orEmpty() else emptyList()
-                    }?.filter { it.jsonObject["type"]?.jsonPrimitive?.content == "output_text" }
-                        ?.joinToString("") { it.jsonObject.getValue("text").jsonPrimitive.content }
+                    }?.mapNotNull { part -> when (part.jsonObject["type"]?.jsonPrimitive?.content) {
+                        "output_text" -> part.jsonObject.getValue("text").jsonPrimitive.content
+                        "refusal" -> part.jsonObject.getValue("refusal").jsonPrimitive.content
+                        else -> null
+                    } }?.joinToString("")
                     require(text == null || text.length <= ResponsesProtocol.MAX_TEXT_CHARS)
-                    ResponseEvent.Completed(text)
+                    ResponseEvent.Completed(text, response["output"]?.jsonArray?.map { it.jsonObject })
                 }
                 "response.failed" -> ResponseEvent.Failed(ApiErrors.parse(null, root.getValue("response").toString()))
                 "response.incomplete" -> ResponseEvent.Incomplete

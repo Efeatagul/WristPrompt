@@ -1,5 +1,10 @@
 package io.github.grassified.wristprompt.ui
 
+import android.app.Activity
+import android.app.RemoteInput
+import android.content.ActivityNotFoundException
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -23,7 +28,7 @@ import io.github.grassified.wristprompt.bridge.WatchAuthViewModel
 import io.github.grassified.wristprompt.bridge.WatchAuthState
 import io.github.grassified.wristprompt.openai.*
 
-private enum class Surface { PROOF, MODELS, CONNECTION, DETAILS, OUTPUT }
+private enum class Surface { CHAT, COMPOSER, PROOF, MODELS, CONNECTION, DETAILS, OUTPUT }
 
 @Composable
 internal fun WearShell(auth: WatchAuthViewModel, settings: ApiKeySettingsViewModel, proof: InferenceViewModel) {
@@ -33,7 +38,27 @@ internal fun WearShell(auth: WatchAuthViewModel, settings: ApiKeySettingsViewMod
     val setup by settings.setup.collectAsStateWithLifecycle()
     val changing by settings.busy.collectAsStateWithLifecycle()
     val state by proof.state.collectAsStateWithLifecycle()
-    var surface by remember { mutableStateOf(Surface.PROOF) }
+    val chat by proof.chat.collectAsStateWithLifecycle()
+    var surface by remember { mutableStateOf(Surface.CHAT) }
+    var inputToken by remember { mutableStateOf<Long?>(null) }
+    var inputUnavailable by remember { mutableStateOf(false) }
+    val input = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val token = inputToken
+        inputToken = null
+        if (result.resultCode == Activity.RESULT_OK && token != null) {
+            result.data?.let(RemoteInput::getResultsFromIntent)?.getCharSequence(CHAT_INPUT_KEY)?.let {
+                proof.draft(it.toString(), token)
+            }
+        }
+    }
+    val write: () -> Unit = {
+        proof.inputToken()?.let { token ->
+            inputToken = token
+            inputUnavailable = false
+            try { input.launch(chatInputIntent()) }
+            catch (_: ActivityNotFoundException) { inputToken = null; inputUnavailable = true }
+        }
+    }
     val ui = shellPresentation(accounts, key, state, bridge, changing)
     val messages = (ApiProblem.entries.map(::problemText) + listOf(
         R.string.setup_storage_error, R.string.signout_confirmed, R.string.signout_unconfirmed,
@@ -43,8 +68,8 @@ internal fun WearShell(auth: WatchAuthViewModel, settings: ApiKeySettingsViewMod
         R.string.auth_request_sent, R.string.companion_unavailable, R.string.bridge_error, R.string.multiple_phones,
     )).associateWith { stringResource(it) }
     val welcome = accounts.planWelcome
-    val back = { surface = Surface.PROOF }
-    BackHandler(enabled = welcome || surface != Surface.PROOF) {
+    val back = { surface = Surface.CHAT }
+    BackHandler(enabled = welcome || surface != Surface.CHAT) {
         if (welcome) auth.confirmPlanNotice() else back()
     }
     AppScaffold(timeText = {}) {
@@ -52,12 +77,27 @@ internal fun WearShell(auth: WatchAuthViewModel, settings: ApiKeySettingsViewMod
         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
             Column(Modifier.fillMaxWidth().padding(start = 36.dp, end = 36.dp, top = 24.dp, bottom = 6.dp),
                 horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(ui.billing, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center)
-                Text(ui.billingNote, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+                if (surface == Surface.CHAT || surface == Surface.COMPOSER) {
+                    Text(when (ui.billing) {
+                        "ChatGPT plan" -> "Using ChatGPT plan"
+                        "OpenAI API" -> "OpenAI API · API billing"
+                        else -> ui.billing
+                    }, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center)
+                } else {
+                    Text(ui.billing, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center)
+                    Text(ui.billingNote, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+                }
             }
             // Stop stays outside the scroll area on every surface, including output/details.
-            if (ui.showStop) Button(onClick = proof::stop,
+            if (ui.showStop || chat.busy) Button(onClick = proof::stop,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 36.dp), label = { Text("Stop") })
+            if (!welcome && surface == Surface.CHAT) Button(
+                onClick = { surface = Surface.COMPOSER }, enabled = !state.busy && !chat.busy,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 36.dp), label = { Text("Compose") })
+            if (!welcome && surface == Surface.COMPOSER) Button(
+                onClick = { proof.send(); if (proof.chat.value.draft.isEmpty()) surface = Surface.CHAT },
+                enabled = ui.proofAvailable && state.selectedSlug != null && !state.busy && chat.canSend,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 36.dp), label = { Text("Send") })
             androidx.compose.runtime.key(surface, welcome) {
                 ShellList(Modifier.weight(1f)) {
                     if (welcome) {
@@ -65,16 +105,39 @@ internal fun WearShell(auth: WatchAuthViewModel, settings: ApiKeySettingsViewMod
                         paragraphs(messages.getValue(R.string.plan_welcome))
                         action(messages.getValue(R.string.got_it), onClick = auth::confirmPlanNotice)
                     } else {
-                        if (surface != Surface.PROOF) action("Back", onClick = back)
+                        if (surface != Surface.CHAT && surface != Surface.COMPOSER) action("Back", onClick = back)
                         if (surface == Surface.MODELS || surface == Surface.CONNECTION) item { ShellText(ui.status) }
                         when (surface) {
+                            Surface.CHAT -> {
+                                item { ShellText("Model: ${ui.model}", compact = true) }
+                                if (!ui.proofAvailable || state.selectedSlug == null) item { ShellText(ui.status) }
+                                chatItems(chat)
+                                action("New Chat", onClick = proof::newChat)
+                                action("Choose model", ui.proofAvailable && !state.busy && !chat.busy) { surface = Surface.MODELS }
+                                action("Connection / settings", onClick = { surface = Surface.CONNECTION })
+                                action("Details", onClick = { surface = Surface.DETAILS })
+                            }
+                            Surface.COMPOSER -> {
+                                action(if (chat.draft.isEmpty()) "Write message" else "Replace draft",
+                                    !chat.busy && !state.busy, write)
+                                item { ShellText("Model: ${ui.model}", compact = true) }
+                                if (!ui.proofAvailable || state.selectedSlug == null) item { ShellText(ui.status) }
+                                if (inputUnavailable) item { ShellText("System text input unavailable. Return and try again.") }
+                                if (chat.draft.isEmpty()) item { ShellText("Enter text, review it here, then Send.") }
+                                else paragraphs(chat.draft)
+                                if (chat.draft.length > ChatConversation.MAX_PROMPT_CHARS)
+                                    item { ShellText("Message too long. Limit: ${ChatConversation.MAX_PROMPT_CHARS} characters. Replace the draft with a shorter message.") }
+                                if (chat.limitReached) item { ShellText("Conversation limit reached. Start New Chat.") }
+                                action("Back to chat", onClick = back)
+                                action("Discard draft") { proof.draft(""); surface = Surface.CHAT }
+                            }
                             Surface.PROOF -> {
                                 item { ShellText("WristPrompt", heading = true) }
                                 item { ShellText(ui.status) }
                                 ui.account?.let { item { ShellText(it, compact = true) } }
                                 item { ShellText("Model: ${ui.model}", compact = true) }
                                 if (ui.proofAvailable) {
-                                    if (!state.busy) {
+                                    if (!state.busy && !chat.busy) {
                                         if (ui.canTest) action("Test inference", onClick = proof::test)
                                         action("Reload models", onClick = proof::loadModels)
                                         action("Choose model", enabled = state.models.isNotEmpty(),
@@ -104,14 +167,16 @@ internal fun WearShell(auth: WatchAuthViewModel, settings: ApiKeySettingsViewMod
                                 item { ShellText("Selected: ${ui.model}", compact = true) }
                                 if (state.mode == key.mode) for (model in state.models) action(
                                     (if (model.slug == state.selectedSlug) "✓ " else "") + model.displayName,
-                                    enabled = !state.busy, onClick = { proof.select(model.slug) })
-                                if (state.models.isEmpty()) item { ShellText("Reload models from the proof screen.") }
+                                    enabled = !state.busy && !chat.busy, onClick = { proof.select(model.slug) })
+                                action("Reload models", !state.busy && !chat.busy, proof::loadModels)
+                                if (state.models.isEmpty()) item { ShellText("No models available. Reload to retry.") }
                             }
                             Surface.CONNECTION -> connectionItems(ui, accounts, key, setup, changing, auth, settings, proof) {
                                 proof.manageUsage(); surface = Surface.DETAILS
                             }
                             Surface.DETAILS -> {
                                 item { ShellText("Details", heading = true) }
+                                action("Inference proof", !chat.busy) { surface = Surface.PROOF }
                                 ui.account?.let { paragraphs(it) }
                                 paragraphs("Model: ${ui.model}")
                                 item { ShellText(ui.status) }

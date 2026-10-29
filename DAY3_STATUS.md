@@ -1,9 +1,9 @@
 # Day 3 status — 2026-10-29
 
-Phase A (readable Wear settings/proof shell) is implemented. Phase B was
-authorized for selected-model diagnosis and a demonstrated fix only; its current
-result is recorded below. Day 2 remains PASS WITH KNOWN DEBT. D3-C is unstarted;
-this is not production chat or a completed Day 3 gate.
+Phase A is implemented. Phase B is complete as investigation/test hardening;
+its historical physical anomaly remains unresolved. Phase C text chat/context is
+implemented below. Day 2 remains PASS WITH KNOWN DEBT. D3-D redesign is unstarted;
+this is not a completed Day 3 physical/release gate.
 
 ## Phase A scope and evidence
 
@@ -46,8 +46,9 @@ install, live request, credential operation, commit or push.
 
 - Terra -> Sol model restoration: D3-B investigation below; not reproduced on
   current code, unchanged and unresolved. No physical resolution is claimed.
-- Native text input/in-memory multi-turn chat: D3-3; unstarted.
-- Streaming chat/Stop integration: later Day 3; current fixed proof only.
+- Native text input/in-memory multi-turn chat: D3-C foundation implemented below.
+- Detailed streaming/Stop/scroll-follow hardening: D3-D; existing transport and
+  basic Stop are reused for D3-C, without claiming D3-D acceptance.
 - Transient reauthorization exchange/context-expiry anomaly: tracked debt, no
   claimed cause/fix; preserve retry from watch and phone guidance. Day 5 disposition.
 - Real successful paid BYOK: BLOCKED by no funded credential; existing synthetic
@@ -98,8 +99,9 @@ Suggested commit: `fix: make Wear proof and settings screens readable on round d
 **VERIFIED AUTOMATICALLY:** 15 new integration tests pass against unchanged
 production code. **Historical Terra -> restart -> Sol: NOT REPRODUCED; root cause
 UNRESOLVED.** No demonstrated failing boundary exists to justify a production
-fix. This does not close the historical physical defect or the D3-B fix gate.
-No physical retest is requested during D3-B. D3-C remains unstarted.
+fix. This does not establish physical resolution. D3-B is complete as an
+investigation/test-hardening phase with the anomaly retained as debt. No physical
+retest was requested during D3-B. D3-C had not started at that handoff.
 
 ### Exact startup and restoration sequence
 
@@ -222,3 +224,152 @@ CURRENT EMULATOR LAB; its investigation was not reopened. Keep the existing
 consolidated acceptance policy, with no new routine physical-test requirement.
 
 Suggested commit: `test: cover model restoration across encrypted startup reconstruction`.
+
+
+## Phase C — arbitrary Wear text chat and in-memory context (2026-10-29)
+
+**VERIFIED AUTOMATICALLY:** normal arbitrary text reaches Responses with explicit
+multi-turn context. **VERIFIED ON EMULATOR (partial acceptance):** chat/composer
+entry, system keyboard entry using on-screen keys, returned draft review and
+cancel-to-composer behavior. No real inference or physical-device evidence is
+claimed. D3-D redesign remains unstarted. The D3-B investigation is not reopened;
+historical Terra -> Sol remains unresolved physical debt.
+
+### Architecture and context rules
+
+- InferenceViewModel owns one ChatConversation and immutable ChatState. Existing
+  model restoration, credential router and shared session remain authoritative.
+- ChatMessage carries local ID, role, text and pending/completed/excluded status.
+  Partial assistant text is separate from completed assistant messages. Old failed
+  user turns stay visibly marked excluded even after a later request completes.
+- Visible user text is appended once at Send. Only a completed, current-lease
+  exchange commits its user item and assistant output items to replay history.
+  Opaque encrypted reasoning and assistant phase are retained in service order,
+  never rendered as reasoning or logged. Failed, stopped, incomplete and interrupted
+  exchanges are excluded from future history; no fabricated assistant or retry.
+- New Chat clears draft, messages and history. Distinct account/access-state,
+  credential-generation, billing mode/revision and selected-model changes clear
+  context. Same-model reload preserves it. A model fallback after failed catalog
+  reload also clears context. Late input results carry a context revision and
+  cannot restore a draft into a different account/model/New Chat context.
+- Conversation content is never persisted. Activity ViewModel destruction or
+  process death may clear it; ordinary retained-ViewModel recreation keeps it.
+- Prompt limit: 8192 UTF-16 code units. Limit: 12 submitted attempts, including
+  failures. Explicit serialized replay/input threshold: 192 KiB UTF-8; after the
+  last bounded completion crosses it, show the completed exchange and require
+  New Chat. No automatic truncation, eviction, compaction or server continuation.
+  Completed replay output is at most 256 KiB; total replay remains bounded by
+  the input threshold plus one completion. D18 records the durable rule.
+
+### Proof-to-chat and UI flow
+
+Chat is the default surface. Billing stays in a compact measured header; current
+model, message roles and statuses are readable in the scrolling conversation.
+Compose is outside scrolling content. Composer uses Write/Replace draft to open
+the platform Wear RemoteInput/keyboard, followed by full scrollable draft review
+and a separate pinned Send button. Blank/whitespace/oversized input cannot Send.
+Cancellation retains the previous draft. Local composition is available before
+sign-in, while Send still requires the existing usable account/model gate.
+Missing system input activity reports a static message without raw exceptions.
+Platform keyboard voice options are platform behavior, not an added app feature.
+
+New Chat and connection/model actions are reachable from the chat list. The
+model picker now includes Reload models for direct recovery without the proof
+screen; Send requires a selected model as well as the existing credential gate. Different
+models start a new conversation. Existing settings, plan confirmation, usage
+management and proof surfaces remain reachable. The fixed proof lives behind
+Details -> Inference proof. It still tests exact output; normal chat completion
+uses response.completed without requiring the proof sentence.
+
+AiProvider/OpenAiProvider gain an explicit-input overload. InferenceSession shares
+the existing lease, catalog, billing-revision, SSE and cancellation validation for
+both proof and chat. ResponsesProtocol serializes the supplied history with only
+model/input/store/stream and retains completed output items for replay. No
+previous_response_id or new endpoint. OpenAiHttp, credential formats/stores,
+CredentialRouter, OAuth and Data Layer routing are unchanged. StreamResult gains
+bounded completed-output retention; no new SSE framing or Stop transport design.
+
+### Automated evidence
+
+New tests: **28** across ChatConversationTest (13), ChatViewModelTest (12) and
+ChatTransportTest (3). They cover arbitrary/Unicode/long prompts; empty/whitespace
+rejection; first/second-turn payload/order; exactly-once messages and duplicate
+submit; completed-only history; failure/Stop/incomplete behavior; New Chat;
+account/billing/generation/revision resets and late results; model changes and
+failed-reload fallback; preserved restoration; process reconstruction; both-mode
+HTTP routing/no fallback; replayed reasoning/phase; context limits; redaction;
+and rejection of tool/non-assistant/incomplete/unreplayable output items.
+
+Final focused gate: **84 tests**, zero failures/errors/skips. Includes the new
+chat tests and existing InferenceSessionTest, InferenceViewModelTest,
+ModelRestorationIntegrationTest, OpenAiProviderTest, ResponsesProtocolTest and
+SseReaderTest. Final full Wear suite: **232 tests**, zero failures/errors/skips.
+:wear:assembleDebug and :wear:lintDebug: PASS, zero lint errors and the same five
+warning instances (two AGP advisories, ExportedService, VectorPath, WearRecents).
+No suppression, dependency, SDK/license or signing change. No shared/mobile code
+changed; mobile tests/build/lint were not rerun and prior results are not new
+physical or automated evidence for this phase.
+
+Commands run using DEVELOPMENT.md's persistent JDK/SDK/cache/signing environment:
+
+```sh
+./gradlew :wear:compileDebugKotlin --console=plain
+./gradlew :wear:testDebugUnitTest \
+  --tests 'io.github.grassified.wristprompt.openai.Chat*Test' \
+  --tests 'io.github.grassified.wristprompt.openai.InferenceSessionTest' \
+  --tests 'io.github.grassified.wristprompt.openai.InferenceViewModelTest' \
+  --tests 'io.github.grassified.wristprompt.openai.ModelRestorationIntegrationTest' \
+  --tests 'io.github.grassified.wristprompt.openai.OpenAiProviderTest' \
+  --tests 'io.github.grassified.wristprompt.openai.ResponsesProtocolTest' \
+  --tests 'io.github.grassified.wristprompt.openai.SseReaderTest' --console=plain
+./gradlew :wear:testDebugUnitTest :wear:assembleDebug :wear:lintDebug --console=plain
+git diff --check
+```
+
+Also assembled Wear separately during layout/input iterations and checked new-file
+whitespace/final newlines. Early test authoring caught a fixture using copy() on a
+non-data CredentialLease, then an incorrect loop assertion retaining the prior
+iteration's conversation; those fixture issues were corrected before final gates.
+All real HTTP adapters in tests use synthetic interceptors; no provider request
+or real credential was used.
+
+### Emulator acceptance and evidence boundaries
+
+Used only existing WristPrompt_Watch7, verified by AVD name and watch emulator
+characteristics before APK update. Started the existing AVD headlessly with
+-no-snapshot-save, updated in place with install -r using the existing debug key;
+no uninstall, data clearing, re-pair, AVD recreation, capability probe or physical
+operation. A physical device appeared in the initial inventory and was never
+selected. An elapsed emulator timer overlay interrupted one screenshot; that
+capture is not accepted as chat/layout evidence.
+
+VERIFIED ON EMULATOR: compact round-screen chat header, Compose -> composer,
+visible pinned disabled Send without authentication, initially visible Write
+message, platform text-input choices and keyboard, on-screen key entry returning
+text to Replace draft/review state, and cancellation returning to composer.
+Hardware-key text injection displayed text in Gboard but did not return it to
+RemoteInput; actual on-screen key taps did return a draft. This is recorded as an
+input-automation limitation, not a claimed app/provider/capability defect.
+
+Not verified on emulator: enabled Send, submitted user/assistant conversation
+rendering, follow-up responses and real multi-turn inference. This lab has no
+usable credential; production capability-dependent auth remains NOT VERIFIABLE
+ON CURRENT EMULATOR LAB. Those positive state/transport paths are tested
+synthetically on JVM, not claimed as emulator results. Long returned drafts,
+full conversation scrolling, rotary and New Chat interaction require later
+consolidated acceptance; their domain/state behavior is covered automatically.
+No new debug scenario injection/harness was added ahead of D3-F.
+
+### Scope/debt retained
+
+D3-D still owns detailed incremental presentation races, Stop semantics and
+cancellation-generation hardening, scroll-follow behavior and consolidated
+streaming acceptance. This phase only reuses existing cancellation and epoch/
+lease checks necessary to protect chat context. No voice, image, tools, MCP,
+provider, database, sync, persistent history or authentication/billing redesign.
+
+The historical Terra -> Sol observation is not fixed or disproved. Reauthorization
+anomaly and funded-BYOK physical-success constraint remain unchanged. No routine
+physical test was requested, milestone checked off, commit made or push performed.
+
+Suggested commit: `feat: add Wear text chat with bounded in-memory conversation context`.

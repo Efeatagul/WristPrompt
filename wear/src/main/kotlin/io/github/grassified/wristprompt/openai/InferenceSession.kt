@@ -7,6 +7,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.job
+import kotlinx.serialization.json.JsonObject
 
 class PreparedCatalog(val credential: CredentialLease, val models: List<AiModel>) {
     override fun toString() = SafeDiagnostics.REDACTED
@@ -39,7 +40,13 @@ class InferenceSession(
         catalog: PreparedCatalog, selected: String,
         onCatalog: (PreparedCatalog) -> Unit,
         onProgress: (StreamResult) -> Unit,
-    ): StreamResult = coroutineScope {
+    ): StreamResult = generate(catalog, selected, null, onCatalog) { onProgress(it) }
+
+    suspend fun chat(catalog: PreparedCatalog, selected: String, input: List<JsonObject>,
+        onProgress: suspend (StreamResult) -> Unit): StreamResult = generate(catalog, selected, input, {}, onProgress)
+
+    private suspend fun generate(catalog: PreparedCatalog, selected: String, input: List<JsonObject>?,
+        onCatalog: (PreparedCatalog) -> Unit, onProgress: suspend (StreamResult) -> Unit): StreamResult = coroutineScope {
         val current = credentials.current()
         // A stale action must never turn into a request for another account or bill.
         if (current.clientId != catalog.credential.clientId || current.generation != catalog.credential.generation ||
@@ -56,11 +63,13 @@ class InferenceSession(
             if (prepared.models.none { it.slug == selected }) throw ApiFailure(ApiProblem.NO_MODELS)
             if (!isCurrent(prepared.credential)) throw ApiFailure(ApiProblem.STALE_ACCOUNT)
             val result = StreamResult(ResponsesProtocol.expected(current.mode))
-            provider.stream(prepared.credential, selected) { event ->
+            val receive: suspend (ResponseEvent) -> Unit = { event ->
                 if (!isCurrent(prepared.credential)) throw ApiFailure(ApiProblem.STALE_ACCOUNT)
                 result.accept(event)
                 onProgress(result)
             }
+            if (input == null) provider.stream(prepared.credential, selected, receive)
+            else provider.stream(prepared.credential, selected, input, receive)
             result.end()
             if (!isCurrent(prepared.credential)) throw ApiFailure(ApiProblem.STALE_ACCOUNT)
             result

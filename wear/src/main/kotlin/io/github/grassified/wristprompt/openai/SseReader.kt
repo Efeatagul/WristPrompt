@@ -57,6 +57,7 @@ class StreamResult(private val expected: String = ResponsesProtocol.EXPECTED_TEX
     var output: String = ""; private set
     var sawTextDelta: Boolean = false; private set
     var completed: Boolean = false; private set
+    var outputItems: List<kotlinx.serialization.json.JsonObject>? = null; private set
     private var terminal = false
     fun accept(event: ResponseEvent) {
         check(!terminal)
@@ -67,7 +68,7 @@ class StreamResult(private val expected: String = ResponsesProtocol.EXPECTED_TEX
                 sawTextDelta = sawTextDelta || event.text.isNotEmpty()
             }
             is ResponseEvent.Completed -> {
-                terminal = true; completed = true
+                terminal = true; completed = true; outputItems = event.outputItems
                 event.finalText?.let { output = it }
             }
             is ResponseEvent.Failed -> { terminal = true; throw event.failure }

@@ -847,3 +847,58 @@ defer it to physical RC acceptance unless discovery recovers. App-scoped API
 results do not prove that unrelated applications have the same problem. Full
 evidence and proposed, unimplemented debug scenario strategy are in
 [EMULATOR_CAPABILITY_INVESTIGATION.md](EMULATOR_CAPABILITY_INVESTIGATION.md).
+
+## D18 — one bounded in-memory text conversation with explicit replay (2026-10-29)
+
+InferenceViewModel owns one ChatConversation alongside the existing model/proof
+state. Immutable messages have a local ID, role, text and pending/completed/
+excluded status; they contain no credential or registration state. Drafts,
+visible messages and replay items remain in memory only. ViewModel destruction
+or process death clears them; no SavedStateHandle, file, DataStore or database
+persists conversation content.
+
+A request consists of the completed exchange history followed by exactly one new
+user item. Commit the user and returned assistant output items together only
+after response.completed and the existing current-lease checks. Preserve opaque
+encrypted reasoning and assistant phase/order in returned output items. Reject
+unsupported tool output, non-assistant output messages, incomplete output items
+and reasoning without replayable encrypted content; do not silently discard
+required continuation data. Failed/cancelled/incomplete exchanges remain visibly
+unfinished and are excluded from later request history. No automatic replay.
+
+New Chat clears draft, visible messages and replay history. Every distinct
+InferenceAccessState change conservatively clears that context, including
+account/client, generation, billing mode/revision and access-gate changes. An
+explicit model change or catalog fallback to another model also clears context;
+a same-model catalog reload preserves it. Track the conversation's model across
+failed reloads so temporary empty catalog state cannot hide a model change.
+Normal bearer renewal within the same access identity/generation uses existing
+rediscovery rules; it does not create a second conversation. Platform input
+results are accepted only for the context revision that launched them.
+
+Limits: 8192 UTF-16 code units per submitted prompt, 12 submitted attempts
+(including failures), and 192 KiB UTF-8 serialized input/replay threshold. Never
+truncate prompts or drop old turns to make room. A completed output is bounded
+by the existing 256 KiB event/output-item budget; if adding it crosses the replay
+threshold, retain the completed exchange but block further Send until New Chat.
+Thus final replay storage is bounded by one input plus one bounded completion
+(about 448 KiB), independently of the existing 65536-character visible response
+limit. The UI explains when New Chat is required.
+
+Keep store=false, stream=true and explicit input; no previous_response_id,
+conversation service or added reasoning controls. The normal chat path supplies
+arbitrary input to the same OpenAiProvider/OpenAiHttp/SSE transport and lease
+validation as the proof path. The fixed proof remains a separate Details action
+for regression checks, not a chat prompt or chat-success criterion.
+
+Official sources rechecked for D3-C:
+- [Plan models/inference](https://developers.openai.com/siwc/token-sharing-open-source/models-and-inference)
+- [Plan preview limitations](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations)
+- [Stateless reasoning replay](https://developers.openai.com/api/docs/guides/reasoning)
+
+The current stateless guide says encrypted reasoning is returned by default;
+therefore no new include parameter is added to the plan request. Wear text entry
+uses the platform RemoteInput activity and keyboard; Done returns a draft for a
+separate app Send action. No voice feature, new dependency, auth/storage/billing
+contract or Data Layer routing change. D3-D retains detailed streaming/Stop and
+scroll-follow hardening. Current test/emulator evidence belongs in DAY3_STATUS.md.
