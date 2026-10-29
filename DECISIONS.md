@@ -780,3 +780,35 @@ interpretation/static error classification changed. Full evidence, source links
 and exact registration-preserving retest: REFRESH_REGRESSION_REVIEW.md.
 Broad acceptance is STOPPED pending that physical result. Real BYOK completion
 is BLOCKED by no funded API credential, not a product failure; no purchase required.
+
+## D17 — Day 3 Phase A readable proof shell (2026-10-29)
+
+Replace the dense single settings/proof list with a main proof screen and separate
+model, connection, details and output surfaces. Keep the active billing path in
+a measured header outside scrolling content; eligible plan use and separate API
+billing remain explicit. Keep Stop outside scrolling content while the existing
+proof state is busy, including on secondary surfaces. No overlays, fixed text
+heights, new design dependencies or custom animations. Long labels have two-line
+button/summary limits; full selected identity/model remains in Details. Existing
+safe account labels are retained, without introducing another identifier.
+
+Use the existing Wear Material 3 AppScaffold/ScreenScaffold and
+TransformingLazyColumn, shared scroll state, explicit spacing, side insets and
+bottom content padding. Rechecked official Android
+[lists](https://developer.android.com/training/wearables/compose/lists) and
+[rotary input](https://developer.android.com/training/wearables/compose/rotary-input)
+guidance. Retain native scrolling without adding scale/morph effects. First-use
+plan confirmation uses the same confirmation action with a scrollable notice.
+
+Concise status mappings preserve completion/mismatch, failure, incomplete,
+interrupted and stopped distinctions. Existing long recovery strings and safe
+category/HTTP status remain in Details. Render output live in a dedicated list;
+split long text into bounded rows without altering the underlying proof output.
+No request IDs, raw errors, bodies or new diagnostic fields are exposed.
+
+Only presentation and its tests change: existing ViewModels, model-preference
+read/write callbacks, auth/refresh/sign-out, stores, transport and billing router
+remain unchanged. Terra -> Sol is still D3-2; text chat is D3-3; streaming chat
+integration is later Day 3. Physical readability is not claimed; evidence and
+the single end-of-day check are in DAY3_STATUS.md. Prior D16 STOPPED wording is
+historical and superseded by final Day 2 acceptance, not a current gate.

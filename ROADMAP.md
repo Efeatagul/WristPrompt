@@ -16,8 +16,9 @@ this stage; synthetic successful-BYOK coverage remains mandatory. No purchase or
 real API key required. Day 2 does not fail for this constraint, and physical paid
 API success is not claimed.
 
-Day 3 has NOT started. Follow DAY2_REPORT.md section N when explicitly authorized:
-readability -> model restoration -> native text/in-memory chat -> streaming/Stop
+Day 3 Phase A (readability only) is authorized and implemented; automated evidence
+and the pending consolidated physical check live in DAY3_STATUS.md. Later phases
+remain unstarted: model restoration -> native text/in-memory chat -> streaming/Stop
 -> safe account/mode/context transitions -> combined validation. Reauth anomaly
 triage remains known debt; Day 5 must disposition it before release freeze.
 
@@ -150,6 +151,10 @@ stage. Refresh/sign-out/backup safeguards have source/test evidence; remote
 revocation outcome and exact refresh telemetry are not claimed as physical facts.
 
 ## Day 3 — watch chat
+
+- [ ] Phase A circular-screen settings/proof shell: automated validation recorded
+  in DAY3_STATUS.md; physical readability/rotary/critical-action acceptance pending.
+  No chat, model-restoration, OAuth, refresh, sign-out, storage or billing changes.
 
 - [ ] Low-priority D2-1 debt: fix explicit model restoration (GPT-6.1 Terra →
   GPT-6.1 Sol after restart while Terra remains listed). Physical result PARTIAL;
