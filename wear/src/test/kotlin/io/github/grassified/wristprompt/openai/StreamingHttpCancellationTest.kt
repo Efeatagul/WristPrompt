@@ -1,6 +1,7 @@
 package io.github.grassified.wristprompt.openai
 
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.ViewModelStore
 import io.github.grassified.wristprompt.auth.CredentialMode
 import java.io.IOException
 import java.util.concurrent.CountDownLatch
@@ -103,6 +104,44 @@ class StreamingHttpCancellationTest {
             assertEquals(listOf("A", "B", "fresh"), vm.chat.value.messages.map { it.text })
             vm.viewModelScope.coroutineContext[Job]!!.cancelAndJoin()
         }
+    }
+    @Test fun finalViewModelStoreClearCancelsActualCallUnblocksSseAndClosesBody(): Unit = runBlocking {
+        val call = AtomicReference<Call>()
+        val cancelled = CountDownLatch(1)
+        val blocked = CompletableDeferred<Unit>(); val closed = CompletableDeferred<Unit>()
+        val client = OkHttpClient.Builder().eventListener(object : EventListener() {
+            override fun canceled(call: Call) { cancelled.countDown() }
+        }).addInterceptor { chain ->
+            call.set(chain.call())
+            val source = object : Source {
+                var delivered = false
+                override fun timeout() = Timeout.NONE
+                override fun close() { closed.complete(Unit) }
+                override fun read(sink: Buffer, byteCount: Long): Long {
+                    if (!delivered) { delivered = true; sink.writeUtf8(partial); return partial.toByteArray().size.toLong() }
+                    blocked.complete(Unit)
+                    check(cancelled.await(3, TimeUnit.SECONDS)) { "Synthetic cancellation deadline" }
+                    throw IOException("Synthetic cancelled read")
+                }
+            }.buffer()
+            response(chain, object : ResponseBody() {
+                override fun contentType() = "text/event-stream".toMediaType()
+                override fun contentLength() = -1L
+                override fun source() = source
+            })
+        }.build()
+        val vm = model(client)
+        val store = ViewModelStore()
+        store.put("inference", vm)
+        withContext(main) { vm.draft("Question"); vm.send() }
+        withTimeout(3000) { blocked.await(); vm.chat.first { it.partial == "partial" } }
+        val terminal = withContext(main) { store.clear(); vm.chat.value }
+        withTimeout(3000) { closed.await(); vm.viewModelScope.coroutineContext[Job]!!.join() }
+        assertTrue(call.get().isCanceled())
+        assertEquals(ChatStage.CANCELLED, terminal.stage)
+        assertEquals(ChatMessageStatus.EXCLUDED, terminal.messages.single().status)
+        assertEquals(terminal, vm.chat.value)
+        assertFalse(vm.chat.value.messages.any { it.role == ChatRole.ASSISTANT })
     }
     @Test fun stopBeforeResponseCancelsCallWithoutInventingPartialOutput(): Unit = runBlocking {
         val entered = CompletableDeferred<Unit>(); val cancelled = CountDownLatch(1)

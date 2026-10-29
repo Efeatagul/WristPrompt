@@ -1000,3 +1000,40 @@ with tools/check_scenario_isolation.py. Fresh ready acknowledgements are fixed,
 non-secret, debug-only developer artifacts. Activity recreation retains a VM;
 process persistence is intentionally not simulated. WEAR_SCENARIOS.md owns the
 launcher contract; DAY3_STATUS.md owns D3-F evidence, not final Day 3 acceptance.
+
+## D22 — retained-process lifecycle and composer interruption (2026-10-29)
+
+The Activity's ViewModelStore owns InferenceViewModel; that ViewModel owns the
+in-memory conversation and operation Job. Recomposition and retained Activity
+recreation do not create a generation. Home/background pauses lifecycle-aware UI
+observation independently of generation ownership. Foreground return observes the
+latest state without resending, rediscovering models or changing credentials.
+Background and screen-off continuation is best effort while the owner/process
+survives, never a promise of uninterrupted execution. Add no service, wake lock,
+production keep-screen-on flag or automatic cancel-on-background policy.
+
+Final ViewModel clear synchronously invalidates the UI epoch and pending input
+revision, excludes an active exchange and cancels normal inference. Existing
+session job checks and serialized generation mutex remain authoritative; the HTTP
+adapter cancels the Call and closes its Response/body while reads unwind. Shared
+application-owned session/provider objects are not destroyed with the Activity.
+
+A platform-composer interaction belongs to its launching composition. Deliberately
+discard its result across recreation: dispose the old single-use callback token,
+retain only the surface and an interrupted-input UI marker with rememberSaveable,
+and offer Write message again. Neither prompt text nor a request token is saved.
+A normal result updates a draft only, requires the current account/billing
+revision, and is consumed once. Send remains explicit. Existing drafts stay solely
+in the retained ViewModel; no durable conversation/draft history is added.
+
+Rotating refresh remains separate: WatchProfiles' durable refreshPending intent,
+35-second bounded NonCancellable refresh and atomic commit/uncertainty behavior
+are unchanged. Owner destruction cannot authorize reusing a possibly consumed
+grant or deleting valid credentials. Process death is a separate D4-B boundary;
+network transitions are D4-C. Neither phase is implemented by this decision.
+
+Repository code and official Android [ViewModel lifetime](https://developer.android.com/topic/libraries/architecture/viewmodel),
+[Compose state](https://developer.android.com/develop/ui/compose/state), and
+[Activity Result registration](https://developer.android.com/training/basics/intents/result)
+were reviewed. DAY4_STATUS.md owns automated/emulator evidence and pending
+physical checks; emulator sleep is not Galaxy Watch power-management evidence.

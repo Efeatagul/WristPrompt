@@ -29,15 +29,18 @@ class InferenceViewModel(
     val state = mutableState.asStateFlow()
     private val conversation = ChatConversation()
     private var inputRevision = 0L
+    private var observedAccess = accounts.value
     private var contextModel: String? = null
     private val mutableChat = MutableStateFlow(conversation.state)
     val chat = mutableChat.asStateFlow()
     private var prepared: PreparedCatalog? = null
     private var operation: Job? = null
     @Volatile private var epoch = 0L
+    private var cleared = false
     init {
         viewModelScope.launch {
             accounts.distinctUntilChanged { old, next -> old == next }.collect { account ->
+                observedAccess = account
                 cancelOperation()
                 prepared = null
                 clearChat()
@@ -118,11 +121,16 @@ class InferenceViewModel(
         if (state.value.busy) mutableState.value = state.value.copy(stage = ProofStage.CANCELLED)
     }
     // Input results are accepted only for the context that launched the platform composer.
-    fun inputToken(): Long? = inputRevision.takeIf { !state.value.busy && !chat.value.busy }
+    fun inputToken(): Long? = inputRevision.takeIf { !cleared && accounts.value == observedAccess && !state.value.busy && !chat.value.busy }
     fun draft(text: String, token: Long = inputRevision) {
-        if (token != inputRevision || state.value.busy || chat.value.busy) return
+        if (cleared || token != inputRevision || state.value.busy || chat.value.busy) return
         if (contextModel == null) contextModel = state.value.selectedSlug
         conversation.draft(text); publishChat()
+    }
+    fun inputResult(text: String, token: Long) {
+        if (cleared || token != inputRevision || accounts.value != observedAccess) return
+        draft(text, token)
+        inputRevision++ // Consume once even if an external result is delivered again.
     }
     fun newChat() {
         cancelOperation()
@@ -183,6 +191,15 @@ class InferenceViewModel(
     }
     private fun publishChat() { mutableChat.value = conversation.state }
     private fun clearChat() { inputRevision++; contextModel = null; conversation.reset(); publishChat() }
+    override fun onCleared() {
+        // Final owner destruction is distinct from stopping UI observation or recreation.
+        // Invalidate callbacks synchronously, before cancelled IO children finish unwinding.
+        cleared = true
+        cancelOperation()
+        inputRevision++
+        if (conversation.state.busy) { conversation.fail(null, cancelled = true); publishChat() }
+        if (state.value.busy) mutableState.value = state.value.copy(stage = ProofStage.CANCELLED)
+    }
     // Future phone-browser hook; never substitute an API-key billing path.
     fun manageUsage() { mutableState.update { it.copy(usageHint = true) } }
     // Publish ownership before executing a Main.immediate coroutine that may finish/re-enter synchronously.

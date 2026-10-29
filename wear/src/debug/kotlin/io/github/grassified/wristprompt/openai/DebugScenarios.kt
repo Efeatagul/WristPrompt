@@ -3,6 +3,7 @@ package io.github.grassified.wristprompt.openai
 import io.github.grassified.wristprompt.auth.*
 import io.github.grassified.wristprompt.ui.Surface
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.JsonObject
 
@@ -11,7 +12,8 @@ internal enum class DebugScenario {
     MANY_MODELS, MODEL_UNAVAILABLE, EMPTY_CHAT, LONG_USER_PROMPT, ONE_TURN_COMPLETED,
     MULTI_TURN_CHAT, LONG_ASSISTANT_OUTPUT, STREAMING_SHORT, STREAMING_LONG, STOPPED_PARTIAL,
     ERROR_401_REAUTH, ERROR_401_API_KEY, ERROR_429, ERROR_503, ERROR_OFFLINE, LONG_ERROR_MESSAGE,
-    RECREATED_COMPLETED_STATE, RECREATED_CANCELLED_STATE;
+    RECREATED_COMPLETED_STATE, RECREATED_CANCELLED_STATE,
+    ACTIVE_STREAM_RECREATION, BACKGROUNDED_STREAM, SCREEN_OFF_STYLE_RESUME, COMPOSER_RECREATION;
     companion object { fun parse(name: String?): DebugScenario? = entries.singleOrNull { it.name == name } }
 }
 
@@ -25,7 +27,7 @@ internal class DebugScenarios(val scenario: DebugScenario) {
     val key = ApiKeyState(loaded = true, mode = mode, configured = mode == CredentialMode.OPENAI_API_KEY)
     val surface = when (scenario) {
         DebugScenario.MANY_MODELS, DebugScenario.MODELS_LOADED, DebugScenario.MODEL_UNAVAILABLE -> Surface.MODELS
-        DebugScenario.LONG_USER_PROMPT -> Surface.COMPOSER
+        DebugScenario.LONG_USER_PROMPT, DebugScenario.COMPOSER_RECREATION -> Surface.COMPOSER
         DebugScenario.SIGNED_OUT -> Surface.CONNECTION
         else -> Surface.CHAT
     }
@@ -34,11 +36,18 @@ internal class DebugScenarios(val scenario: DebugScenario) {
     // It is passed only to this synthetic provider, never to a persistence or HTTP boundary.
     private val lease = CredentialLease("debug", 0, "", Long.MAX_VALUE, mode)
     var generations = 0; private set
+    var discoveries = 0; private set
+    var completions = 0; private set
+    val lifecycleScenario get() = scenario in setOf(DebugScenario.ACTIVE_STREAM_RECREATION,
+        DebugScenario.BACKGROUNDED_STREAM, DebugScenario.SCREEN_OFF_STYLE_RESUME)
+    private val steps = Channel<Boolean>(Channel.UNLIMITED)
+    fun advance(complete: Boolean = false) { if (lifecycleScenario) steps.trySend(complete) }
     val inputs = mutableListOf<List<JsonObject>>()
     private var unavailable = scenario == DebugScenario.MODEL_UNAVAILABLE
     private val loading = scenario == DebugScenario.MODELS_LOADING
     private val provider = object : AiProvider {
         override suspend fun models(credential: CredentialLease): List<AiModel> {
+            discoveries++
             if (loading) awaitCancellation()
             if (unavailable) { unavailable = false; throw ApiFailure(ApiProblem.NO_MODELS) }
             return (1..if (scenario == DebugScenario.MANY_MODELS) 40 else 3).map { AiModel("debug-$it", "Synthetic model $it") }
@@ -47,6 +56,15 @@ internal class DebugScenarios(val scenario: DebugScenario) {
         override suspend fun stream(credential: CredentialLease, model: String, input: List<JsonObject>, onEvent: suspend (ResponseEvent) -> Unit) {
             generations++; inputs += input
             failure()?.let { throw it }
+            if (lifecycleScenario) {
+                var chunk = 1
+                onEvent(ResponseEvent.Delta("Lifecycle chunk 1. "))
+                for (complete in steps) {
+                    if (complete) { completions++; onEvent(ResponseEvent.Completed(null)); return }
+                    chunk++; onEvent(ResponseEvent.Delta("Lifecycle chunk $chunk. "))
+                }
+                return
+            }
             val long = scenario in setOf(DebugScenario.STREAMING_LONG, DebugScenario.LONG_ASSISTANT_OUTPUT)
             val streaming = scenario in setOf(DebugScenario.STREAMING_LONG, DebugScenario.STREAMING_SHORT)
             val stopped = scenario in setOf(DebugScenario.STOPPED_PARTIAL, DebugScenario.RECREATED_CANCELLED_STATE) && generations == 1
@@ -58,7 +76,7 @@ internal class DebugScenarios(val scenario: DebugScenario) {
                 output.append(chunk); onEvent(ResponseEvent.Delta(chunk))
                 if (streaming) delay(400)
             }
-            onEvent(ResponseEvent.Completed(text))
+            completions++; onEvent(ResponseEvent.Completed(text))
         }
     }
     val vm = InferenceViewModel(access, InferenceSession({ lease }, provider) { it === lease })
@@ -85,7 +103,9 @@ internal class DebugScenarios(val scenario: DebugScenario) {
             DebugScenario.STOPPED_PARTIAL, DebugScenario.RECREATED_CANCELLED_STATE -> {
                 vm.draft("Stop this synthetic request"); vm.send(); vm.chat.first { it.stage == ChatStage.RECEIVING }; vm.stop()
             }
-            DebugScenario.STREAMING_SHORT, DebugScenario.STREAMING_LONG -> {
+            DebugScenario.STREAMING_SHORT, DebugScenario.STREAMING_LONG,
+            DebugScenario.ACTIVE_STREAM_RECREATION, DebugScenario.BACKGROUNDED_STREAM,
+            DebugScenario.SCREEN_OFF_STYLE_RESUME -> {
                 vm.draft("Stream a synthetic answer"); vm.send(); vm.chat.first { it.stage == ChatStage.RECEIVING }
             }
             else -> if (failure() != null) { vm.draft("Synthetic failure request"); vm.send(); vm.chat.first { it.stage == ChatStage.FAILED } }

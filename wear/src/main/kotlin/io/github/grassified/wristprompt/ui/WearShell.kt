@@ -9,6 +9,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,24 +64,25 @@ internal fun WearShellContent(
     val messageChunks = remember(renderedChat.messages) {
         renderedChat.messages.associate { it.id to readableChunks(it.text) }
     }
-    var surface by remember { mutableStateOf(initialSurface) }
-    var inputToken by remember { mutableStateOf<Long?>(null) }
+    var surface by rememberSaveable { mutableStateOf(initialSurface) }
+    val composer = remember(proof) { ComposerInteraction(proof) }
+    // Only a UI marker is saved: never returned text or a request token.
+    var inputPending by rememberSaveable { mutableStateOf(false) }
+    val interruptedInput = inputPending && !composer.pending
+    DisposableEffect(composer) { onDispose { composer.discard() } }
     var inputUnavailable by remember { mutableStateOf(false) }
     val input = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        val token = inputToken
-        inputToken = null
-        if (result.resultCode == Activity.RESULT_OK && token != null) {
-            result.data?.let(RemoteInput::getResultsFromIntent)?.getCharSequence(CHAT_INPUT_KEY)?.let {
-                proof.draft(it.toString(), token)
-            }
-        }
+        val text = if (result.resultCode == Activity.RESULT_OK)
+            result.data?.let(RemoteInput::getResultsFromIntent)?.getCharSequence(CHAT_INPUT_KEY)?.toString() else null
+        // A recreated composition deliberately has no pending interaction to consume.
+        if (composer.pending) { composer.result(text); inputPending = false }
     }
     val write: () -> Unit = {
-        proof.inputToken()?.let { token ->
-            inputToken = token
+        if (composer.begin()) {
+            inputPending = true
             inputUnavailable = false
             try { input.launch(chatInputIntent()) }
-            catch (_: ActivityNotFoundException) { inputToken = null; inputUnavailable = true }
+            catch (_: ActivityNotFoundException) { composer.discard(); inputPending = false; inputUnavailable = true }
         }
     }
     val ui = shellPresentation(accounts, key, state, bridge, changing)
@@ -147,6 +149,7 @@ internal fun WearShellContent(
                                     !chat.busy && !state.busy, write)
                                 item { ShellText("Model: ${ui.model}", compact = true) }
                                 if (!ui.proofAvailable || state.selectedSlug == null) item { ShellText(ui.status) }
+                                if (interruptedInput) item { ShellText("Text input was interrupted. Write your message again.") }
                                 if (inputUnavailable) item { ShellText("System text input unavailable. Return and try again.") }
                                 if (chat.draft.isEmpty()) item { ShellText("Enter text, review it here, then Send.") }
                                 else paragraphs(chat.draft)

@@ -21,8 +21,11 @@ KNOWN DEBT**, D3-A through D3-G complete for that scope. See DAY3_REPORT.md for
 272 Wear / 70 mobile / 8 Python tests, both debug/release builds and lint,
 release isolation, and all 23 emulator scenarios. Physical RC gate remains open;
 funded BYOK and capability-dependent emulator auth constraints are not app failures.
-Historical restoration and reauthorization anomalies remain unresolved. Day 4 has
-not started; reauthorization debt still requires Day 5 disposition before freeze.
+Historical restoration and reauthorization anomalies remain unresolved. D4-0 is
+complete; D4-A retained-process lifecycle hardening is PASS WITH KNOWN DEBT for
+automated/emulator scope (DAY4_STATUS.md). D4-B process death and D4-C network
+transitions are unstarted; reauthorization debt still requires Day 5 disposition
+before freeze.
 
 Day numbers are execution stages, not a claim that work has started. A failed
 release gate blocks progression; retain evidence without credentials. Scope and
@@ -193,6 +196,15 @@ Data Layer smoke was BLOCKED — ENVIRONMENT (required pair unavailable); earlie
 capability isolation evidence remains unchanged. No production fallback.
 
 ## Day 4 — optional voice and device edge cases
+
+- [x] D4-0 ownership audit (supplied complete) and D4-A retained Activity/background/
+  final ViewModel-clear hardening: 288 Wear / 8 Python tests, Wear debug/release
+  builds, lint and release isolation pass; six lifecycle/composer/terminal scenarios
+  pass emulator acceptance. Screen-off evidence is Dozing/resume, with Activity
+  still RESUMED during measurement, not physical uninterrupted execution.
+- [ ] D4-A physical Galaxy Watch background/screen-off and retained-owner checks,
+  batched into DAY4_STATUS.md's end-of-day/RC checklist; not required during implementation.
+- [ ] D4-B process death and D4-C network transitions: pending, not begun.
 
 - [ ] Add platform voice input only if earlier gates are green; otherwise cut it.
 - [ ] Check permission denial, recognizer absence, phone absence, process death,

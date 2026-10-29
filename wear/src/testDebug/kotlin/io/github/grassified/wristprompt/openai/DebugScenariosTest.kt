@@ -14,7 +14,7 @@ class DebugScenariosTest {
     @After fun cleanup() { fixtures.forEach { it.vm.viewModelScope.cancel() }; Dispatchers.resetMain() }
     private fun fixture(s: DebugScenario) = DebugScenarios(s).also { fixtures += it }
     @Test fun namesAreUniqueAndRoundTrip() {
-        assertEquals(23, DebugScenario.entries.size)
+        assertEquals(27, DebugScenario.entries.size)
         DebugScenario.entries.forEach { assertSame(it, DebugScenario.parse(it.name)) }
     }
     @Test fun unknownFailsClosed() { listOf(null, "", "streaming_long", "../SIGNED_OUT").forEach { assertNull(DebugScenario.parse(it)) } }
@@ -61,6 +61,21 @@ class DebugScenariosTest {
         assertEquals(8, f.vm.chat.value.messages.size)
         assertEquals(listOf(1, 3, 5, 7), f.inputs.map { it.size })
         assertTrue(f.vm.chat.value.messages.all { it.status == ChatMessageStatus.COMPLETED })
+    }
+    @Test fun lifecycleScenariosAdvanceOnlyAtExplicitGatesAndNeverReplay(): Unit = runTest {
+        for (s in listOf(DebugScenario.ACTIVE_STREAM_RECREATION, DebugScenario.BACKGROUNDED_STREAM,
+            DebugScenario.SCREEN_OFF_STYLE_RESUME)) {
+            val f = fixture(s); val owner = ScenarioOwner(f); runCurrent()
+            assertTrue(owner.ready); assertEquals(1, f.generations); assertEquals(1, f.discoveries)
+            assertEquals("Lifecycle chunk 1. ", f.vm.chat.value.partial)
+            owner.recreated = true; runCurrent()
+            f.advance(); runCurrent()
+            assertEquals("Lifecycle chunk 1. Lifecycle chunk 2. ", f.vm.chat.value.partial)
+            f.advance(complete = true); runCurrent(); f.vm.send(); runCurrent()
+            assertEquals(1, f.generations); assertEquals(1, f.completions)
+            assertEquals(2, f.vm.chat.value.messages.size)
+            owner.viewModelScope.cancel()
+        }
     }
     @Test fun retainedOwnerDoesNotPrepareAgain(): Unit = runTest {
         for (s in listOf(DebugScenario.RECREATED_COMPLETED_STATE, DebugScenario.RECREATED_CANCELLED_STATE)) {

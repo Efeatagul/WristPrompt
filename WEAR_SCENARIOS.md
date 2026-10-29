@@ -1,10 +1,10 @@
-# Offline Wear scenarios — Day 3 Phase F
+# Offline Wear scenarios — Day 3 Phase F / Day 4 Phase A
 
 The explicitly launched `DebugScenarioActivity` replaces `StreamingPreviewActivity`.
-All 23 fixtures live under `wear/src/debug`; the Activity is declared only in the
+All 27 fixtures live under `wear/src/debug`; the Activity is declared only in the
 debug manifest overlay. There is one scenario entrypoint and one production UI.
 `ScenarioOwner` retains a fixture and its `InferenceViewModel` across Activity
-recreation, starts preparation once, and cancels that VM when finally cleared.
+recreation, starts preparation once, and clears that VM through its own ViewModelStore when finally cleared.
 This simulates no process persistence: a new task/owner starts fresh memory.
 
 `DebugScenarios` owns synthetic account/billing display metadata, a synthetic
@@ -50,7 +50,7 @@ Every launch clears the previous Activity task, not app data, and supplies a fre
 a valid identifier. A fixed app-private `debug-scenario-ready.txt` acknowledgement
 contains only that identifier, enum, generation count and chat stage. The launcher
 requires its matching acknowledgement plus a live app process within 20 seconds.
-It does not read logs, credentials or chat payloads. Smoke runs all 23 states;
+It does not read logs, credentials or chat payloads. Smoke runs all 27 states;
 it proves readiness/liveness, **not visual acceptance**. Optional screenshots use
 ADB screencap; there is no OCR, image comparison or accessibility framework.
 
@@ -81,6 +81,10 @@ ADB screencap; there is no OCR, image comparison or accessibility framework.
 | LONG_ERROR_MESSAGE | TEMPORARY failure plus repeated static production recovery copy, chunked by shared renderer |
 | RECREATED_COMPLETED_STATE | Completes once, automatically recreates Activity with same retained owner |
 | RECREATED_CANCELLED_STATE | Stops once, automatically recreates; cancellation/partial remain, no new generation |
+| ACTIVE_STREAM_RECREATION | One gated stream; automatic retained Activity recreation; production Stop and renderer |
+| BACKGROUNDED_STREAM | One gated stream; Home allowed; latest output observed on foreground return |
+| SCREEN_OFF_STYLE_RESUME | Gated stream with no debug keep-screen-on or turn-screen-on request; emulator sleep/resume |
+| COMPOSER_RECREATION | Empty production Composer; open system text input and recreate the host; returned text deliberately discarded |
 
 ERROR_401_REAUTH is the requested public name, **not** a new claim that a bare
 inference 401 proves expired OAuth. D3-E deliberately keeps that case PERMISSION.
@@ -114,3 +118,52 @@ font/display settings; rotary, larger fonts and real-network behavior remain sep
 
 Production capability-dependent authentication remains:
 **NOT VERIFIABLE ON CURRENT EMULATOR LAB**.
+
+
+## Day 4 lifecycle controls
+
+The three streaming lifecycle fixtures emit `Lifecycle chunk 1. `, then wait on
+an in-memory channel, without timer-based races. Their visible round-screen
+diagnostic shows `G` (generation count), `M` (model discoveries), stage and partial
+character count. ADVANCE emits the next numbered chunk; COMPLETE emits one terminal
+event. Use real Stop in the renderer to cancel. They perform no network requests.
+Readiness still means ready, not completed or visually accepted.
+
+An exported **debug-only**, Activity-lifetime receiver accepts fixed commands only
+for these fixtures (and RECREATE for composer). It checks the launcher's fresh
+`launch_id`; no production Activity registers it. Select only the emulator serial
+that reports AVD `WristPrompt_Watch7` and watch characteristics. With the current
+launch identifier from the acknowledgement:
+
+```sh
+adb -s EMULATOR_SERIAL shell am broadcast \
+  -a io.github.grassified.wristprompt.DEBUG_LIFECYCLE \
+  -p io.github.grassified.wristprompt \
+  --es launch_id LAUNCH_ID --es command ADVANCE
+```
+
+Other accepted fixed commands are COMPLETE, RECREATE and STOP. Commands never
+select credentials, dispatch real inference, access Data Layer or modify stores.
+The acknowledgement additionally reports discoveries/completions, partial/draft
+character counts, message count, retained owner UUID, Activity creation count,
+STARTED-collection status, last observed partial length, lifecycle and window flag.
+It contains no text content or credentials. Destroyed hosts cannot overwrite it.
+The observation diagnostic uses repeatOnLifecycle(STARTED); the production
+renderer continues using collectAsStateWithLifecycle. A paused observer can lag
+behind the VM, then must match the current state on resume.
+
+Use Home to background; return to the existing instance with Activity reorder-to-
+front, not a fresh scenario launch (which intentionally starts a new owner).
+For SCREEN_OFF_STYLE_RESUME, emulator KEYCODE_SLEEP/KEYCODE_WAKEUP can exercise
+display transitions where supported. No production power-management guarantee
+follows from this. Other fixtures retain the useful debug keep-screen-on behavior.
+
+COMPOSER_RECREATION starts on Compose. Tap Write message, recreate the underlying
+scenario Activity with the fixed command while platform input is open, then return
+text. The restored surface says input was interrupted; draft remains empty and
+there is no generation. Write again, review the returned draft and explicitly Send.
+No token or draft text is saved across Activity recreation by the UI. A draft
+already delivered before recreation remains in the retained ViewModel.
+
+Current D4-A dispositions and physical debt are in DAY4_STATUS.md. D4-B process
+death and D4-C network transitions remain separate, unstarted work.
