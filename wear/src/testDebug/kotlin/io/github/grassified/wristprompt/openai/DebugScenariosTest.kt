@@ -14,7 +14,7 @@ class DebugScenariosTest {
     @After fun cleanup() { fixtures.forEach { it.vm.viewModelScope.cancel() }; Dispatchers.resetMain() }
     private fun fixture(s: DebugScenario) = DebugScenarios(s).also { fixtures += it }
     @Test fun namesAreUniqueAndRoundTrip() {
-        assertEquals(27, DebugScenario.entries.size)
+        assertEquals(31, DebugScenario.entries.size)
         DebugScenario.entries.forEach { assertSame(it, DebugScenario.parse(it.name)) }
     }
     @Test fun unknownFailsClosed() { listOf(null, "", "streaming_long", "../SIGNED_OUT").forEach { assertNull(DebugScenario.parse(it)) } }
@@ -75,6 +75,21 @@ class DebugScenariosTest {
             assertEquals(1, f.generations); assertEquals(1, f.completions)
             assertEquals(2, f.vm.chat.value.messages.size)
             owner.viewModelScope.cancel()
+        }
+    }
+    @Test fun freshProcessFixtureNeverSeedsItselfOrRestoresOldWork(): Unit = runTest {
+        for (scenario in DebugScenario.entries.filter { it.name.startsWith("PROCESS_RESTART_") }) {
+            val old = fixture(scenario); launch { old.prepare() }; runCurrent()
+            assertEquals(0, old.generations)
+            launch { old.seedProcess(); old.seedProcess() }; runCurrent()
+            val oldGenerations = if (scenario == DebugScenario.PROCESS_RESTART_IDLE) 0 else 1
+            assertEquals(oldGenerations, old.generations)
+            val fresh = fixture(scenario); launch { fresh.prepare() }; runCurrent()
+            assertNotSame(old.vm, fresh.vm); assertEquals(ChatState(), fresh.vm.chat.value)
+            assertEquals(0, fresh.generations); assertEquals(1, fresh.discoveries)
+            assertFalse(fresh.vm.chat.value.busy); assertFalse(fresh.vm.state.value.busy)
+            assertEquals("debug-1", fresh.vm.state.value.selectedSlug)
+            old.vm.viewModelScope.cancel(); fresh.vm.viewModelScope.cancel()
         }
     }
     @Test fun retainedOwnerDoesNotPrepareAgain(): Unit = runTest {

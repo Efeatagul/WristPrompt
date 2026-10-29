@@ -52,8 +52,12 @@ internal class ScenarioOwner(val fixture: DebugScenarios) : ViewModel() {
 
 /** Explicit ADB entrypoint only. No production navigation references this class. */
 class DebugScenarioActivity : ComponentActivity() {
-    companion object { private var reportEpoch = 0L }
+    companion object {
+        private var reportEpoch = 0L
+        private val processOwner = java.util.UUID.randomUUID().toString()
+    }
     private var activityReportEpoch = -1L
+    private var navigation: ShellNavigationViewModel? = null
     private var fixture: DebugScenarios? = null
     private var owner: ScenarioOwner? = null
     private var launchId: String? = null
@@ -64,8 +68,9 @@ class DebugScenarioActivity : ComponentActivity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.getStringExtra("launch_id") != launchId) return
             val f = fixture ?: return
-            if (!f.lifecycleScenario && f.scenario != DebugScenario.COMPOSER_RECREATION) return
+            if (!f.lifecycleScenario && !f.processScenario && f.scenario != DebugScenario.COMPOSER_RECREATION) return
             when (intent?.getStringExtra("command")) {
+                "SEED" -> owner?.viewModelScope?.launch { f.seedProcess(); report() }
                 "ADVANCE" -> f.advance()
                 "COMPLETE" -> f.advance(complete = true)
                 "STOP" -> f.vm.stop()
@@ -84,6 +89,9 @@ class DebugScenarioActivity : ComponentActivity() {
                 " discoveries=${f.discoveries} completions=${f.completions} chars=${chat.partial.length}" +
                 " draftChars=${chat.draft.length} messages=${chat.messages.size} owner=${o.identity} creations=${o.creations}" +
                 " collecting=$collecting observedChars=$observedLength lifecycle=${lifecycle.currentState}" +
+                " pid=${android.os.Process.myPid()} processOwner=$processOwner busy=${chat.busy}" +
+                " proof=${f.vm.state.value.stage} model=${f.vm.state.value.selectedSlug ?: "NONE"} billing=${f.mode}" +
+                " surface=${navigation?.surface?.value ?: Surface.CHAT} pendingInput=${navigation?.inputPending?.value ?: false}" +
                 " keepScreenOn=${window.attributes.flags and WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON != 0}")
         }
     }
@@ -108,6 +116,13 @@ class DebugScenarioActivity : ComponentActivity() {
         setContent {
             val owner: ScenarioOwner = viewModel(factory = viewModelFactory { initializer { ScenarioOwner(DebugScenarios(scenario)) } })
             val f = owner.fixture
+            val nav: ShellNavigationViewModel = viewModel(factory = viewModelFactory {
+                initializer { ShellNavigationViewModel(f.surface) }
+            })
+            navigation = nav
+            LaunchedEffect(nav) {
+                snapshotFlow { nav.surface.value to nav.inputPending.value }.collect { report() }
+            }
             DisposableEffect(owner) {
                 this@DebugScenarioActivity.owner = owner
                 fixture = f
@@ -125,7 +140,7 @@ class DebugScenarioActivity : ComponentActivity() {
             val chat by f.vm.chat.collectAsStateWithLifecycle()
             MaterialTheme {
                 Column(Modifier.fillMaxSize()) {
-                    if (f.lifecycleScenario) Text("G=${f.generations} M=${f.discoveries} ${chat.stage}\nchars=${chat.partial.length}",
+                    if (f.lifecycleScenario || f.processScenario) Text("G=${f.generations} M=${f.discoveries} ${chat.stage}\nchars=${chat.partial.length}",
                         modifier = Modifier.fillMaxWidth().padding(top = 20.dp, start = 42.dp, end = 42.dp),
                         style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
                     Box(Modifier.weight(1f)) {

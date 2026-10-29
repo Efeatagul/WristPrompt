@@ -17,6 +17,23 @@ def scenarios():
     return [name.strip() for name in body.split(',')]
 
 
+def discover_watch(call, required_name=None):
+    watches = []
+    for line in call('devices').splitlines()[1:]:
+        parts = line.split()
+        if len(parts) < 2 or parts[1] != 'device' or not parts[0].startswith('emulator-'):
+            continue
+        serial = parts[0]
+        if 'watch' in call('-s', serial, 'shell', 'getprop', 'ro.build.characteristics').split(','):
+            watches.append((serial, call('-s', serial, 'emu', 'avd', 'name').splitlines()[0]))
+    if len(watches) != 1:
+        raise RuntimeError('Expected exactly one watch emulator; found ' + str(len(watches)))
+    serial, name = watches[0]
+    if required_name is not None and name != required_name:
+        raise RuntimeError('Expected AVD ' + required_name + '; found ' + name)
+    return serial, name
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--list', action='store_true')
@@ -38,17 +55,7 @@ def main():
     def call(*parts):
         return subprocess.check_output([adb, *parts], text=True, stderr=subprocess.STDOUT, timeout=30).strip()
 
-    watches = []
-    for line in call('devices').splitlines()[1:]:
-        parts = line.split()
-        if len(parts) < 2 or parts[1] != 'device' or not parts[0].startswith('emulator-'):
-            continue
-        serial = parts[0]
-        if 'watch' in call('-s', serial, 'shell', 'getprop', 'ro.build.characteristics').split(','):
-            watches.append((serial, call('-s', serial, 'emu', 'avd', 'name').splitlines()[0]))
-    if len(watches) != 1:
-        raise RuntimeError('Expected exactly one watch emulator; found ' + str(len(watches)))
-    serial, name = watches[0]
+    serial, name = discover_watch(call)
     print(f'{name}: {serial}', flush=True)
 
     def device(*parts):

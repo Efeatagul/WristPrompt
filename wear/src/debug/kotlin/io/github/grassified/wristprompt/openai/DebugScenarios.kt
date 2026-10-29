@@ -13,7 +13,9 @@ internal enum class DebugScenario {
     MULTI_TURN_CHAT, LONG_ASSISTANT_OUTPUT, STREAMING_SHORT, STREAMING_LONG, STOPPED_PARTIAL,
     ERROR_401_REAUTH, ERROR_401_API_KEY, ERROR_429, ERROR_503, ERROR_OFFLINE, LONG_ERROR_MESSAGE,
     RECREATED_COMPLETED_STATE, RECREATED_CANCELLED_STATE,
-    ACTIVE_STREAM_RECREATION, BACKGROUNDED_STREAM, SCREEN_OFF_STYLE_RESUME, COMPOSER_RECREATION;
+    ACTIVE_STREAM_RECREATION, BACKGROUNDED_STREAM, SCREEN_OFF_STYLE_RESUME, COMPOSER_RECREATION,
+    PROCESS_RESTART_IDLE, PROCESS_RESTART_AFTER_COMPLETED,
+    PROCESS_RESTART_DURING_ACTIVE, PROCESS_RESTART_AFTER_PARTIAL;
     companion object { fun parse(name: String?): DebugScenario? = entries.singleOrNull { it.name == name } }
 }
 
@@ -40,6 +42,21 @@ internal class DebugScenarios(val scenario: DebugScenario) {
     var completions = 0; private set
     val lifecycleScenario get() = scenario in setOf(DebugScenario.ACTIVE_STREAM_RECREATION,
         DebugScenario.BACKGROUNDED_STREAM, DebugScenario.SCREEN_OFF_STYLE_RESUME)
+    val processScenario get() = scenario.name.startsWith("PROCESS_RESTART_")
+    private var seeded = false
+    suspend fun seedProcess() {
+        if (!processScenario || seeded) return
+        seeded = true
+        if (scenario == DebugScenario.PROCESS_RESTART_IDLE) {
+            vm.select("debug-2"); vm.state.first { it.selectedSlug == "debug-2" }; return
+        }
+        vm.draft("Synthetic process-boundary request"); vm.send()
+        vm.chat.first { when (scenario) {
+            DebugScenario.PROCESS_RESTART_AFTER_COMPLETED -> it.stage == ChatStage.COMPLETED
+            DebugScenario.PROCESS_RESTART_AFTER_PARTIAL -> it.stage == ChatStage.RECEIVING
+            else -> it.stage == ChatStage.STARTING
+        } }
+    }
     private val steps = Channel<Boolean>(Channel.UNLIMITED)
     fun advance(complete: Boolean = false) { if (lifecycleScenario) steps.trySend(complete) }
     val inputs = mutableListOf<List<JsonObject>>()
@@ -56,6 +73,10 @@ internal class DebugScenarios(val scenario: DebugScenario) {
         override suspend fun stream(credential: CredentialLease, model: String, input: List<JsonObject>, onEvent: suspend (ResponseEvent) -> Unit) {
             generations++; inputs += input
             failure()?.let { throw it }
+            if (scenario == DebugScenario.PROCESS_RESTART_DURING_ACTIVE) awaitCancellation()
+            if (scenario == DebugScenario.PROCESS_RESTART_AFTER_PARTIAL) {
+                onEvent(ResponseEvent.Delta("Synthetic process partial")); awaitCancellation()
+            }
             if (lifecycleScenario) {
                 var chunk = 1
                 onEvent(ResponseEvent.Delta("Lifecycle chunk 1. "))

@@ -1,7 +1,7 @@
-# Offline Wear scenarios — Day 3 Phase F / Day 4 Phase A
+# Offline Wear scenarios — Day 3 Phase F / Day 4 Phases A–B
 
 The explicitly launched `DebugScenarioActivity` replaces `StreamingPreviewActivity`.
-All 27 fixtures live under `wear/src/debug`; the Activity is declared only in the
+All 31 fixtures live under `wear/src/debug`; the Activity is declared only in the
 debug manifest overlay. There is one scenario entrypoint and one production UI.
 `ScenarioOwner` retains a fixture and its `InferenceViewModel` across Activity
 recreation, starts preparation once, and clears that VM through its own ViewModelStore when finally cleared.
@@ -48,9 +48,9 @@ missing fresh ready acknowledgements fail closed. No pairing/association is need
 Every launch clears the previous Activity task, not app data, and supplies a fresh
 32-character random launch identifier. The Activity accepts only a known enum and
 a valid identifier. A fixed app-private `debug-scenario-ready.txt` acknowledgement
-contains only that identifier, enum, generation count and chat stage. The launcher
+contains safe launch/scenario/state metadata and the counters described below. The launcher
 requires its matching acknowledgement plus a live app process within 20 seconds.
-It does not read logs, credentials or chat payloads. Smoke runs all 27 states;
+It does not read logs, credentials or chat payloads. Smoke runs all 31 states;
 it proves readiness/liveness, **not visual acceptance**. Optional screenshots use
 ADB screencap; there is no OCR, image comparison or accessibility framework.
 
@@ -85,6 +85,10 @@ ADB screencap; there is no OCR, image comparison or accessibility framework.
 | BACKGROUNDED_STREAM | One gated stream; Home allowed; latest output observed on foreground return |
 | SCREEN_OFF_STYLE_RESUME | Gated stream with no debug keep-screen-on or turn-screen-on request; emulator sleep/resume |
 | COMPOSER_RECREATION | Empty production Composer; open system text input and recreate the host; returned text deliberately discarded |
+| PROCESS_RESTART_IDLE | Fresh fixture is empty; explicit SEED selects debug-2 in memory; restart returns to default debug-1 |
+| PROCESS_RESTART_AFTER_COMPLETED | Explicit SEED creates one completed synthetic exchange; a new fixture never seeds itself |
+| PROCESS_RESTART_DURING_ACTIVE | Explicit SEED starts one request before any delta; suspended until owner/process ends |
+| PROCESS_RESTART_AFTER_PARTIAL | Explicit SEED starts one request and emits a partial; suspended until owner/process ends |
 
 ERROR_401_REAUTH is the requested public name, **not** a new claim that a bare
 inference 401 proves expired OAuth. D3-E deliberately keeps that case PERMISSION.
@@ -130,7 +134,7 @@ event. Use real Stop in the renderer to cancel. They perform no network requests
 Readiness still means ready, not completed or visually accepted.
 
 An exported **debug-only**, Activity-lifetime receiver accepts fixed commands only
-for these fixtures (and RECREATE for composer). It checks the launcher's fresh
+for these fixtures, composer recreation, and the process fixtures described below. It checks the launcher's fresh
 `launch_id`; no production Activity registers it. Select only the emulator serial
 that reports AVD `WristPrompt_Watch7` and watch characteristics. With the current
 launch identifier from the acknowledgement:
@@ -165,5 +169,60 @@ there is no generation. Write again, review the returned draft and explicitly Se
 No token or draft text is saved across Activity recreation by the UI. A draft
 already delivered before recreation remains in the retained ViewModel.
 
-Current D4-A dispositions and physical debt are in DAY4_STATUS.md. D4-B process
-death and D4-C network transitions remain separate, unstarted work.
+Current D4-A/D4-B dispositions and physical debt are in DAY4_STATUS.md. D4-C
+network transitions remain separate, unstarted work.
+
+
+## Day 4 process-restart controls
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 python3 tools/wear_process_restart.py --all --install
+PYTHONDONTWRITEBYTECODE=1 python3 tools/wear_process_restart.py --scenario PROCESS_RESTART_AFTER_PARTIAL
+PYTHONDONTWRITEBYTECODE=1 python3 tools/wear_process_restart.py \
+  --scenario PROCESS_RESTART_DURING_ACTIVE --method force-stop
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tools -p 'test_wear*.py'
+```
+
+The process runner shares watch discovery with wear_scenarios.py and additionally
+requires the exact existing AVD name WristPrompt_Watch7. Physical serials,
+ambiguous watches, another AVD and non-debuggable packages fail before process
+mutation. No Android Studio, pairing, data clear, uninstall or credential access.
+
+Each process scenario initially prepares only a fresh catalog and empty VM. One
+explicit SEED broadcast (same fixed debug receiver and fresh launch identifier)
+creates its pre-death condition. SEED is memory-only, idempotent within a fixture,
+and **never** called during startup/relaunch. The old fixture is not serialized.
+No "after restart" marker, request or previous PID is written into app storage.
+
+Default --method am-kill backgrounds the Activity, observes CREATED/below STARTED,
+uses `am kill`, requires the application PID to disappear, then reorders the
+existing Android task to the foreground. Android restores the Activity's original
+launch intent and saved framework state; a new process constructs new fixtures
+and owners. The runner requires a different PID, process-owner UUID and
+ScenarioOwner UUID, and checks EMPTY, zero messages/partial/draft/generations,
+READY fresh catalog, no busy/pending input, and CHAT surface. It does not fall
+back to force-stop if ActivityManager refuses to kill the background process.
+
+Explicit --method force-stop is a **stronger, separately labelled** package-stop
+check. It uses a new explicit cold launch after force-stop. It is not evidence for
+every low-memory process-death condition. Neither method proves watch reboot or
+hardware Keystore behavior. Process death does not establish server-side
+completion/cancellation or usage; no previous generation is ever replayed.
+
+The safe acknowledgement adds PID, process owner, chat busy, proof stage, selected
+synthetic model slug, synthetic billing mode, current surface and pending-input
+marker. No account IDs, text, credential records, authenticated bodies or headers
+are reported. CLI output includes old/new PID and boolean owner-change evidence,
+not account identity. Scenarios remain absent from release manifest/DEX.
+
+Synthetic billing/model values are **not production persistence evidence**:
+PROCESS_RESTART_IDLE intentionally changes debug-2 back to debug-1 in the fresh
+fixture. Real durable account/billing/model/credential reconstruction is covered
+separately by ProcessReconstructionTest and the D3-B encrypted-record integration
+fixture. No debug scenario constructs a real repository or reads installed tokens.
+
+D4-B moved shell navigation and the interruption marker from rememberSaveable to
+an Activity-owned UI ViewModel. They survive retained recreation, but Android's
+saved Bundle cannot restore them into a new process. Composer request tokens
+still belong only to their composition, so retained recreation discards returned
+text with guidance; a fresh process starts without the interruption marker/token.

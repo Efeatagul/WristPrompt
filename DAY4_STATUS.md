@@ -1,10 +1,16 @@
-# Day 4 Phase A — 2026-10-29
+# Day 4 status — 2026-10-29
+
+**Current D4-B result: PASS WITH KNOWN DEBT.** See the D4-B section below for
+303 Wear / 16 Python tests and actual emulator PID-change acceptance. D4-C is
+unstarted. The Phase A sections retain the 962452c handoff evidence and counts.
+
+# D4-A handoff — historical phase record
 
 ## A. Executive result
 
 **PASS WITH KNOWN DEBT — VERIFIED AUTOMATICALLY; emulator matrix below.**
-Only D4-A lifecycle work is implemented. D4-0 was supplied as complete. D4-B
-process death and D4-C network transitions are unstarted. No physical test,
+At the D4-A handoff, only lifecycle work was implemented. D4-0 was supplied as
+complete; D4-B and D4-C were unstarted at that handoff. No physical test,
 credential operation, commit, push, publication or signing change was performed.
 The starting working tree was clean.
 
@@ -301,3 +307,325 @@ ComposerInteraction.kt, DebugScenarioActivity.kt, DebugScenarios.kt,
 LifecycleOwnershipTest.kt, ComposerInteractionTest.kt,
 StreamingHttpCancellationTest.kt, DebugScenariosTest.kt and test_wear_scenarios.py.
 DAY3_REPORT.md remains unchanged.
+
+# D4-B — process death and fresh reconstruction
+
+## A. Executive result — PASS WITH KNOWN DEBT
+
+**VERIFIED AUTOMATICALLY:** 303 Wear tests, 16 Python tests, Wear debug/release
+assembly, lint, release isolation and whitespace/syntax checks pass. **PASS —
+VERIFIED ON EMULATOR:** all four actual am-kill/task-resume scenarios, a separate
+force-stop/cold launch, the reproduced page-reset regression, and retained D4-A
+stream/Stop/composer-marker checks. Hardware process/reboot/Keystore and release
+acceptance remain separate. Only D4-B was implemented; D4-C is unstarted.
+
+Starting tree was clean at `962452c` (the completed D4-A commit). No commit, push,
+publication, real credential operation or physical-device testing performed.
+
+## B. Final process-death contract
+
+Process death ends the in-memory conversation, including completed replay and
+opaque reasoning items, draft, partial output and interrupted user exchange.
+Request Jobs, callbacks, busy/Stop state, prepared catalogs and leases are not
+durable. A fresh graph restores protected configuration and discovers a fresh
+catalog before reconciling the exact saved slug. Chat then starts EMPTY/idle.
+Initial credential/model loading is legitimate fresh startup work; it is not
+restored inference. A live account observer also is not an active generation Job.
+
+No generation is resumed, replayed, retried or inferred completed. The client
+process dying cannot establish whether OpenAI finished generation or incurred
+usage. A new inference requires an explicit user Send. No recovery feature or
+persistent interrupted-request/conversation marker was added. Existing empty-chat
+copy already says history stays in memory for this session; no confusion evidence
+justified new UX copy.
+
+| Lifecycle | Meaning |
+| --- | --- |
+| Recomposition | Same owners/work; rendering only, covered by D4-A. |
+| Retained Activity recreation | Same ViewModelStore and conversation/operation; D4-A behavior retained. |
+| Finish/final ViewModel destruction | Graceful local cancellation/invalidation and transport cleanup; not process-death evidence. |
+| Background `am kill` | Actual app process termination with Android task/saved state retained; used for primary D4-B acceptance. Not induced low-memory pressure. |
+| Force-stop | Stronger package-stopped state; checked separately with explicit cold launch. Not equivalent to all natural kills. |
+| Relaunch after process death | New Application/process dependencies, stores and ViewModels; existing durable records reconstruct, ephemeral work does not. |
+| Device reboot | Separate hardware/RC boundary; not exercised. |
+
+## C. Fresh startup and ownership sequence
+
+1. Android creates WristPromptApplication. Its clock and application scope are
+   eager; repositories/router/session/HTTP/bridge dependencies remain lazy.
+2. MainActivity creates WatchAuthViewModel. Constructor dependencies instantiate
+   the auth bridge, profiles, revocation/HTTP and inference dependencies as needed.
+   InferenceSession is a fresh shared dependency, not an application-owned request.
+   CredentialRouter starts combining fresh repository flows with usable=false.
+3. WatchAuthViewModel starts `profiles.load()` in viewModelScope. MainActivity's
+   ApiKeySettingsViewModel starts `keys.load()` independently. EncryptedRecord
+   construction alone does not decrypt; repository reads validate/decrypt the
+   existing vaults. Startup ordering is concurrent, not an assumed fixed read order.
+4. WatchProfiles loads selected registration/generation/model preferences and
+   refresh/sign-out metadata. Abandoned sign-out intent completes local clearing
+   with UNCONFIRMED remote outcome. Uncertain refresh remains blocked, not retried.
+5. ApiKeyRepository restores loaded mode/modeRevision, key/keyRevision and API
+   model. Until loaded, the router is unusable even if a plan profile arrives first.
+   API mode may legitimately become usable before plan profiles load; its route is
+   independent. Direct `router.current()` also reads the durable billing snapshot.
+6. Fresh InferenceViewModel constructs empty ChatConversation, no prepared catalog
+   or operation, and new epoch/input ownership. Only a usable current access state
+   triggers model discovery. It never calls Send from startup or restoration.
+7. InferenceSession obtains the current lease from the selected route, discovers
+   with that bearer, checks lease currency and cancellation, then the ViewModel
+   reads the account/mode-specific saved model and revalidates epoch/lease again.
+   Exact slug wins regardless of service order/labels; otherwise first service
+   entry is a display fallback with no dormant-preference writeback.
+8. Activity-owned ShellNavigationViewModel starts at CHAT (debug fixtures may
+   explicitly choose another initial surface). No old shell page or pending-input
+   marker is restored from Android's saved Bundle. Composer tokens remain local
+   to their composition and cannot return text into a fresh owner.
+
+Installation DataStore is instantiated lazily via HostIdRepository for bridge
+identity use. Normal inference startup does not manufacture/read a new host ID.
+Independent DataStore reconstruction verifies the existing UUID remains stable.
+Absent first-install identity follows existing getOrCreate behavior; invalid or
+unreadable persisted identity fails without calling a replacement generator.
+Existing encrypted records with a missing key fail closed; no reset/fallback path
+was introduced. These are code/JVM boundaries, not hardware Keystore acceptance.
+
+The delayed-profile, delayed-billing and delayed-model-preference D3-B tests pass;
+new API reconstruction tests explicitly try Send before billing load and observe
+zero discovery/generation. No startup wrong-mode race was reproduced. A corrupt
+API vault may remain loaded=false/storageError=true rather than publishing a
+router STORAGE problem immediately; it stays unusable and UI has storageError.
+The safety assertion is fail-closed/no dispatch, not a guessed intermediate enum.
+
+## D. Baseline defect reproduced
+
+D4-A's `rememberSaveable` surface and pending-input marker were eligible for
+Android process saved-state restoration. Baseline EMPTY_CHAT was navigated to
+Compose, backgrounded, killed with am kill, and its original task resumed:
+PID **3746 -> 3877**, fresh ScenarioOwner, yet Compose/disabled Send/Write message
+returned. The conversation was correctly empty, but a stale shell page survived.
+
+Final code recheck: PID **4497 -> 4910**, fresh owner, **COMPOSER -> CHAT** after
+am kill/task resume. This is an actual process transition, not Activity.recreate().
+No credential, refresh, model restoration, chat persistence or inference replay
+production defect was reproduced. The initial corrupted-record test was corrected
+to test fail-closed routing rather than require an intermediate error enum.
+
+## E. Production changes
+
+- Added `ui/ShellNavigationViewModel.kt` for two transient UI values: current
+  surface and pending-input marker. Activity ViewModel ownership retains them
+  across configuration changes; a fresh process starts with fresh defaults.
+- `ui/WearShell.kt` now uses that owner rather than rememberSaveable for those
+  two values. No SavedStateHandle or persisted marker is involved. Existing
+  composition-owned ComposerInteraction discards old returned text as in D4-A.
+
+No change to MainActivity/Application, InferenceViewModel/session/conversation,
+CredentialRouter, credential/model vaults, DataStore identity, encryption/signing,
+refresh, sign-out, OAuth, billing or production Data Layer routing. D23 records
+the new shell-state boundary; D18's memory-only chat decision is unchanged.
+
+## F. Persistence matrix after process death
+
+| State | Disposition |
+| --- | --- |
+| Installation host identity | RESTORED from existing DataStore; missing first installation has existing explicit getOrCreate semantics; invalid/unreadable storage fails closed. |
+| Issued client/registration identity, verified identity, scopes, tokens | RESTORED from validated encrypted profiles, if usable; no new registration inferred. |
+| Selected account and generation | RESTORED from WatchVault, including a selected second registration in the integrated test. |
+| Billing mode and mode revision | RESTORED from ApiVault before routing can become usable. |
+| API key/key revision/configured state | RESTORED from ApiVault; missing key in API mode never falls back to plan. |
+| Plan model per registration / API model | RESTORED preferences, reconciled against a fresh current catalog; no fallback writeback. |
+| Refresh intent/uncertainty / reauth-required state | RESTORED; uncertain/terminal grants remain blocked. |
+| Sign-out intent/result and retained registration | RESTORED/recovered; abandoned intent clears local secrets, reports UNCONFIRMED, never revives credentials. |
+| Repository/router/session/provider objects, mutexes and active-job map | RECONSTRUCTED; no old instances or active request ownership. |
+| Catalog and bearer lease | RECONSTRUCTED through discovery/current routing; never restored from prior process memory. |
+| Credential/model loading | RECONSTRUCTED current startup work, not stale request busy state. |
+| Conversation, completed replay, reasoning items, partial output, draft | CLEARED / NOT DURABLE. |
+| Active generation, SSE, operation Job, old callback ownership | CLEARED / NOT DURABLE; remote outcome remains unknown. |
+| UI epoch and input revision | RECONSTRUCTED for the fresh ViewModel; old callbacks retain no reference to it. |
+| Stop/receiving state, old transient errors, shell page, pending composer token/marker | CLEARED / NOT DURABLE. |
+| In-memory refresh cooldown and renewed-session display hint | CLEARED / NOT DURABLE; durable uncertainty is independent and remains authoritative. |
+
+## G. Refresh and sign-out recovery
+
+**VERIFIED AUTOMATICALLY**, with unchanged production code:
+
+- Normal fresh credentials restore and discover without refresh or generation.
+- Definitely-unsent refresh failure clears durable intent; a fresh graph may safely
+  renew for catalog access. This is not replay of inference or an uncertain grant.
+- Synthetic uncertain post-dispatch NETWORK outcome persists refreshPending.
+  A fresh router/VM requires reauth, performs zero catalog/generation calls, and
+  direct credential acquisition cannot reuse the old grant.
+- Terminal invalid_grant persists unusable/reauth state; fresh acquisition does
+  not attempt another refresh or normal inference.
+- A snapshot taken after durable sign-out intent but before revocation completion
+  is reconstructed as abandoned work. Local clearing completes, registration/host
+  remain for reauthorization, no ID-token hint returns, and remote result is
+  UNCONFIRMED. No remote revoke replay or credential resurrection occurs.
+- Existing full regression includes **35 refresh** tests and **13 sign-out** tests.
+  Bounded NonCancellable rotation/commit semantics were not weakened.
+
+## H. Debug scenarios and tooling
+
+Added PROCESS_RESTART_IDLE, PROCESS_RESTART_AFTER_COMPLETED,
+PROCESS_RESTART_DURING_ACTIVE and PROCESS_RESTART_AFTER_PARTIAL: **31 total**
+fixtures. Each new fixture starts empty with fresh discovery; only the runner's
+explicit once-only SEED creates its pre-death state. No fixture, stage, prompt or
+"already seeded" marker is written for the next process. Fresh app ownership never
+calls SEED. The active-before-delta and active-after-partial cases suspend on
+cancellation, without timer races. Completed case uses normal ViewModel/session/
+conversation paths. Debug lease remains an empty bearer, never a real credential.
+
+`tools/wear_process_restart.py` shares watch discovery with the existing launcher,
+requires AVD WristPrompt_Watch7, verifies debug before mutation, and reports safe
+PID/enum/count/synthetic-model/billing metadata. Default am-kill waits for below-
+STARTED observation and actual PID disappearance, then resumes the original task.
+Explicit force-stop is a distinct method and performs a new explicit launch.
+Fresh PID/process-owner/fixture-owner and empty/no-replay assertions are mandatory.
+No hidden force-stop fallback, data clear, uninstall, credential access or network.
+WEAR_SCENARIOS.md records the public commands and evidence boundaries.
+
+## I. Automated results — VERIFIED AUTOMATICALLY
+
+| Check | Exact result |
+| --- | --- |
+| Full Wear unit suite | **303 tests**, 0 failures/errors/skips; 15 additional tests over D4-A's 288. |
+| Combined focused D4-B/D3-B/D4-A/recovery/chat suites | **123 tests**, 0 failures/errors/skips; included in full suite. |
+| New process reconstruction class | **11 tests**, including gated/mode/state loops; passing. |
+| D3-B ModelRestorationIntegrationTest | **15 tests**, passing, all existing cases retained. |
+| D4-A LifecycleOwnershipTest | **8 tests**, passing. ComposerInteractionTest also passes. |
+| New shell owner tests | **2 tests**, passing. |
+| HostIdRepositoryTest | **5 tests**, passing; includes new corrupt persisted-DataStore reconstruction rejection. |
+| Python launcher + process-runner suites | **16 tests**, 0 failures/errors/skips. |
+| Wear assembleDebug / assembleRelease | Both PASS; unsigned release inspection only. |
+| Wear lintDebug | PASS; 0 errors, same 6 warning instances as D4-A. |
+| Scenario manifest/DEX/source/dependency release-isolation checker | PASS. |
+| Python syntax | All 6 tools/*.py files PASS. |
+| git diff --check and changed/new-file whitespace | PASS. |
+| Mobile unit/build/lint | Not rerun: no shared/mobile changes; historical results not claimed as current. |
+
+Reused/extracted the existing D3-B encrypted-disk fixture in
+`ReconstructionFixture.kt`; no second repository/router fixture framework. Each
+runtime constructs new SecretRecord wrappers, WatchProfiles, ApiKeyRepository,
+router, session, ViewModel and actual ViewModelStore. Catalog parsing uses the
+production provider/HTTP adapter with synthetic interceptor responses. Chat inputs
+and gated responses pass through real VM/session/conversation paths. JCE AES-GCM
+file encryption/serialization and real disk DataStore are exercised; test keys
+live at the simulated OS boundary. Android Keystore/AtomicFile/device reboot are
+not established by JVM tests.
+
+All race tests use deferred/channel/state gates, not arbitrary sleeps. The account
+collector is expected to remain live after startup; tests distinguish it from an
+active inference Job. A deliberately late NonCancellable old-owner completion
+cannot publish into the old cleared or fresh graph. A new explicit request after
+fresh reconstruction contains exactly its one new user item, no old reasoning or
+completed/partial history.
+
+Final commands, with DEVELOPMENT.md's existing JDK/signing environment:
+
+```sh
+export JAVA_HOME="$HOME/.local/share/wristprompt/jdk-17.0.21+9"
+export ANDROID_USER_HOME="$HOME/.local/share/wristprompt/android"
+./gradlew :wear:testDebugUnitTest \
+  --tests '*ProcessReconstructionTest' --tests '*ModelRestorationIntegrationTest' \
+  --tests '*LifecycleOwnershipTest' --tests '*ShellNavigationViewModelTest' \
+  --tests '*ComposerInteractionTest' --tests '*DebugScenariosTest' \
+  --tests '*WatchRefreshTest' --tests '*RefreshUpgradeTest' \
+  --tests '*WatchSignOutTest' --tests '*HostIdRepositoryTest' \
+  --tests '*ChatConversationTest' --tests '*ChatViewModelTest' --console=plain
+./gradlew :wear:testDebugUnitTest :wear:assembleDebug :wear:assembleRelease :wear:lintDebug --console=plain
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tools -p 'test_wear*.py'
+python3 tools/check_scenario_isolation.py
+git diff --check
+```
+
+## J. Emulator process-restart acceptance
+
+Existing WristPrompt_Watch7 was started with `-no-snapshot-save`, verified by AVD
+name/watch characteristics, and updated with install -r using the existing key.
+No Android Studio, physical device, reboot, pairing or CapabilityClient probe.
+
+| Scenario | Method | PID before -> after | Result |
+| --- | --- | --- | --- |
+| PROCESS_RESTART_IDLE | Home / am kill / original-task resume | **4004 -> 4103** | PASS — VERIFIED ON EMULATOR |
+| PROCESS_RESTART_AFTER_COMPLETED | Same | **4103 -> 4197** | PASS — VERIFIED ON EMULATOR |
+| PROCESS_RESTART_DURING_ACTIVE | Same | **4197 -> 4287** | PASS — VERIFIED ON EMULATOR |
+| PROCESS_RESTART_AFTER_PARTIAL | Same | **4287 -> 4381** | PASS — VERIFIED ON EMULATOR |
+| PROCESS_RESTART_DURING_ACTIVE | Separate force-stop + explicit cold launch | **4381 -> 4497** | PASS — VERIFIED ON EMULATOR; stronger semantics |
+
+Every row changed both process-owner and fixture-owner UUIDs. Every new process:
+EMPTY, zero generations/messages/partial/draft, busy=false, fresh READY catalog,
+no pending input, CHAT surface. Before death: completed had two messages; active
+had one pending user/zero partial; partial had one user/25 partial characters.
+The idle fixture's debug-2 selection resets to debug-1 intentionally: fixtures
+are not persisted and **do not prove production preference restoration**.
+Synthetic billing remains CHATGPT_PLAN. Real durable production account/billing/
+model/credential reconstruction is covered separately by integrated JVM tests;
+installed real credentials were never read for emulator assertions.
+
+Additional actual renderer/owner checks:
+
+- Saved-page defect recheck: **4497 -> 4910**, COMPOSER -> CHAT with fresh owner.
+- ACTIVE_STREAM_RECREATION still retained one owner/generation through two Activity
+  creations; explicit gate yielded 38 chars and production Stop yielded CANCELLED
+  with one excluded user exchange. No process restart was confused with recreation.
+- COMPOSER_RECREATION retained its marker/surface through Activity recreation,
+  then native swipe-back dismissal returned RESUMED/COMPOSER, pending marker=true,
+  zero draft/generations and coherent interruption guidance. Generic Back did not
+  dismiss this Wear picker; that tooling assumption was corrected to swipe-back.
+
+Commands actually executed:
+
+```sh
+python3 tools/wear_process_restart.py --all --install
+python3 tools/wear_process_restart.py --scenario PROCESS_RESTART_DURING_ACTIVE --method force-stop
+PYTHONDONTWRITEBYTECODE=1 python3 /tmp/d4b-ui-acceptance.py
+```
+
+The temporary UI runner's first immediate tap was not accepted as a UI transition;
+rendered-control synchronization confirmed the page-reset/stream checks. Its
+Back-key composer dismissal timed out; manual native swipe-back completed that
+check with the safe acknowledgement above. These are not claimed as passing
+unmodified host-script runs. Process runner assertions themselves passed all rows.
+
+This is actual process termination, not induced low-memory pressure or hardware
+reboot. am kill preserves the Android task; force-stop has stronger stopped-package
+semantics. PID change does not prove remote inference ended cleanly or usage was
+avoided. No generation was automatically resumed/replayed in any fresh fixture.
+
+## K. Security and architecture invariants
+
+No conversation/request persistence, automatic inference replay, unsafe uncertain
+refresh reuse, credential fallback, Data Layer bypass or sensitive logging added.
+Debug metadata includes no account IDs, token/key/header/payload, prompt, response
+or raw authenticated body. No credential schema/storage migration, OAuth/billing
+redesign, signing/dependency change, foreground service, WorkManager, wake lock,
+connectivity observer or production keep-screen-on. Scenario classes/commands are
+absent from release manifest/DEX; production has no references to them. No real
+app-data clearing, uninstall, session revocation or key invalidation performed.
+
+## L–M. Remaining debt / deferred to D4-C
+
+**PENDING END-OF-DAY PHYSICAL TEST / RC:** actual Galaxy Watch process kill/relaunch,
+watch reboot, hardware Keystore restoration, phone-off/watch-only reconstruction,
+and final release-build lifecycle acceptance. No physical testing performed here.
+
+D4-C connectivity/network transitions remain unstarted; no observer/retry or
+Wi-Fi/Bluetooth transition implementation was added. Historical Terra -> Sol
+physical anomaly remains unreproduced/unresolved; integrated regression passes
+are not an anomaly fix. Reauthorization anomaly remains unresolved for Day 5
+freeze disposition. Funded BYOK physical success remains externally constrained;
+no funded credential/purchase required. Emulator CapabilityClient limitation is
+unchanged and was not reinvestigated. Existing D3/D4-A physical/RC debt remains.
+
+## N. Suggested commit
+
+`test: verify fresh-process reconstruction without inference replay`
+
+No commit or push performed. Changed files: WearShell.kt,
+ShellNavigationViewModel.kt, ModelRestorationIntegrationTest.kt,
+ReconstructionFixture.kt, ProcessReconstructionTest.kt,
+ShellNavigationViewModelTest.kt, HostIdRepositoryTest.kt,
+DebugScenarios.kt, DebugScenarioActivity.kt, DebugScenariosTest.kt,
+wear_scenarios.py, wear_process_restart.py, test_wear_scenarios.py,
+test_wear_process_restart.py, DAY4_STATUS.md, WEAR_SCENARIOS.md,
+DECISIONS.md and ROADMAP.md. DAY3_REPORT.md remains unchanged.

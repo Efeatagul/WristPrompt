@@ -9,7 +9,9 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,10 +66,13 @@ internal fun WearShellContent(
     val messageChunks = remember(renderedChat.messages) {
         renderedChat.messages.associate { it.id to readableChunks(it.text) }
     }
-    var surface by rememberSaveable { mutableStateOf(initialSurface) }
+    val navigation: ShellNavigationViewModel = viewModel(factory = viewModelFactory {
+        initializer { ShellNavigationViewModel(initialSurface) }
+    })
+    var surface by navigation.surface
     val composer = remember(proof) { ComposerInteraction(proof) }
-    // Only a UI marker is saved: never returned text or a request token.
-    var inputPending by rememberSaveable { mutableStateOf(false) }
+    // Marker stays in the retained owner; a fresh process has neither marker nor token.
+    var inputPending by navigation.inputPending
     val interruptedInput = inputPending && !composer.pending
     DisposableEffect(composer) { onDispose { composer.discard() } }
     var inputUnavailable by remember { mutableStateOf(false) }

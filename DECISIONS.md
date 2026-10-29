@@ -1037,3 +1037,28 @@ Repository code and official Android [ViewModel lifetime](https://developer.andr
 [Activity Result registration](https://developer.android.com/training/basics/intents/result)
 were reviewed. DAY4_STATUS.md owns automated/emulator evidence and pending
 physical checks; emulator sleep is not Galaxy Watch power-management evidence.
+
+
+## D23 — fresh-process shell state boundary (2026-10-29)
+
+D4-B reproduced an Android saved-state boundary gap in D22: a new process/new
+InferenceViewModel could restore the previous shell page via rememberSaveable.
+Use an Activity-owned ShellNavigationViewModel for surface and pending-input UI
+marker instead. They are retained through Activity recreation and cleared with
+the owner/process. This supersedes only D22's saveable surface/marker choice;
+composition-owned single-use result discard remains unchanged. No SavedStateHandle,
+new persistence, request restoration or durable interruption marker is added.
+
+D18's memory-only conversation and D19's no-replay rules remain authoritative.
+Fresh repositories/router/session/ViewModels reconstruct only existing durable
+configuration, perform current-catalog discovery/reconciliation, and start empty
+chat. A killed client cannot establish the remote generation/usage outcome;
+replaying its previous prompt is prohibited. Existing durable refresh uncertainty
+and sign-out cleanup remain fail-closed; no credential schema or recovery change.
+Actual background am-kill/task-resume and separately labelled force-stop acceptance
+are recorded in DAY4_STATUS.md; hardware reboot/Keystore acceptance is separate.
+
+Official Android [saved UI state](https://developer.android.com/develop/ui/compose/state-saving)
+and [process lifetime](https://developer.android.com/guide/components/activities/process-lifecycle)
+were checked. The process runner never claims force-stop is equivalent to every
+system low-memory kill. D4-C connectivity work is not authorized by this decision.

@@ -49,6 +49,20 @@ class HostIdRepositoryTest {
         assertEquals("corrupted", data.data.first()[HostIdRepository.HOST_ID])
     }
 
+    @Test fun unreadablePersistedDataStoreNeverGeneratesAReplacementIdentity() = runBlocking {
+        val expected = HostIdRepository(store()).getOrCreate()
+        assertTrue(BridgeProtocol.isHostId(expected))
+        scope.coroutineContext.job.cancelAndJoin()
+        File(temporary.root, "installation.preferences_pb").writeBytes(byteArrayOf(0xff.toByte(), 0xff.toByte()))
+        scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        var replacements = 0
+        try {
+            HostIdRepository(store()) { replacements++; BridgeProtocol.newHostId() }.getOrCreate()
+            fail("Unreadable identity must not reset")
+        } catch (_: androidx.datastore.core.CorruptionException) { }
+        assertEquals(0, replacements)
+    }
+
     @Test fun invalidGeneratorCannotWriteIdentity() = runBlocking {
         val data = store()
         assertThrows(IllegalStateException::class.java) {

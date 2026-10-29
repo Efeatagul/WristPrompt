@@ -23,9 +23,11 @@ release isolation, and all 23 emulator scenarios. Physical RC gate remains open;
 funded BYOK and capability-dependent emulator auth constraints are not app failures.
 Historical restoration and reauthorization anomalies remain unresolved. D4-0 is
 complete; D4-A retained-process lifecycle hardening is PASS WITH KNOWN DEBT for
-automated/emulator scope (DAY4_STATUS.md). D4-B process death and D4-C network
-transitions are unstarted; reauthorization debt still requires Day 5 disposition
-before freeze.
+automated/emulator scope (DAY4_STATUS.md). D4-B process reconstruction is also
+PASS WITH KNOWN DEBT: 303 Wear / 16 Python tests, both Wear builds/lint, release
+isolation and all four am-kill/task-resume scenarios pass. Hardware process/reboot
+acceptance remains pending. D4-C network transitions are unstarted; reauthorization
+debt still requires Day 5 disposition before freeze.
 
 Day numbers are execution stages, not a claim that work has started. A failed
 release gate blocks progression; retain evidence without credentials. Scope and
@@ -204,7 +206,12 @@ capability isolation evidence remains unchanged. No production fallback.
   still RESUMED during measurement, not physical uninterrupted execution.
 - [ ] D4-A physical Galaxy Watch background/screen-off and retained-owner checks,
   batched into DAY4_STATUS.md's end-of-day/RC checklist; not required during implementation.
-- [ ] D4-B process death and D4-C network transitions: pending, not begun.
+- [x] D4-B fresh encrypted object-graph reconstruction and actual emulator process
+  restart acceptance: durable identity/billing/model restoration, empty chat/no
+  replay, conservative refresh/sign-out recovery; 303 Wear / 16 Python tests pass.
+- [ ] D4-B physical process/reboot/Keystore and release-build lifecycle acceptance,
+  deferred to the consolidated Day 4/RC hardware checklist.
+- [ ] D4-C network transitions: pending, not begun.
 
 - [ ] Add platform voice input only if earlier gates are green; otherwise cut it.
 - [ ] Check permission denial, recognizer absence, phone absence, process death,
