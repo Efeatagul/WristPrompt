@@ -2,18 +2,28 @@
 
 ## 1. Executive result
 
-**PASS WITH KNOWN DEBT — PHYSICAL PENDING.** D4-A through D4-F are complete
-for their recorded automated/emulator scope. D4-G consolidation and final automated/
-emulator validation pass. **PENDING PHYSICAL ACCEPTANCE:** no Day 4 physical result
-has been supplied. This is not full Day 4 hardware or release acceptance.
+**PASS WITH KNOWN DEBT. Day 4 is complete.** Automated, emulator and targeted
+physical acceptance are complete, including the owner's successful fixed-D4-H-APK
+P9 retest on Galaxy Watch 7 with the physical phone. P9 is PASS — PHYSICAL AFTER
+REMEDIATION. The pre-D4-H failure remains recorded as defect history, not current status.
 
-Phase G changes documentation only. No features, production/debug/tooling code,
-OAuth, billing, credential formats/storage, Data Layer routing, dependencies or
-signing identity changed. No physical action, commit or push occurred. Day 5 is not started.
+This final closure changes documentation only. No production/test changes, new
+automated or emulator runs, physical-device actions, commit or push occurred in
+this closure. The physical results are owner-reported. Day 5 has not started.
+D4-H changed account presentation only; no lifecycle/background architecture,
+OAuth/handoff/storage architecture, routing or persistence change was required.
 
-## 2. Scope
+The final baseline combines D4-H Wear verification with applicable earlier D4-G
+mobile/Python/emulator evidence. Mobile and Python were not rerun during D4-H;
+no old automated result is represented as newly executed in this closure.
 
-Read AGENTS, PROJECT_SPEC, ROADMAP, DECISIONS, DAY3_REPORT, DAY3_STATUS,
+## 2. Historical D4-G scope
+
+The following describes the earlier D4-G review, not the final closure worktree.
+Final closure read DAY4_REPORT, DAY4_STATUS, ROADMAP, DECISIONS and DAY3_REPORT;
+its starting tree contained the existing uncommitted D4-H changes, preserved intact.
+
+D4-G read AGENTS, PROJECT_SPEC, ROADMAP, DECISIONS, DAY3_REPORT, DAY3_STATUS,
 DAY4_STATUS, WEAR_SCENARIOS and both emulator Data Layer investigation reports.
 Reviewed relevant lifecycle/session/conversation/router/refresh/transport/manifest
 and emulator-selection code. Starting working tree was clean. Historical Day 3
@@ -71,14 +81,17 @@ CapabilityClient investigation remains closed; no production fallback was added.
 
 ## 9. Final automated acceptance
 
-**VERIFIED AUTOMATICALLY**, rerun from the current repository:
+**VERIFIED AUTOMATICALLY — preserved baseline, not rerun during final closure.**
+Wear counts/builds/lint/isolation below are the latest D4-H results; mobile,
+Python and the focused 116-test subset are historical D4-G results. The D4-G
+340-test Wear result is superseded by D4-H's 343-test suite.
 
 | Check | Exact result |
 | --- | --- |
-| Full Wear JVM suite | 340 tests / 44 suites; 0 failures/errors/skips |
-| Full mobile JVM suite | 70 tests / 11 suites; 0 failures/errors/skips |
+| Full Wear JVM suite (D4-H) | 343 tests / 45 suites; 0 failures/errors/skips |
+| Full mobile JVM suite (D4-G; not rerun in D4-H) | 70 tests / 11 suites; 0 failures/errors/skips |
 | Focused Day 4 rerun (subset of full suite) | 116 tests / 13 suites; 0 failures/errors/skips |
-| Python tool tests | 40 passed |
+| Python tool tests (D4-G; not rerun in D4-H) | 40 passed |
 | Wear debug / release builds | Both PASS |
 | Mobile debug / release builds | Both PASS |
 | Wear lintDebug | 0 errors / 6 existing warnings |
@@ -92,9 +105,10 @@ Focused suites: LifecycleOwnership 8, ComposerInteraction 6,
 StreamingHttpCancellation 8, ProcessReconstruction 11, ShellNavigationViewModel 2,
 ConnectivityTransitions 7, ConnectivityCredential 2, PhoneIndependence 6,
 PersistenceRecovery 13, ModelRestorationIntegration 15, ProtectedFailureMatrix 4,
-WatchRefresh 21, WatchSignOut 13. These 116 are not additional to the 340.
+WatchRefresh 21, WatchSignOut 13. These 116 were a subset of the historical 340-test D4-G run, not extra tests.
 
-Commands actually run using DEVELOPMENT.md's preserved JDK/ANDROID_USER_HOME:
+Historical D4-G commands using DEVELOPMENT.md's preserved JDK/ANDROID_USER_HOME
+(D4-H commands and suite details are recorded in section G below):
 
 ```sh
 ./gradlew :wear:testDebugUnitTest --rerun :mobile:testDebugUnitTest --rerun \
@@ -126,9 +140,10 @@ before the focused rerun replaced Wear's test XML. Build/lint tasks may reuse cu
 Gradle outputs; unit tasks explicitly reran. Initial sandbox cache/ADB access failed;
 authorized host execution passed without cache migration or signing changes.
 
-## 10. Final emulator acceptance
+## 10. Final emulator baseline — preserved D4-G evidence
 
-**VERIFIED ON EMULATOR.** All commands below ran sequentially. Each runner dynamically
+**VERIFIED ON EMULATOR.** Previously executed D4-G commands below ran sequentially;
+none was rerun during D4-H or final documentation closure. Each runner dynamically
 selected **WristPrompt_Watch7 (emulator-5554)**, verified watch characteristics and
 excluded physical serials. No physical device was selected or modified.
 
@@ -153,56 +168,36 @@ local access, not production OAuth/handoff. No real OpenAI, hardware lifecycle,
 real radio-transition or release-on-device result is implied. Capability-dependent
 production paired-emulator OAuth/handoff remains NOT VERIFIABLE ON CURRENT EMULATOR LAB.
 
-## 11. Physical acceptance status
+## 11. Final physical acceptance — owner-reported, 2026-10-29
 
-**PENDING PHYSICAL ACCEPTANCE.** Use physical Galaxy Watch 7 and Android phone,
-current Day 4 debug APKs and the existing signing identity. Update with install -r;
-no uninstall, clear-data, key deletion, token tampering or destructive corruption.
-Phone/watch ADB must be ready; select actual physical serials explicitly. These
-commands are for the user, not executed in Phase G:
+**VERIFIED PHYSICALLY / PASS WITH KNOWN DEBT.** The owner supplied P1–P10 results,
+including successful P9 retesting of the fixed D4-H APK. The agent performed no
+physical-device actions during documentation closure. This is targeted Day 4
+acceptance, not full release-candidate or destructive platform acceptance.
 
-```sh
-adb devices -l
-adb -s PHONE_SERIAL install -r mobile/build/outputs/apk/debug/mobile-debug.apk
-adb -s WATCH_SERIAL install -r wear/build/outputs/apk/debug/wear-debug.apk
-```
-
-Replace serial placeholders after identifying each physical device. Both built
-APKs match the preserved signing fingerprint in DEVELOPMENT.md. If installation
-reports a signing mismatch, stop; do not uninstall to bypass it.
-
-This is the single final Day 4 matrix; earlier phase checklists are historical.
-Record each row using exactly one of: **PASS — PHYSICAL**, **FAIL — PHYSICAL**,
-**NOT EXERCISED**, **BLOCKED — EXTERNAL**. All rows are currently untested.
-
-| ID / check | User action and expected acceptance | Status |
+| ID | Final physical result | Evidence / boundary |
 | --- | --- | --- |
-| P1 Retained background stream | Start real long response, Home, wait briefly, reopen. Latest partial/completed state coherent; no duplicate/replay; credentials/model unchanged. If active, Stop works, partial stays excluded, Compose returns. | NOT EXERCISED |
-| P2 Screen-off / wake | Start another long response, let/force screen off without app keep-screen-on; wake/return. Continued coherent state OR coherent interrupted non-success is acceptable. No duplicate output/request, replay, impossible busy state or account/model corruption. | NOT EXERCISED |
-| P3 App/process restart | From normal authenticated state, safe process-level termination/relaunch or natural close/reopen, without clearing data. Durable account/billing/model restores; empty chat, no old partial/active request or replay; new Send works. Not equivalent to watch reboot. | NOT EXERCISED |
-| P4 Watch-only | Verify normal operation with phone, give watch its own Internet (prefer Wi-Fi), then disable phone Bluetooth, power phone off or move out of range. Model reload, plan inference, follow-up, Stop and New Chat work; no normal-operation phone-required state. Do not force reauthentication. | NOT EXERCISED |
-| P5 Real network loss | Start real long stream, interrupt watch's usable Internet, restore. No false completion, credentials retained, coherent failure/partial, no automatic resend. Explicitly send “Reply with exactly: NETWORK RECOVERED”; expect “NETWORK RECOVERED”. Phone state irrelevant. | NOT EXERCISED |
-| P6 Model restoration | Select non-default model (Terra if available), leave/relaunch; same model restores if available. If Terra becomes Sol, STOP and preserve state/logs/exact steps; no speculative repair. | NOT EXERCISED |
-| P7 Rotary | Check long response, model picker and error/recovery details if practical. Crown scrolling usable; controls neither skipped nor trapped. | NOT EXERCISED |
-| P8 Larger font | Increase watch font one practical setting; check chat, composer/recovery, picker and long error. No severe overlap; controls reachable; wrapping/scrolling appropriate. Restore setting if desired. | NOT EXERCISED |
-| P9 Final sign-out / reauth | Only after P1–P8: sign out; local authenticated state disappears. Existing Continue with ChatGPT sends setup to phone; reauth/handoff completes; models and one real inference work. Record transient anomaly state/timing if seen; do not claim fixed. | NOT EXERCISED |
-| P10 Optional API separation | Optional fake/known-invalid API key, explicitly select API-key mode, request: API auth failure and NO plan fallback. Explicitly return to plan mode. No funded credit needed; optional due to D2/D3 coverage. | NOT EXERCISED |
+| P1 | PASS — PHYSICAL, WITH INTERMITTENT PRIOR INTERRUPTION NOT REPRODUCED | One initial real Home interruption retained partial output, marked the exchange unfinished/interrupted, excluded it from future context and caused no replay. Four later attempts succeeded, including two approximately 30-paragraph Linux scheduler requests, with more than 10 seconds on the watch face before returning to the same continuing stream. No duplicate request or replay. |
+| P2 | PASS — PHYSICAL | Real stream interrupted after screen-off/wake; partial/non-success state retained with no replay. Accepted under the best-effort screen-off/Doze contract. |
+| P3 | PASS — PHYSICAL | Process kill/restart restored account, billing mode and selected model; chat remained non-durable, no old active request replayed, and a new request returned exactly RESTART WORKS. Does not establish full reboot. |
+| P4 | PASS — PHYSICAL | Phone Bluetooth disconnected; watch independently online over Wi-Fi. Model operations, real plan inference, follow-up, Stop and New Chat worked. Normal post-setup operation remained phone-independent; natural token refresh was not observed. |
+| P5 | PASS — PHYSICAL | Removing watch Wi-Fi immediately stopped real streaming without false completion. Wi-Fi restoration caused no automatic replay; credentials remained usable. An explicit request returned exactly NETWORK RECOVERED. |
+| P6 | PASS — PHYSICAL | Exact selected GPT-5.6 Luna restored. Terra was not physically retested; historical Terra -> Sol anomaly remains unreproduced and unresolved. |
+| P7 | PASS — PHYSICAL | Rotary scrolling worked on available main-menu screens and long assistant output. |
+| P8 | PASS — PHYSICAL | Maximum watch font size remained usable; controls remained reachable. |
+| P9 | PASS — PHYSICAL AFTER REMEDIATION | Before D4-H, credentials were unusable, Continue returned and model loading stopped, but old name/ID remained visible. Fixed-APK retest clears previous account information and authenticated presentation, shows Continue with ChatGPT, completes physical-phone OAuth and watch credential handoff, restores correct account presentation, loads models and completes real inference. Historical transient reauthorization anomaly remains unresolved and was not reproduced during current physical acceptance. |
+| P10 | PASS — PHYSICAL | Obviously invalid API key failed as expected without fallback to ChatGPT-plan credentials. |
 
-Physical PASS requires P1–P9 without a new critical/high defect; P10 is optional.
-P9 is the only planned sign-out/reauth operation and is performed by the user last.
-No destructive physical credential/key test is required or authorized here.
-
-If P6 passes without reproducing the historical issue, retain this wording:
-“Historical physical model-restoration anomaly remains unreproduced and unresolved;
-current physical and automated acceptance passes.” Do not assert its physical
-clause until results are supplied.
-
-Natural refresh: do not force expiry or tamper with tokens. Record it if observed;
-otherwise retain **NOT PHYSICALLY OBSERVED — AUTOMATED WATCH-ONLY REFRESH COVERAGE PASSES.**
+Background continuation remains best effort. The one prior Home interruption
+could not be reproduced; subsequent repeated physical continuation and the safe
+interrupted/excluded path satisfy Day 4 acceptance. No foreground service,
+Ongoing Activity or background architecture change was justified. D4-H made no
+lifecycle production change. No additional physical-device actions are required
+for Day 4 closure.
 
 ## 12. Architecture/security invariants
 
-**VERIFIED AUTOMATICALLY / source review:**
+**Preserved Day 4 automated/source-review conclusions, supplemented by owner-reported P9:**
 
 - No automatic inference replay or model-discovery retry. Initial usable-account
   discovery and required bearer-change catalog reconciliation are not retry loops.
@@ -213,7 +208,7 @@ otherwise retain **NOT PHYSICALLY OBSERVED — AUTOMATED WATCH-ONLY REFRESH COVE
 - Watch OpenAiProvider/OpenAiHttp perform direct inference; phone is not a proxy.
 - WearConnectivity still requires reachable capability discovery; no Data Layer
   bypass or production NodeClient/connectedNodes fallback. Debug diagnostic use is separate.
-- No ConnectivityManager observer, foreground service, WorkManager, wake lock or
+- No ConnectivityManager observer, foreground service, Ongoing Activity, WorkManager, wake lock or
   production keep-screen-on behavior.
 - WatchProfiles preserves durable refreshPending, bounded NonCancellable rotation
   and atomic replacement; uncertain consumed grants remain fail-closed.
@@ -222,18 +217,30 @@ otherwise retain **NOT PHYSICALLY OBSERVED — AUTOMATED WATCH-ONLY REFRESH COVE
   excludes pending exchanges from future context; cancellation reaches HTTP transport.
 - Scenario Activity/classes/names/ACK/action are absent from release manifest/DEX;
   production source references and fixture storage/network dependencies are rejected.
+- Signed-out authenticated account name/ID is no longer presented as current,
+  verified by the fixed-APK physical P9 retest. Durable installation/registration
+  identity remains intact internally for normal reauthentication.
 
-These checks do not establish physical power management or platform interruption durability.
+Best-effort power management remains intentional; destructive platform interruption
+durability and full RC acceptance are not inferred from targeted physical success.
 
 ## 13. Known debt
 
-- Historical Terra -> Sol physical restoration anomaly: unreproduced/unresolved.
-- Transient reauthorization anomaly: unresolved; record recurrence, do not mark fixed.
-- Funded BYOK success: unverified, BLOCKED — EXTERNAL (no funded API credits).
-- Paired-emulator CapabilityClient synchronization: emulator/GMS limitation; closed investigation.
-- Physical Keystore / AtomicFile interruption behavior: not destructively tested.
-- Natural real-token refresh without phone: not physically observed; automated coverage passes.
-- Final hardware lifecycle/network/watch-only acceptance: pending P1–P9.
+- Historical Terra -> Sol physical restoration anomaly: unreproduced and unresolved;
+  current P6 physically verified GPT-5.6 Luna only.
+- Historical transient reauthorization anomaly remains unresolved and was not
+  reproduced during current physical acceptance.
+- Natural real-token refresh while phone is absent: not physically observed;
+  automated watch-only refresh coverage passes. Do not force token expiry.
+- Funded BYOK success: unverified because no funded API credits are available;
+  external constraint accepted, no purchase required.
+- Paired-emulator CapabilityClient synchronization: existing GMS/emulator limitation;
+  production physical Data Layer handoff works. No investigation reopened.
+- Destructive Android Keystore / AtomicFile interruption behavior: intentionally
+  not physically tested; synthetic tests do not prove platform interruption durability.
+- Terra-specific restoration physical retest: deferred unless naturally useful later.
+
+These are retained known debt, not blockers to closing Day 4.
 
 ## 14. Deferred RC items
 
@@ -244,15 +251,181 @@ external credential is available. Distinguish these from this debug hardware mat
 No forced expiry, destructive storage test or funded-credit purchase is required.
 Reauthorization debt needs explicit disposition before freeze; compilation cannot close it.
 
-## 15. Day 5 handoff
+## 15. Final closure and Day 5 handoff
 
-Recommendation only: after recording the Day 4 hardware result, follow ROADMAP's
-release-hardening focus: protocol/security regression, manifest/exported-component/
-diagnostic/backup/crypto/signing/dependency and release-shrinker review, then accurate
-release documentation/privacy/setup materials and current Play/Wear requirements.
-Resolve or explicitly disposition historical anomalies before freeze. Optional voice
-is not introduced by this handoff. **Day 5 has not started.**
+Day 4 is complete with PASS WITH KNOWN DEBT. Recommended next focus:
+**DAY 5 — release / RC hardening**. Defer the exact D5 phase plan to a fresh
+Day 5 read-only audit; no Day 5 implementation or optional voice work has started.
+The deferred RC evidence above is distinct from the completed Day 4 gate.
 
-Changed files: DAY4_REPORT.md, DAY4_STATUS.md, ROADMAP.md only.
-Suggested commit: `docs: consolidate Day 4 acceptance and physical test matrix`.
-No commit or push performed.
+Final closure changed DAY4_REPORT.md, DAY4_STATUS.md and ROADMAP.md only.
+DECISIONS.md remains consistent: D12 retains durable registration identity, while
+D22/D23 preserve best-effort lifecycle and memory-only request ownership.
+DAY3_REPORT.md remains a historical record and was not changed. No new architecture
+decision, code/test edit, automated/emulator rerun, device action, commit or push.
+
+Documentation consistency: P1–P10 accepted within their stated scope; P6 is Luna
+only; P9 passes after remediation without claiming the historical reauthorization
+anomaly fixed; historical counts retain phase attribution. Closure git diff and
+changed/new-file whitespace checks PASS.
+
+Suggested commit: `docs: close Day 4 acceptance with known debt`.
+
+# D4-H — narrow physical sign-out remediation — 2026-10-29
+
+## A. Executive result
+
+**PASS WITH KNOWN DEBT — VERIFIED AUTOMATICALLY / VERIFIED PHYSICALLY.**
+D4-H's stale account presentation fix passed the owner's fixed-APK Galaxy Watch 7
+retest. P9 is PASS — PHYSICAL AFTER REMEDIATION; its earlier failure remains defect
+history. Current acceptance is DAY4_REPORT.md section 11. The historical transient
+reauthorization anomaly remains unresolved and was not reproduced during current
+physical acceptance. Day 5 remains unstarted. No device action, commit or push
+was performed by the agent during final documentation closure.
+
+## B–C. P1 classification and architecture
+
+**PASS — PHYSICAL, WITH INTERMITTENT PRIOR INTERRUPTION NOT REPRODUCED.**
+Background continuation is best effort but repeatedly worked on physical Galaxy
+Watch 7: four successful later attempts, including two approximately 30-paragraph
+Linux scheduler responses, after more than 10 seconds on the watch face. One
+prior interruption safely retained partial text, marked interrupted, excluded the
+exchange from future context and never replayed. No confirmed lifecycle defect.
+No lifecycle production change, foreground service, Ongoing Activity, WorkManager,
+wake lock, screen-off policy or background ownership change. None is justified by
+current evidence. P1 requires no further stress testing in this pass.
+
+## D–F. Root cause, fix and contract
+
+Exact source: WatchProfiles.signOut retains encrypted profile metadata by design;
+WatchProfiles.publish previously mapped every retained profile to name/email plus
+client-ID suffix, including signOutPending/signOutResults registrations.
+WatchAuthViewModel.accounts directly exposes that state; ConnectionItems rendered
+all labels, while ShellPresentation independently resolved the selected label
+without checking authentication. This was repository publication plus presentation
+eligibility, not cached Compose state or CredentialRouter credential availability.
+
+Before production edits, SignOutPresentationTest deterministically failed with
+`expected null, but was:<Synthetic · nt_one>` after real repository sign-out and
+router/ViewModel transition to REAUTHORIZE. Logs: /tmp/d4h-red.log. The original
+single integration test then passed after the production fix (/tmp/d4h-green.log).
+
+Small production fix:
+- Publish “Signed-out ChatGPT account” for pending/completed/blocked sign-out
+  registrations, without name/email/client-ID suffix. This applies to every
+  registration, including non-selected signed-out entries. Keep its internal
+  selection key so the normal same-registration reauthorization path remains.
+- Present current account summary only when connected, not signing/signed out,
+  not requiring reauthorization, and without protected-storage error.
+- Show selected model only when the selected billing route is available, so a
+  retained catalog snapshot cannot suggest a signed-out usable model.
+
+After successful local sign-out: old name/ID absent from current presentation,
+Continue with ChatGPT available, plan models/catalog/inference unavailable, and
+explicit billing unchanged even with a configured API key. Repeated sign-out is
+idempotent. Reconstruction keeps presentation signed out. Normal phone OAuth and
+handoff restore current presentation, catalog and explicit inference. No OAuth,
+protocol, handoff, router, credential storage or lifecycle implementation changed.
+
+## G. Automated verification — preserved D4-H run
+
+| Check | Exact result |
+| --- | --- |
+| Full Wear JVM suite, explicitly rerun | 343 tests / 45 suites, 0 failures/errors/skips |
+| New SignOutPresentationTest | 2 passed (included in 343) |
+| ShellPresentationTest | 12 passed, including 1 new transition guard (included) |
+| WatchSignOutTest / OpenAiRevocationTest | 13 / 5 passed (included) |
+| TransitionTest / ErrorTransitionTest | 12 / 2 passed (included) |
+| WatchProfilesTest / CredentialRouterTest | 15 / 4 passed (included) |
+| D4-A LifecycleOwnershipTest | 8 passed (included) |
+| D4-B ProcessReconstructionTest | 11 passed (included) |
+| D4-D PhoneIndependenceTest | 6 passed (included) |
+| D4-E PersistenceRecoveryTest | 13 passed (included) |
+| ModelRestorationIntegrationTest / WatchRefreshTest | 15 / 21 passed (included) |
+| Wear assembleDebug / assembleRelease | Both PASS |
+| Wear lintDebug | 0 errors/fatals, 6 existing warnings |
+| Release source/manifest/DEX scenario isolation | PASS |
+| git diff --check / changed and new file whitespace | PASS |
+| Mobile JVM suite | Not rerun: no shared/mobile changes |
+| Python unit tests / syntax | Not rerun: no tooling changes |
+
+The 3 new tests cover authenticated name/ID before sign-out; clearing both after
+sign-out; Continue; model/catalog gating including an intentionally retained old
+snapshot; blocked plan lease and inference; no API fallback despite configured key;
+idempotence; encrypted-record reconstruction; retained registration and absent
+ID-token hint; reauthentication presentation/catalog/inference; stale generation
+rejection; pending sign-out plus an independent selectable authenticated account.
+Existing account/mode revision, late callback, sign-out/revocation and lifecycle
+safeguards passed in the full suite. These are synthetic JVM results, not physical
+or emulator acceptance, and no new emulator/device run is claimed.
+
+Commands actually run (existing JDK/cache/signing configuration):
+
+```sh
+export JAVA_HOME="$HOME/.local/share/wristprompt/jdk-17.0.21+9"
+export ANDROID_USER_HOME="$HOME/.local/share/wristprompt/android"
+./gradlew :wear:testDebugUnitTest --tests '*SignOutPresentationTest' --console=plain
+# Above executed before and after production fix; expected initial regression failure.
+./gradlew :wear:testDebugUnitTest --rerun :wear:assembleDebug :wear:assembleRelease :wear:lintDebug --console=plain
+PYTHONDONTWRITEBYTECODE=1 python3 tools/check_scenario_isolation.py
+git diff --check
+```
+
+XML parsing counted tests and lint severities; an explicit changed/new-file scan
+checked trailing whitespace, conflict markers and final newline. Logs and full
+per-suite counts: /tmp/d4h-validation.log and /tmp/d4h-counts.txt (temporary).
+The first restricted Gradle attempt could not write its existing cache lock;
+authorized host execution succeeded. No cache migration or signing change.
+
+## H. Security and identity review
+
+Current authenticated account presentation is conditional UI state. After sign-out,
+it must not expose the old name or ID as authenticated. The neutral registration
+row explicitly says signed out. Internal client keys remain for selection/routing;
+they are not rendered in that row. Retained encrypted display metadata is unchanged.
+
+Durable installation/registration identity is host ID plus issued client and
+verified issuer/subject. It must survive sign-out for normal protocol continuity.
+No host/client/key deletion, migration, new storage format or token handling change.
+Tests verify preserved client registration/no ID-token hint and old lease rejection.
+No API fallback, sensitive logs, production diagnostic changes, Data Layer bypass,
+conversation/request persistence, inference replay or remote service change.
+DECISIONS.md unchanged: D12's durable identity retention remains correct; this is a
+presentation bug fix within that existing architecture.
+
+## I. Historical D4-H implementation files changed
+
+- wear/src/main/kotlin/io/github/grassified/wristprompt/auth/WatchProfiles.kt
+- wear/src/main/kotlin/io/github/grassified/wristprompt/ui/ShellPresentation.kt
+- wear/src/test/kotlin/io/github/grassified/wristprompt/openai/SignOutPresentationTest.kt (new)
+- wear/src/test/kotlin/io/github/grassified/wristprompt/ui/ShellPresentationTest.kt
+- DAY4_STATUS.md
+- DAY4_REPORT.md
+- ROADMAP.md (acceptance updates only)
+
+## J. Fixed-APK physical retest — complete
+
+**P9 — PASS — PHYSICAL AFTER REMEDIATION.** Owner-reported retest confirms previous
+account information disappears, authenticated presentation clears, and Continue
+with ChatGPT appears. Physical-phone OAuth completes; credentials return to watch,
+current account presentation returns, models load and real inference succeeds.
+Historical transient reauthorization anomaly remains unresolved and was not
+reproduced during current physical acceptance. No additional Day 4 physical retest
+or P1 stress testing is required.
+
+## K. Remaining known debt
+
+Historical Terra → Sol anomaly remains unreproduced/unresolved; P6 proves exact
+GPT-5.6 Luna restoration only, not Terra. Historical transient reauthorization
+anomaly remains unresolved and was not reproduced during current physical acceptance. Natural
+watch-only real-token refresh is unobserved physically. Funded BYOK success remains
+externally blocked. Emulator/GMS CapabilityClient limitation is unchanged and was
+not reopened. Destructive Keystore/AtomicFile interruption tests were not performed.
+Full reboot, release-on-hardware, remote revocation and actual server-context
+boundary checks remain deferred RC scope, not extra required D4-H physical retests.
+
+## L. Historical D4-H suggested commit message
+
+`fix(wear): hide retained account identity after ChatGPT sign-out`
+
+No commit or push performed. Day 5 remains unstarted.

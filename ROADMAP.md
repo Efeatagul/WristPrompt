@@ -21,26 +21,39 @@ KNOWN DEBT**, D3-A through D3-G complete for that scope. See DAY3_REPORT.md for
 272 Wear / 70 mobile / 8 Python tests, both debug/release builds and lint,
 release isolation, and all 23 emulator scenarios. Physical RC gate remains open;
 funded BYOK and capability-dependent emulator auth constraints are not app failures.
-Historical restoration and reauthorization anomalies remain unresolved. D4-0 is
-complete; D4-A retained-process lifecycle hardening is PASS WITH KNOWN DEBT for
-automated/emulator scope (DAY4_STATUS.md). D4-B process reconstruction is also
-PASS WITH KNOWN DEBT: 303 Wear / 16 Python tests, both Wear builds/lint, release
-isolation and all four am-kill/task-resume scenarios pass. Hardware process/reboot
-acceptance remains pending. D4-C network transitions are PASS WITH KNOWN DEBT:
-317 Wear / 22 Python tests and six synthetic emulator scenarios pass; real radio
-transitions remain pending hardware evidence. D4-D is PASS WITH KNOWN DEBT:
-326 Wear / 26 Python tests, six synthetic emulator phone-absence scenarios, no
-production change required. Updated-build hardware acceptance remains pending;
-D4-E is PASS WITH KNOWN DEBT — VERIFIED AUTOMATICALLY: 340 Wear / 70 mobile /
-26 Python tests, both Wear builds/lint/release isolation; no production change
-required. D4-F harness consolidation is PASS WITH KNOWN DEBT: 340 Wear / 70 mobile /
-40 Python tests, 11 smoke / 43 full emulator fixtures, separate process and synthetic
-connectivity runners, strengthened release isolation. Physical persistence/reboot
-acceptance remains pending. D4-G automated/emulator consolidation passes: 340 Wear /
-70 mobile / 40 Python tests, both apps debug/release builds and lint, 11/11 smoke,
-43/43 catalog, 4/4 am-kill, 4/4 force-stop, 6/6 connectivity and 6/6 phone absence.
-See DAY4_REPORT.md for final evidence and the P1–P10 physical matrix.
-Reauthorization debt still requires Day 5 disposition before freeze.
+Historical restoration and reauthorization anomalies remain unresolved.
+
+## Final Day 4 gate — 2026-10-29
+
+**PASS WITH KNOWN DEBT — COMPLETE.** D4-A through D4-H automated, emulator and
+targeted physical acceptance are complete. Owner-reported P1–P10 results, including
+the successful fixed-D4-H-APK P9 sign-out/OAuth/handoff/models/inference retest, are
+recorded in DAY4_REPORT.md section 11 and DAY4_STATUS.md's final matrix.
+
+Latest D4-H baseline: Wear 343 tests / 45 suites, zero failures/errors/skips;
+Wear debug/release builds PASS; lint zero errors/six existing warnings; release
+scenario isolation and whitespace checks PASS. Preserved D4-G baseline: mobile
+70 tests, Python 40 tests, emulator catalog 43/43, smoke 11/11, process restart
+4/4 am-kill and 4/4 force-stop, synthetic connectivity 6/6, phone absence 6/6.
+Mobile/Python were not rerun during D4-H; final closure reran no test/build/emulator.
+
+P1: PASS — PHYSICAL, WITH INTERMITTENT PRIOR INTERRUPTION NOT REPRODUCED.
+Best-effort continuation remains; no foreground service/Ongoing Activity or new
+background architecture was justified. P2 screen-off interruption satisfies the
+best-effort contract. P6 proves exact GPT-5.6 Luna only, not Terra.
+
+Known debt remains non-blocking for Day 4: historical Terra -> Sol anomaly is
+unreproduced/unresolved; Terra-specific physical retest is deferred unless naturally
+useful later. Historical transient reauthorization anomaly remains unresolved and
+was not reproduced during current physical acceptance. Natural phone-absent real
+token refresh was not physically observed (automated watch-only coverage passes;
+no forced expiry). Funded BYOK success is unverified without funded API credits.
+Paired-emulator CapabilityClient synchronization remains a GMS/emulator limitation;
+production physical Data Layer handoff works. Destructive Keystore/AtomicFile
+interruption tests were intentionally not physically performed.
+
+Recommended next focus: **DAY 5 — release / RC hardening**. Defer the exact D5
+phase plan to a fresh Day 5 read-only audit. No Day 5 implementation has started.
 
 Day numbers are execution stages, not a claim that work has started. A failed
 release gate blocks progression; retain evidence without credentials. Scope and
@@ -203,6 +216,11 @@ phase-local history: DAY3_STATUS.md.
   release-build checks. Successful funded BYOK remains unverified/constrained;
   no purchase is required. See DAY3_REPORT.md for physical evidence boundaries.
 
+The Day 3 checklist above is a historical RC handoff. Day 4 P1–P10 now close
+the overlapping targeted sign-out/reauthentication, rotary/font, process restart,
+background/screen-off and network checks; remote revocation, actual server-context
+boundaries and release-specific acceptance remain deferred.
+
 The original physical Day 3 release gate remains **DEFERRED FINAL PHYSICAL RC**,
 not checked off by development acceptance. Routine UI/state acceptance uses the
 emulator; final hardware/real-network checklist is in DAY3_REPORT.md. Capability-
@@ -210,50 +228,67 @@ dependent production auth is NOT VERIFIABLE ON CURRENT EMULATOR LAB. D3-G's pair
 Data Layer smoke was BLOCKED — ENVIRONMENT (required pair unavailable); earlier
 capability isolation evidence remains unchanged. No production fallback.
 
-## Day 4 — lifecycle, resilience and device acceptance
+## Day 4 — lifecycle, resilience and device acceptance — COMPLETE
+
+**PASS WITH KNOWN DEBT.** Phase counts below are historical; the final baseline
+and targeted physical acceptance are recorded above. Deferred RC evidence and
+optional voice are not open Day 4 closure gates.
 
 - [x] D4-0 ownership audit (supplied complete) and D4-A retained Activity/background/
   final ViewModel-clear hardening: 288 Wear / 8 Python tests, Wear debug/release
   builds, lint and release isolation pass; six lifecycle/composer/terminal scenarios
   pass emulator acceptance. Screen-off evidence is Dozing/resume, with Activity
   still RESUMED during measurement, not physical uninterrupted execution.
-- [ ] D4-A physical Galaxy Watch background/screen-off and retained-owner checks,
-  batched into DAY4_STATUS.md's end-of-day/RC checklist; not required during implementation.
+- [x] D4-A physical P1 background acceptance (prior intermittent interruption not
+  reproduced) and P2 accepted best-effort screen-off interruption; no new lifecycle change.
 - [x] D4-B fresh encrypted object-graph reconstruction and actual emulator process
   restart acceptance: durable identity/billing/model restoration, empty chat/no
   replay, conservative refresh/sign-out recovery; 303 Wear / 16 Python tests pass.
-- [ ] D4-B physical process/reboot/Keystore and release-build lifecycle acceptance,
-  deferred to the consolidated Day 4/RC hardware checklist.
+- [x] D4-B targeted P3 physical process restart: account/billing/model restored,
+  empty non-durable chat, no replay, exact RESTART WORKS. Full reboot/Keystore/
+  release-build lifecycle evidence remains separate deferred RC scope.
 - [x] D4-C network transitions: VERIFIED AUTOMATICALLY and six synthetic scenarios
-  VERIFIED ON EMULATOR; real Galaxy Watch radio transitions pending. See DAY4_STATUS.md.
+  VERIFIED ON EMULATOR; owner-reported P5 real network-loss/recovery PASS — PHYSICAL.
+  See DAY4_STATUS.md and DAY4_REPORT.md for scope.
 
 - [x] D4-D phone-independence audit/integrated regression and six synthetic
   presentation scenarios: VERIFIED AUTOMATICALLY / VERIFIED ON EMULATOR.
   No production change required; phone is setup/reauth companion, not inference proxy.
-- [ ] D4-D updated-build physical phone-off/watch-Wi-Fi and natural refresh
-  acceptance, deferred to DAY4_STATUS.md's targeted hardware session; no forced expiry.
+- [x] D4-D P4 physical watch Wi-Fi with phone Bluetooth disconnected: model
+  operations, plan inference, follow-up, Stop and New Chat pass. Natural token
+  refresh remains unobserved physically; automated coverage passes, no forced expiry.
 - [x] D4-E persistence/recovery edge cases: VERIFIED AUTOMATICALLY, 137 focused /
   340 full Wear tests, 70 mobile tests, both Wear builds/lint/release isolation.
   No production change required; final durability matrix in DAY4_STATUS.md.
-- [ ] D4-E physical persistence/reboot/Keystore/platform AtomicFile acceptance,
-  deferred to the non-destructive consolidated Day 4/RC checklist.
+- [x] D4-E targeted P3/P6 persistence acceptance: account/billing/model restored,
+  GPT-5.6 Luna only. Destructive Keystore/AtomicFile tests intentionally not run;
+  full reboot/platform interruption evidence remains deferred RC scope.
 - [x] D4-F harness consolidation: VERIFIED AUTOMATICALLY / VERIFIED ON EMULATOR;
   43-name catalog, bounded 11-case smoke, shared safe ADB helpers and separate
-  specialized runners. See WEAR_SCENARIOS.md and DAY4_STATUS.md; physical gate open.
+  specialized runners. See WEAR_SCENARIOS.md and DAY4_STATUS.md; targeted physical gate closed.
 - [x] D4-G consolidated automated/emulator validation and DAY4_REPORT.md.
-- [ ] D4-G physical acceptance: P1–P9 pending; P10 optional. Day 4 is not yet
-  fully physically accepted; see DAY4_REPORT.md section 11.
+- [x] D4-H narrow P9 presentation remediation and deterministic pre-fix reproduction.
+- [x] Owner-reported P3 process restoration, P4 watch Wi-Fi/phone Bluetooth absent,
+  P5 network recovery, P6 GPT-5.6 Luna, P7 rotary, P8 maximum font, P10 API separation.
+- [x] D4-H fixed-APK P9: PASS — PHYSICAL AFTER REMEDIATION. Old account name/ID
+  clears; Continue appears; phone OAuth, watch handoff, current presentation, models
+  and real inference pass. Historical transient reauthorization anomaly unresolved
+  and not reproduced. Day 4 targeted physical acceptance complete.
 
-- [ ] Add platform voice input only if earlier gates are green; otherwise cut it.
-- [ ] Check permission denial, recognizer absence, phone absence, process death,
-  screen-off/background behavior, reconnect, Wi-Fi/Bluetooth transitions, and low
-  connectivity on Galaxy Watch 7.
-- [ ] Polish readability, tap targets, rotary focus, and accessibility.
+- Optional platform voice input deferred/cut from Day 4; no implementation started.
+  Voice-specific permission/recognizer checks are outside the completed text-chat scope.
+- [x] Targeted physical lifecycle/network/phone-independence checks P1–P5 and
+  rotary/maximum-font usability P7/P8 accepted; no uninterrupted screen-off guarantee.
+  Remaining release-specific evidence stays deferred to RC hardening.
 
 Gate: reliable foreground text chat without voice; no hidden phone dependency
 for inference/refresh after setup. Document intentional lifecycle limits.
 
-## Day 5 — release hardening
+## Day 5 — release / RC hardening — NOT STARTED
+
+The items below are existing roadmap candidates, not an approved exact phase plan.
+Begin only with a fresh Day 5 read-only audit; no implementation is authorized by
+Day 4 closure.
 
 - [ ] Complete focused protocol/security regression tests and both-app lint/build.
 - [ ] Review manifests, exported components, diagnostics, backups, crypto, signing,
