@@ -2,24 +2,15 @@
 """Synthetic process-death acceptance on the existing WristPrompt_Watch7 AVD only."""
 import argparse
 import json
-import os
-from pathlib import Path
 import subprocess
 import time
 import uuid
 
-from wear_scenarios import PACKAGE, ROOT, discover_watch
+from wear_adb import PACKAGE, discover_watch, adb_call, require_debug, install_debug, fields
 
 SCENARIOS = ('PROCESS_RESTART_IDLE', 'PROCESS_RESTART_AFTER_COMPLETED',
              'PROCESS_RESTART_DURING_ACTIVE', 'PROCESS_RESTART_AFTER_PARTIAL')
 COMPONENT = PACKAGE + '/.openai.DebugScenarioActivity'
-
-
-def fields(raw, token, scenario):
-    prefix = f'{token} {scenario} READY '
-    if not raw.startswith(prefix):
-        return None
-    return dict(item.split('=', 1) for item in raw[len(prefix):].split())
 
 
 def verify_fresh(before, after):
@@ -42,11 +33,7 @@ def main():
                         help='am-kill resumes the retained task; force-stop is a stronger separate cold-launch check')
     parser.add_argument('--install', action='store_true')
     args = parser.parse_args()
-    sdk = Path(os.environ.get('ANDROID_HOME', str(Path.home() / 'Android/Sdk')))
-    adb = str(sdk / 'platform-tools/adb')
-
-    def call(*parts):
-        return subprocess.check_output([adb, *parts], text=True, stderr=subprocess.STDOUT, timeout=30).strip()
+    call = adb_call
 
     serial, name = discover_watch(call, required_name='WristPrompt_Watch7')
     print(f'{name}: {serial}; method={args.method}', flush=True)
@@ -55,10 +42,8 @@ def main():
         return call('-s', serial, *parts)
 
     if args.install:
-        device('install', '-r', str(ROOT / 'wear/build/outputs/apk/debug/wear-debug.apk'))
-    if not device('shell', 'pm', 'path', PACKAGE).startswith('package:'):
-        raise RuntimeError('WristPrompt package missing')
-    device('shell', 'run-as', PACKAGE, 'pwd')  # Debug-only check before killing anything.
+        install_debug(device)
+    require_debug(device)
 
     def pid():
         try:

@@ -25,8 +25,10 @@ class LauncherTest(unittest.TestCase):
             if 'run-as' in parts and not debug:
                 import subprocess
                 raise subprocess.CalledProcessError(1, parts)
+            if 'pidof' in parts:
+                return '100'
             if 'cat' in parts:
-                return 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa EMPTY_CHAT READY generations=0 stage=EMPTY'
+                return 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa EMPTY_CHAT READY generations=0 stage=EMPTY lifecycle=RESUMED pid=100'
             return '/data/user/0/debug'
         with patch.object(sys, 'argv', ['wear_scenarios.py', *(argv or ['--scenario', 'EMPTY_CHAT'])]), \
              patch.object(runner.subprocess, 'check_output', side_effect=command), \
@@ -71,7 +73,7 @@ class LauncherTest(unittest.TestCase):
 
     def test_release_fails_run_as(self):
         import subprocess
-        with self.assertRaises(subprocess.CalledProcessError):
+        with self.assertRaisesRegex(RuntimeError, 'not accessible as debug'):
             self.run_cli('emulator-5582\tdevice\n', debug=False)
 
 

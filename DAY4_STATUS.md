@@ -1,11 +1,11 @@
 # Day 4 status — 2026-10-29
 
-**Current D4-E result: PASS WITH KNOWN DEBT — VERIFIED AUTOMATICALLY.**
-340 Wear / 70 mobile / 26 Python tests, both Wear builds, lint and release isolation
-pass. No production change required. See D4-E below for the final durability matrix,
-137-test focused evidence and platform/device limits. No D4-E emulator or physical
-acceptance claimed. Physical persistence/reboot checks, D4-F and D4-G remain pending.
-Earlier sections preserve historical handoff counts.
+**Current D4-F result: PASS WITH KNOWN DEBT — VERIFIED AUTOMATICALLY / VERIFIED ON EMULATOR.**
+340 Wear / 70 mobile / 40 Python tests pass; Wear debug/release builds, lint and
+strengthened release isolation pass. Bounded smoke 11/11 and full non-destructive
+catalog 43/43 pass; specialized evidence is recorded in D4-F below. No production
+code change. No physical Day 4 acceptance; D4-G remains unstarted. Earlier sections
+preserve historical phase counts and handoff statements.
 
 # D4-A handoff — historical phase record
 
@@ -1462,5 +1462,207 @@ scenario infrastructure. Final Day 4 acceptance belongs to D4-G, not this result
 - ROADMAP.md
 
 Suggested message: `test: verify durable credential and recovery failure boundaries`
+
+No commit or push performed.
+
+# D4-F — debug harness consolidation — 2026-10-29
+
+## A. Executive result
+
+**PASS WITH KNOWN DEBT — VERIFIED AUTOMATICALLY / VERIFIED ON EMULATOR.**
+D4-F only is complete. No production changes, physical testing, credential/data
+clearing, commit/push or D4-G final Day 4 acceptance/reporting. The starting tree
+was clean. D4-A through D4-E evidence remains scoped to its original measurements.
+
+## B. Final harness architecture and consolidation
+
+`tools/wear_scenarios.py` remains the primary entrypoint. It now offers category
+listing/filtering, an explicit non-destructive `--all`, and bounded 11-case smoke
+instead of treating all 43 fixtures as smoke. Selection flags are mutually
+exclusive. Matching launch-ID/scenario READY metadata, RESUMED Activity and a
+matching live PID are required. Watch-only scenarios additionally use the existing
+zero-bridge/work/billing assertions. Screenshots use only the selected watch.
+
+New `tools/wear_catalog.py` owns category/smoke metadata checked exhaustively
+against the Kotlin public enum. The enum remains the public name authority;
+WEAR_SCENARIOS.md is the canonical complete developer inventory and guide.
+
+New `tools/wear_adb.py` centralizes SDK ADB resolution, timeout/capture, unique
+emulator-watch discovery, expected AVD identity, package/debug access checks,
+screenshot capture and safe acknowledgement parsing. Four scenario runners no
+longer duplicate ADB setup/package checks or import helpers from another runner.
+The paired Data Layer diagnostic shares command execution/timeout only: its
+purposefully different two-named-AVD validation remains intact. It was not run.
+No CapabilityClient investigation or production routing work was reopened.
+
+Process restart, synthetic connectivity and phone-absence runners keep their
+existing focused operations/assertions. No framework, new dependency, scenario,
+production callback or debug Activity/schema change was necessary. The shared
+parser now rejects unknown/duplicate/malformed acknowledgement fields without
+printing their contents. Existing launch guard, safe count/state fields and
+random owner identifiers remain; no credentials, account IDs or chat content.
+
+## C. Final inventory / duplication disposition
+
+**43 public scenarios, 10 categories; all manually launchable, useful and confined
+to synthetic in-memory application state plus the fixed non-secret debug ACK.**
+Full per-name inventory, smoke membership, special-runner requirements, purpose
+and overlap disposition: [WEAR_SCENARIOS.md](WEAR_SCENARIOS.md).
+
+| Category | Count |
+| --- | ---: |
+| DAY 3 PRESENTATION / CHAT (`presentation`) | 5 |
+| AUTH / BILLING (`auth`) | 3 |
+| MODEL (`model`) | 4 |
+| STREAMING / CANCELLATION (`streaming`) | 3 |
+| ERROR (`error`) | 6 |
+| ACTIVITY LIFECYCLE (`lifecycle`) | 4 |
+| PROCESS RESTART (`process`) | 4 |
+| CONNECTIVITY (`connectivity`) | 6 |
+| PHONE INDEPENDENCE (`phone`) | 6 |
+| RECOVERY / PERSISTENCE PRESENTATION (`recovery`) | 2 |
+
+No removed/renamed/consolidated scenario aliases. Generic authenticated/empty-chat
+fixtures resemble absent-phone fixtures visually, but only the latter inject the
+absent-companion spy. Recreated terminal fixtures cover retained ownership versus
+fresh ownership in process fixtures. Offline error presentation differs from
+explicit restore/no-replay recovery. NETWORK_RECOVERED/NETWORK_LOST_BEFORE_SEND
+and MODEL_DISCOVERY_RECOVERED/MODEL_DISCOVERY_OFFLINE deliberately share initial
+states and transition assertions; retaining established public acceptance names
+costs no duplicated fixture implementation. No useful regression evidence removed.
+
+## D. Production audit and release/security isolation
+
+Reviewed the debug host/fixtures, debug manifest, all Python runners/tests,
+WearShell presentation/callback extraction, build source sets and production
+wear/mobile/shared runtime sources. WearShell still forwards real account and
+billing actions; content/navigation ownership remains useful independently of
+fixtures. No debug conditionals, scenario values or test-only auth branches found
+in production. No production files changed and no broad cleanup/refactor required.
+
+Strengthened existing source/binary checker: scenario Activity absent in release
+merged manifest; Activity/enum/fixture/owner class markers, acknowledgement filename,
+receiver action and all 43 public names absent from release DEX. Debug counterparts
+exist. Production wear/mobile/shared sources reject debug entrypoints, scenario
+names, acknowledgement/action markers and BuildConfig.DEBUG references. Existing
+fixture storage/network/credential dependency exclusions remain enforced. Empty
+transient bearer never reaches real repositories or secure storage; every fixture
+prepares using only the synthetic provider. No debug credentials can be written
+through these fixtures. Release Activity non-resolution is manifest/binary evidence,
+not an on-device release install/launch claim.
+
+## E. Automated results — VERIFIED AUTOMATICALLY
+
+| Check | Result |
+| --- | --- |
+| Full Wear suite, rerun | 340 tests / 44 suites; zero failures/errors/skips |
+| DebugScenariosTest, included above | 16 passed |
+| D4-A LifecycleOwnershipTest, included above | 8 passed |
+| D4-B ProcessReconstructionTest, included above | 11 passed |
+| D4-C ConnectivityTransitionsTest / ConnectivityCredentialTest, included above | 7 / 2 passed |
+| D4-D PhoneIndependenceTest, included above | 6 passed |
+| D4-E PersistenceRecoveryTest, included above | 13 passed |
+| Full mobile suite, rerun despite no mobile changes | 70 tests / 11 suites; zero failures/errors/skips |
+| Python tools tests | 40 passed (26 baseline + 14 new) |
+| Wear assembleDebug / assembleRelease | BUILD SUCCESSFUL |
+| Wear lintDebug | Zero errors; six unchanged warnings |
+| Strengthened release/source isolation checker | PASS |
+| Python syntax (ast.parse) | All 13 tools/*.py pass |
+| git diff --check; changed/new-file whitespace/conflict/newline checks | PASS |
+
+Python regression coverage includes exact enum/category/runner-list agreement,
+valid unique bounded smoke, unknown name closed failure, read-only filtered listing,
+emitted ACK-field allowlist, unknown/duplicate/stale/malformed ACK rejection,
+SDK/timeout/capture semantics, physical exclusion, zero/ambiguous watches, changed
+serials, wrong AVD rejection, missing/release package errors, selected-watch
+screenshots, PID/owner freshness, distinct am-kill/force-stop behavior, no replay,
+explicit recovery and bridge-zero negative assertions. Binary/source release
+checks complement host tests; no brittle UI/OCR/golden tests added.
+
+Actual validation commands (DEVELOPMENT.md JDK and preserved ANDROID_USER_HOME):
+
+```sh
+./gradlew :wear:testDebugUnitTest --rerun :mobile:testDebugUnitTest --rerun \
+  :wear:assembleDebug :wear:assembleRelease :wear:lintDebug --console=plain
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tools -p 'test_*.py'
+PYTHONDONTWRITEBYTECODE=1 python3 tools/check_scenario_isolation.py
+git diff --check
+```
+
+The full Wear rerun includes all lifecycle, reconstruction, transport, independence
+and persistence suites, not just debug tests. Tests were executed; unchanged build
+and lint tasks reused Gradle outputs where up to date. Lint XML contains six Warning
+entries: two AndroidGradlePluginVersion, one ExportedService, one VectorPath, two
+WearRecents; zero errors. Initial sandbox Gradle cache lock and host ADB listener
+restrictions required authorized execution outside that sandbox; no cache/signing
+migration or SDK/dependency change.
+
+## F. Emulator acceptance — VERIFIED ON EMULATOR
+
+Dynamic identity: WristPrompt_Watch7, watch characteristics; serial discovered,
+never hardcoded. Existing debug APK updated with install -r during the initial and final smoke runs. No physical
+serial was selected. All final acceptance commands ran sequentially.
+
+| Command / scope | Result and evidence |
+| --- | --- |
+| `python3 tools/wear_scenarios.py --smoke --install` | 11/11 PASS, accepted fresh scenario ACK, RESUMED, matching live PID |
+| `python3 tools/wear_scenarios.py --all` | 43/43 PASS; all requested representative fixtures included |
+| `python3 tools/wear_process_restart.py --all` | 4/4 PASS, actual am-kill PID/owner changes and fresh empty state |
+| `python3 tools/wear_process_restart.py --all --method force-stop` | 4/4 PASS, separate stronger package-stop/cold-launch evidence |
+| `python3 tools/wear_connectivity.py --screenshots /tmp/wristprompt-d4f-connectivity` | 6/6 PASS, synthetic provider failure/restoration/explicit recovery; 12 screen captures |
+| `PYTHONDONTWRITEBYTECODE=1 python3 tools/wear_phone_absence.py` | 6/6 PASS, zero bridge lookups/requests, rendered billing/auth text and fresh fixture processes |
+| `PYTHONDONTWRITEBYTECODE=1 python3 tools/wear_scenarios.py --scenario ERROR_429 --screenshot /tmp/wristprompt-d4f-error429.png` | PASS, selected-watch screenshot path exercised |
+
+Smoke members: SIGNED_OUT, MULTI_TURN_CHAT, MANY_MODELS, STREAMING_LONG,
+STOPPED_PARTIAL, ERROR_429, ACTIVE_STREAM_RECREATION, PROCESS_RESTART_IDLE,
+WATCH_ONLY_AUTHENTICATED, REAUTH_REQUIRED_PHONE_ABSENT, RECREATED_CANCELLED_STATE.
+
+Am-kill PID transitions: 6395→7039, 7039→7133, 7133→7222, 7222→7317.
+Force-stop PID transitions: 7317→7426, 7426→7520, 7520→7608, 7608→7700.
+Both fixture/process owners changed in every case. Resulting messages=0,
+generations=0, busy=false; old completed/active/partial work never replayed.
+Force-stop is stronger than ordinary process death; no silent fallback used.
+
+An initial full launch run and process run overlapped accidentally; both were
+interrupted and excluded. The full 43-case run and specialized process runs above
+were rerun separately and completed successfully. No failure hidden as evidence.
+
+Generic lifecycle cases here establish launch/readiness only; D4-A command-driven
+background/recreation/dozing evidence is retained without claiming it was repeated.
+No OCR, image recognition, visual correctness or screenshot comparison acceptance.
+Connectivity changes only the synthetic provider, never real radio/network state.
+Phone fixtures use synthetic local access, never production paired auth/handoff.
+
+## G. Known limitations / remaining debt / D4-G boundary
+
+- No physical Day 4 acceptance yet. Physical lifecycle, network transitions,
+  watch-only operation, process/reboot and persistence acceptance remain pending.
+- No production paired-emulator auth handoff: BLOCKED — EMULATOR LIMITATION /
+  NOT VERIFIABLE ON CURRENT EMULATOR LAB. CapabilityClient issue unchanged.
+- No real radio-transition acceptance or new physical screen-off guarantee.
+- No funded BYOK success evidence; external constraint remains accepted.
+- Physical Android Keystore and interrupted AtomicFile evidence remain pending;
+  synthetic failures and fixture process death do not establish platform durability.
+- Historical Terra -> Sol and transient reauthorization anomalies remain unresolved;
+  reauthorization debt still requires Day 5 disposition before freeze.
+
+D4-G final Day 4 acceptance/reporting and the targeted hardware session are deferred
+and **not begun**. The existing hardware checklist remains the handoff; no APK
+physical deployment guide or new destructive test is introduced.
+
+## H. Documentation / changed files / suggested commit
+
+WEAR_SCENARIOS.md rewritten as canonical current developer guide and full inventory;
+DAY4_STATUS.md records phase-local evidence; ROADMAP.md marks only D4-F complete
+and leaves physical/D4-G gates open. PROJECT_SPEC.md and DECISIONS.md unchanged:
+this small organization cleanup establishes no new durable architecture policy.
+
+Changed tools: wear_scenarios.py, wear_process_restart.py, wear_connectivity.py,
+wear_phone_absence.py, emulator_data_layer.py, check_scenario_isolation.py,
+test_wear_scenarios.py, test_wear_process_restart.py. New tools: wear_adb.py,
+wear_catalog.py, test_wear_harness.py. No Kotlin, manifests, Gradle or production
+runtime sources changed.
+
+Suggested commit: `test: consolidate Day 4 Wear scenario acceptance tooling`
 
 No commit or push performed.

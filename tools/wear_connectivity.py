@@ -2,14 +2,12 @@
 """Deterministic provider-failure acceptance on WristPrompt_Watch7; no real radio toggles."""
 import argparse
 import json
-import os
 from pathlib import Path
 import subprocess
 import time
 import uuid
 
-from wear_scenarios import PACKAGE, ROOT, discover_watch
-from wear_process_restart import fields
+from wear_adb import PACKAGE, discover_watch, adb_path, adb_call, require_debug, install_debug, fields
 
 SCENARIOS = ('NETWORK_LOST_BEFORE_SEND', 'NETWORK_LOST_DURING_STREAM', 'NETWORK_RECOVERED',
              'MODEL_DISCOVERY_OFFLINE', 'MODEL_DISCOVERY_RECOVERED', 'STOP_NETWORK_RACE')
@@ -51,11 +49,8 @@ def main():
     parser.add_argument('--install', action='store_true')
     parser.add_argument('--screenshots', type=Path)
     args = parser.parse_args()
-    sdk = Path(os.environ.get('ANDROID_HOME', str(Path.home() / 'Android/Sdk')))
-    adb = str(sdk / 'platform-tools/adb')
-
-    def call(*parts):
-        return subprocess.check_output([adb, *parts], text=True, stderr=subprocess.STDOUT, timeout=30).strip()
+    adb = adb_path()
+    call = adb_call
 
     serial, name = discover_watch(call, required_name='WristPrompt_Watch7')
     print(f'{name}: {serial}; synthetic provider transitions only', flush=True)
@@ -64,8 +59,8 @@ def main():
         return call('-s', serial, *parts)
 
     if args.install:
-        device('install', '-r', str(ROOT / 'wear/build/outputs/apk/debug/wear-debug.apk'))
-    device('shell', 'run-as', PACKAGE, 'pwd')
+        install_debug(device)
+    require_debug(device)
 
     for scenario in SCENARIOS:
         token = uuid.uuid4().hex

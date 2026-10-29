@@ -111,7 +111,7 @@ class ProcessRunnerTest(unittest.TestCase):
         self.assertFalse(any('physical-watch' in c for c in self.calls))
 
     def test_release_fails_before_process_mutation(self):
-        with self.assertRaises(subprocess.CalledProcessError):
+        with self.assertRaisesRegex(RuntimeError, 'not accessible as debug'):
             self.run_cli(debug=False)
         self.assertFalse(any(any(action in c for action in ('start', 'kill', 'force-stop', 'install')) for c in self.calls))
 

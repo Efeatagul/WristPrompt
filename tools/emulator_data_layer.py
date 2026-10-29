@@ -1,22 +1,19 @@
 #!/usr/bin/env python3
 """Probe only the two named WristPrompt AVDs. Never select physical devices."""
 import argparse
-import os
 from pathlib import Path
 import subprocess
 import time
+from wear_adb import adb_call
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--install', action='store_true', help='Update debug APKs without clearing data')
 args = parser.parse_args()
 root = Path(__file__).resolve().parent.parent
-sdk = Path(os.environ.get('ANDROID_HOME', str(Path.home() / 'Android/Sdk')))
-adb = str(sdk / 'platform-tools/adb')
 package = 'io.github.grassified.wristprompt'
 activity = package + '/.bridge.DataLayerDiagnosticsActivity'
 
-def call(*arguments):
-    return subprocess.check_output([adb, *arguments], text=True, stderr=subprocess.STDOUT).strip()
+call = adb_call
 
 found = {}
 for line in call('devices').splitlines()[1:]:

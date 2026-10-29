@@ -33,7 +33,10 @@ transitions remain pending hardware evidence. D4-D is PASS WITH KNOWN DEBT:
 production change required. Updated-build hardware acceptance remains pending;
 D4-E is PASS WITH KNOWN DEBT — VERIFIED AUTOMATICALLY: 340 Wear / 70 mobile /
 26 Python tests, both Wear builds/lint/release isolation; no production change
-required. Physical persistence/reboot acceptance, D4-F and D4-G remain pending.
+required. D4-F harness consolidation is PASS WITH KNOWN DEBT: 340 Wear / 70 mobile /
+40 Python tests, 11 smoke / 43 full emulator fixtures, separate process and synthetic
+connectivity runners, strengthened release isolation. Physical persistence/reboot
+acceptance and D4-G remain pending.
 Reauthorization debt still requires Day 5 disposition before freeze.
 
 Day numbers are execution stages, not a claim that work has started. A failed
@@ -231,7 +234,9 @@ capability isolation evidence remains unchanged. No production fallback.
   No production change required; final durability matrix in DAY4_STATUS.md.
 - [ ] D4-E physical persistence/reboot/Keystore/platform AtomicFile acceptance,
   deferred to the non-destructive consolidated Day 4/RC checklist.
-- [ ] D4-F harness consolidation; not begun.
+- [x] D4-F harness consolidation: VERIFIED AUTOMATICALLY / VERIFIED ON EMULATOR;
+  43-name catalog, bounded 11-case smoke, shared safe ADB helpers and separate
+  specialized runners. See WEAR_SCENARIOS.md and DAY4_STATUS.md; physical gate open.
 - [ ] D4-G final Day 4 acceptance; not begun.
 
 - [ ] Add platform voice input only if earlier gates are green; otherwise cut it.

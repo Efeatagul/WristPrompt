@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Launch offline debug scenarios on one dynamically discovered Wear emulator."""
 import argparse
-import os
 from pathlib import Path
 import subprocess
 import time
 import uuid
 
-ROOT = Path(__file__).resolve().parent.parent
-PACKAGE = 'io.github.grassified.wristprompt'
+from wear_adb import ROOT, PACKAGE, adb_path, adb_call, discover_watch, require_debug, install_debug, fields, screenshot
+from wear_catalog import CATEGORIES, SMOKE, category
+
 SOURCE = ROOT / 'wear/src/debug/kotlin/io/github/grassified/wristprompt/openai/DebugScenarios.kt'
 
 
@@ -17,57 +17,39 @@ def scenarios():
     return [name.strip() for name in body.split(',')]
 
 
-def discover_watch(call, required_name=None):
-    watches = []
-    for line in call('devices').splitlines()[1:]:
-        parts = line.split()
-        if len(parts) < 2 or parts[1] != 'device' or not parts[0].startswith('emulator-'):
-            continue
-        serial = parts[0]
-        if 'watch' in call('-s', serial, 'shell', 'getprop', 'ro.build.characteristics').split(','):
-            watches.append((serial, call('-s', serial, 'emu', 'avd', 'name').splitlines()[0]))
-    if len(watches) != 1:
-        raise RuntimeError('Expected exactly one watch emulator; found ' + str(len(watches)))
-    serial, name = watches[0]
-    if required_name is not None and name != required_name:
-        raise RuntimeError('Expected AVD ' + required_name + '; found ' + name)
-    return serial, name
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--list', action='store_true')
-    parser.add_argument('--scenario', choices=scenarios())
-    parser.add_argument('--smoke', action='store_true')
+    selection = parser.add_mutually_exclusive_group(required=True)
+    selection.add_argument('--list', action='store_true')
+    selection.add_argument('--scenario', choices=scenarios())
+    selection.add_argument('--smoke', action='store_true')
+    selection.add_argument('--all', action='store_true', help='Launch every non-destructive fixture; no process termination or radio changes')
+    parser.add_argument('--category', choices=CATEGORIES, help='Filter --list or --all')
     parser.add_argument('--install', action='store_true')
     parser.add_argument('--screenshot', type=Path)
     args = parser.parse_args()
+    if args.category and not (args.list or args.all):
+        parser.error('--category requires --list or --all')
+    selected = [name for name in scenarios() if not args.category or category(name) == args.category]
     if args.list:
-        print('\n'.join(scenarios()))
+        print('\n'.join(f'{name} [{category(name)}]' for name in selected))
         return
-    if not args.scenario and not args.smoke:
-        parser.error('Choose --scenario or --smoke')
-    if args.screenshot and args.smoke:
+    if args.screenshot and not args.scenario:
         parser.error('--screenshot requires a single --scenario')
-    sdk = Path(os.environ.get('ANDROID_HOME', str(Path.home() / 'Android/Sdk')))
-    adb = str(sdk / 'platform-tools/adb')
+    adb = adb_path()
+    call = adb_call
 
-    def call(*parts):
-        return subprocess.check_output([adb, *parts], text=True, stderr=subprocess.STDOUT, timeout=30).strip()
-
-    serial, name = discover_watch(call)
+    serial, name = discover_watch(call, required_name='WristPrompt_Watch7')
     print(f'{name}: {serial}', flush=True)
 
     def device(*parts):
         return call('-s', serial, *parts)
 
     if args.install:
-        print(device('install', '-r', str(ROOT / 'wear/build/outputs/apk/debug/wear-debug.apk')))
-    if not device('shell', 'pm', 'path', PACKAGE).startswith('package:'):
-        raise RuntimeError('WristPrompt package missing; build debug and use --install')
-    # run-as proves installed application is debuggable; release fails closed.
-    device('shell', 'run-as', PACKAGE, 'pwd')
-    for scenario in scenarios() if args.smoke else [args.scenario]:
+        print(install_debug(device))
+    require_debug(device)
+    device('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP')
+    for scenario in SMOKE if args.smoke else selected if args.all else [args.scenario]:
         token = uuid.uuid4().hex
         output = device('shell', 'am', 'start', '-W', '-n', PACKAGE + '/.openai.DebugScenarioActivity',
                         '-f', '0x10008000', '--es', 'scenario', scenario, '--es', 'launch_id', token)
@@ -77,18 +59,20 @@ def main():
         while True:
             try:
                 report = device('shell', 'run-as', PACKAGE, 'cat', 'files/debug-scenario-ready.txt')
-                if report.startswith(f'{token} {scenario} READY ') and device('shell', 'pidof', PACKAGE):
+                metadata = fields(report, token, scenario)
+                if metadata and metadata.get('lifecycle') == 'RESUMED' and metadata.get('pid') == device('shell', 'pidof', PACKAGE):
                     break
             except subprocess.CalledProcessError:
                 pass
             if time.monotonic() > deadline:
                 raise RuntimeError(f'{scenario}: ready acknowledgement timed out')
             time.sleep(0.2)
-        print(f'{scenario}: PASS (ready, process alive)', flush=True)
+        if scenario in ('WATCH_ONLY_AUTHENTICATED', 'WATCH_ONLY_CHAT', 'WATCH_ONLY_REFRESHED', 'PHONE_ABSENT', 'API_KEY_WATCH_ONLY', 'REAUTH_REQUIRED_PHONE_ABSENT'):
+            from wear_phone_absence import verify
+            verify(metadata, scenario)
+        print(f'{scenario}: PASS — VERIFIED ON EMULATOR (ready, matching PID, resumed)', flush=True)
     if args.screenshot:
-        args.screenshot.parent.mkdir(parents=True, exist_ok=True)
-        with args.screenshot.open('wb') as target:
-            subprocess.run([adb, '-s', serial, 'exec-out', 'screencap', '-p'], stdout=target, check=True, timeout=30)
+        screenshot(adb, serial, args.screenshot)
         print(f'Screenshot: {args.screenshot}')
 
 

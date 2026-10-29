@@ -23,10 +23,14 @@ def check_dependencies():
 
 def check():
     check_dependencies()
-    for p in (ROOT / 'wear/src/main').rglob('*'):
-        if p.is_file():
-            content = p.read_text()
-            assert 'DebugScenario' not in content and 'StreamingPreviewActivity' not in content, p
+    from wear_scenarios import scenarios
+    markers = ('DebugScenario', 'StreamingPreviewActivity', 'DEBUG_LIFECYCLE',
+               'debug-scenario-ready.txt', 'BuildConfig.DEBUG', *scenarios())
+    for source in ('wear/src/main', 'mobile/src/main', 'shared/src/main'):
+        for p in (ROOT / source).rglob('*'):
+            if p.is_file():
+                content = p.read_text()
+                assert all(marker not in content for marker in markers), p
     for variant in ('debug', 'release'):
         manifest = ROOT / f'wear/build/intermediates/merged_manifests/{variant}/process{variant.title()}Manifest/AndroidManifest.xml'
         tree = ET.parse(manifest)
@@ -37,8 +41,11 @@ def check():
         apk, = folder.glob('*.apk')
         with zipfile.ZipFile(apk) as archive:
             dex = b''.join(archive.read(name) for name in archive.namelist() if name.endswith('.dex'))
-        for marker in (b'DebugScenarioActivity', b'DebugScenarios;', b'ScenarioOwner;'):
+        for marker in (b'DebugScenarioActivity', b'DebugScenarios;', b'DebugScenario;', b'ScenarioOwner;',
+                       b'debug-scenario-ready.txt', b'DEBUG_LIFECYCLE'):
             assert (marker in dex) == (variant == 'debug'), (variant, marker)
+    for name in scenarios():
+        assert name.encode() not in dex, ('release scenario name', name)
     print('PASS: debug-only manifests/DEX; no production references; no harness storage/network dependencies')
 
 

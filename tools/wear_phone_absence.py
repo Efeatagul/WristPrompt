@@ -2,15 +2,13 @@
 """Synthetic watch independence presentation acceptance; only WristPrompt_Watch7 is eligible."""
 import argparse
 import json
-import os
 from pathlib import Path
 import subprocess
 import time
 import uuid
 import xml.etree.ElementTree as ET
 
-from wear_scenarios import PACKAGE, ROOT, discover_watch
-from wear_process_restart import fields
+from wear_adb import PACKAGE, discover_watch, adb_path, adb_call, require_debug, install_debug, fields
 
 SCENARIOS = ('WATCH_ONLY_AUTHENTICATED', 'PHONE_ABSENT', 'WATCH_ONLY_CHAT',
              'WATCH_ONLY_REFRESHED', 'REAUTH_REQUIRED_PHONE_ABSENT', 'API_KEY_WATCH_ONLY')
@@ -37,11 +35,8 @@ def main():
     parser.add_argument('--install', action='store_true')
     parser.add_argument('--screenshots', type=Path)
     args = parser.parse_args()
-    sdk = Path(os.environ.get('ANDROID_HOME', str(Path.home() / 'Android/Sdk')))
-    adb = str(sdk / 'platform-tools/adb')
-
-    def call(*parts):
-        return subprocess.check_output([adb, *parts], text=True, stderr=subprocess.STDOUT, timeout=30).strip()
+    adb = adb_path()
+    call = adb_call
 
     serial, name = discover_watch(call, required_name='WristPrompt_Watch7')
     print(f'{name}: {serial}; synthetic non-persisted state only', flush=True)
@@ -50,8 +45,8 @@ def main():
         return call('-s', serial, *parts)
 
     if args.install:
-        device('install', '-r', str(ROOT / 'wear/build/outputs/apk/debug/wear-debug.apk'))
-    device('shell', 'run-as', PACKAGE, 'pwd')
+        install_debug(device)
+    require_debug(device)
     for scenario in SCENARIOS:
         # Reconstruct every fixture in a fresh emulator-only process; preserve app data.
         device('shell', 'am', 'force-stop', PACKAGE)
