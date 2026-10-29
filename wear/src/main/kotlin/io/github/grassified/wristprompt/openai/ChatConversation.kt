@@ -34,7 +34,7 @@ class ChatConversation {
     private var attempts = 0
     fun reset() { history = emptyList(); pending = null; pendingUserId = null; attempts = 0; state = ChatState() }
     fun draft(text: String) {
-        if (!state.busy) state = state.copy(draft = text, stage = ChatStage.COMPOSING)
+        if (!state.busy) state = state.copy(draft = text, stage = ChatStage.COMPOSING, problem = null)
     }
     fun begin(): List<JsonObject>? {
         if (!state.canSend) return null

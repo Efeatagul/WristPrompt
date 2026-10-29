@@ -953,3 +953,33 @@ Layer routing change. A standalone debug-source-set synthetic preview exercises
 the real ViewModel/session and shared chat renderer without credential stores,
 network, capability bypass or intent-provided data. It is absent from the merged
 release manifest. DAY3_STATUS.md owns exact validation and emulator limitations.
+
+## D20 — terminal state recovery and current model ownership (2026-10-29)
+
+A prepared catalog is usable only with the current usable account/client,
+credential generation and explicit billing mode/revision. Check the latest access
+snapshot at UI command entry as well as the durable lease in InferenceSession.
+Revalidate after asynchronous model-preference reads before publishing discovery.
+Cancellation of catalog/proof by the shared session must end the current busy
+state; an older cancellation cannot replace a newer operation's state.
+
+A selected model rejected during bearer rediscovery or by exact model_not_found
+invalidates prepared catalog/selection/Ready state. Require explicit reload before
+another Send. Preserve dormant completed context until reload determines the model:
+same model preserves it; another model clears it under D18. Authentication-required,
+stale-account, missing-key or storage failures invalidate model and incompatible
+conversation state without modifying credential records. Ordinary transient request
+failures preserve valid completed context. Editing a draft removes stale error
+presentation but never sends automatically.
+
+Keep existing specific error categories and explicit manual recovery/navigation.
+Plan admission 401 remains a permission failure, not proof of terminal refresh;
+API 401 remains API-key rejection, never a reason to change billing. Do not erase
+credentials on transient failure. No automatic generation replay, OAuth loop or
+credential fallback. Clip scrolling content within its viewport so fixed Stop and
+other action controls remain readable. D18/D19 retain replay and transport ownership.
+
+Official [errors and recovery](https://developers.openai.com/siwc/token-sharing-open-source/errors-and-recovery)
+rechecked 2026-10-29. No OAuth protocol, inference request field, credential format,
+storage, production Data Layer or billing-route change. DAY3_STATUS.md owns current
+test/emulator evidence; these rules do not establish physical anomaly resolution.

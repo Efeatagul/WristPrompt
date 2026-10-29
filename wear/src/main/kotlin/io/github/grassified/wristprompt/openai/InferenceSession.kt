@@ -33,9 +33,16 @@ class InferenceSession(
         active[job] = lease.clientId
         try { catalog(lease) } finally { active.remove(job) }
     }
+    suspend fun validate(catalog: PreparedCatalog) {
+        currentCoroutineContext().ensureActive()
+        if (!isCurrent(catalog.credential)) throw ApiFailure(ApiProblem.STALE_ACCOUNT)
+        currentCoroutineContext().ensureActive()
+    }
     private suspend fun catalog(lease: CredentialLease): PreparedCatalog {
         if (!isCurrent(lease)) throw ApiFailure(ApiProblem.STALE_ACCOUNT)
+        currentCoroutineContext().ensureActive()
         val models = provider.models(lease)
+        currentCoroutineContext().ensureActive()
         if (!isCurrent(lease)) throw ApiFailure(ApiProblem.STALE_ACCOUNT)
         if (models.isEmpty()) throw ApiFailure(ApiProblem.NO_MODELS)
         return PreparedCatalog(lease, models)

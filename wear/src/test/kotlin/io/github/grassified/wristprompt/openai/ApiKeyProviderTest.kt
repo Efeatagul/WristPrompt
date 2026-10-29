@@ -29,7 +29,7 @@ class ApiKeyProviderTest {
     @Test fun unauthorizedQuotaAndServerErrorsStayInApiModeWithSanitizedDiagnostics() = runBlocking {
         for ((status, code, expected) in listOf(Triple(401, "invalid_api_key", ApiProblem.INVALID_API_KEY),
             Triple(429, "insufficient_quota", ApiProblem.API_LIMIT), Triple(500, "server_error", ApiProblem.TEMPORARY),
-            Triple(400, "model_not_found", ApiProblem.INVALID_REQUEST))) {
+            Triple(400, "model_not_found", ApiProblem.NO_MODELS))) {
             var calls = 0
             val p = provider({ calls++; status to """{"error":{"code":"$code","message":"synthetic-user-key"}}""" })
             try { p.models(lease); fail("Expected failure") } catch (f: ApiFailure) {

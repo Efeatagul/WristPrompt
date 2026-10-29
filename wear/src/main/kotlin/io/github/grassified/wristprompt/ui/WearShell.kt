@@ -9,6 +9,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -229,7 +230,7 @@ internal fun WearShell(auth: WatchAuthViewModel, settings: ApiKeySettingsViewMod
 @Composable
 internal fun ShellList(modifier: Modifier, content: TransformingLazyColumnScope.() -> Unit) {
     val scroll = rememberTransformingLazyColumnState()
-    ScreenScaffold(scrollState = scroll, modifier = modifier, timeText = {},
+    ScreenScaffold(scrollState = scroll, modifier = modifier.clipToBounds(), timeText = {},
         contentPadding = PaddingValues(top = 8.dp, bottom = 40.dp)) { padding ->
         TransformingLazyColumn(state = scroll, modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 24.dp, end = 24.dp,

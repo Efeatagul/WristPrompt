@@ -38,6 +38,7 @@ object ApiErrors {
         val problem = when {
             refresh && unusableRefresh(code) -> ApiProblem.REAUTHORIZE
             refresh && status == 429 -> ApiProblem.TEMPORARY
+            !refresh && code == "model_not_found" -> ApiProblem.NO_MODELS
             code == "invalid_client" -> ApiProblem.CONFIGURATION
             code == "subscription_sharing_usage_limit_exceeded" || status == 429 -> ApiProblem.USAGE_LIMIT
             code == "subscription_sharing_usage_unavailable" -> ApiProblem.USAGE_UNAVAILABLE

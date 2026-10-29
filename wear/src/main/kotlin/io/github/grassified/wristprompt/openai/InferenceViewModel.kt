@@ -20,7 +20,7 @@ data class ProofState(
 }
 
 class InferenceViewModel(
-    accounts: StateFlow<InferenceAccessState>,
+    private val accounts: StateFlow<InferenceAccessState>,
     private val session: InferenceSession,
     private val selectedModel: suspend (CredentialLease) -> String? = { null },
     private val saveModel: suspend (CredentialLease, String) -> Unit = { _, _ -> },
@@ -48,7 +48,7 @@ class InferenceViewModel(
     }
     fun select(slug: String) {
         if (operation?.isActive == true || state.value.busy || state.value.models.none { it.slug == slug }) return
-        val catalog = prepared ?: return
+        val catalog = prepared?.takeIf(::compatible) ?: return
         val run = epoch
         launchOperation {
             try {
@@ -58,14 +58,15 @@ class InferenceViewModel(
                     mutableState.value = state.value.copy(selectedSlug = slug, output = "", completedObserved = false,
                         stage = if (state.value.stage == ProofStage.FAILED) ProofStage.FAILED else ProofStage.READY)
                 }
-            } catch (cancelled: CancellationException) { throw cancelled
+            } catch (cancelled: CancellationException) { cancelled(run); throw cancelled
             } catch (failure: Exception) { failed(run, failure) }
         }
     }
     fun loadModels() {
-        if (operation?.isActive == true) return
+        if (operation?.isActive == true || !accounts.value.usable) return
         val priorModel = contextModel ?: state.value.selectedSlug
         val run = ++epoch
+        prepared = null
         mutableState.value = ProofState(stage = ProofStage.LOADING, mode = state.value.mode)
         launchOperation {
             try {
@@ -73,19 +74,21 @@ class InferenceViewModel(
                 if (run != epoch) return@launchOperation
                 val saved = selectedModel(catalog.credential)
                 if (run != epoch) return@launchOperation
+                session.validate(catalog)
+                if (run != epoch || !compatible(catalog)) return@launchOperation
                 prepared = catalog
                 val restored = catalog.models.firstOrNull { it.slug == saved }?.slug ?: catalog.models.first().slug
                 if (priorModel != null && priorModel != restored) clearChat()
                 mutableState.value = ProofState(ProofStage.READY, catalog.models,
                     restored, mode = catalog.credential.mode)
-            } catch (cancelled: CancellationException) { throw cancelled
+            } catch (cancelled: CancellationException) { cancelled(run); throw cancelled
             } catch (failure: Exception) { failed(run, failure) }
         }
     }
     fun test() {
         if (operation?.isActive == true) return
-        val catalog = prepared ?: return
-        val selected = state.value.selectedSlug ?: return
+        val catalog = prepared?.takeIf(::compatible) ?: return
+        val selected = state.value.selectedSlug?.takeIf { slug -> catalog.models.any { it.slug == slug } } ?: return
         val run = ++epoch
         mutableState.value = state.value.copy(stage = ProofStage.LOADING, output = "", completedObserved = false, problem = null, protocolDetail = null, httpStatus = null, errorCode = null, requestId = null, errorShape = null)
         launchOperation {
@@ -103,7 +106,7 @@ class InferenceViewModel(
                     stage = if (result.proofPassed) ProofStage.SUCCEEDED else ProofStage.OUTPUT_MISMATCH,
                     output = result.output, completedObserved = result.completed,
                 ) }
-            } catch (cancelled: CancellationException) { throw cancelled
+            } catch (cancelled: CancellationException) { cancelled(run); throw cancelled
             } catch (failure: Exception) { failed(run, failure) }
         }
     }
@@ -128,8 +131,8 @@ class InferenceViewModel(
     }
     fun send() {
         if (operation?.isActive == true || state.value.busy) return
-        val catalog = prepared ?: return
-        val selected = state.value.selectedSlug ?: return
+        val catalog = prepared?.takeIf(::compatible) ?: return
+        val selected = state.value.selectedSlug?.takeIf { slug -> catalog.models.any { it.slug == slug } } ?: return
         contextModel = selected
         val input = conversation.begin()
         publishChat()
@@ -149,14 +152,33 @@ class InferenceViewModel(
                 throw cancelled
             } catch (failure: Exception) {
                 if (run == epoch) {
-                    conversation.fail(when (failure) {
+                    val problem = when (failure) {
                         is ApiFailure -> failure.problem
                         is SecureStorageException -> ApiProblem.STORAGE
                         else -> ApiProblem.PROTOCOL
-                    })
+                    }
+                    invalidateModel(problem)
+                    conversation.fail(problem)
                     publishChat()
                 }
             }
+        }
+    }
+    // The StateFlow may change before its collector runs. Never dispatch against that old snapshot.
+    private fun compatible(catalog: PreparedCatalog): Boolean = accounts.value.let { access ->
+        access.usable && access.client == catalog.credential.clientId &&
+            access.generation == catalog.credential.generation && access.mode == catalog.credential.mode &&
+            access.modeRevision == catalog.credential.modeRevision
+    }
+    private fun cancelled(run: Long) {
+        if (run == epoch && state.value.busy) mutableState.value = state.value.copy(stage = ProofStage.CANCELLED)
+    }
+    private fun invalidateModel(problem: ApiProblem) {
+        if (problem in setOf(ApiProblem.NO_MODELS, ApiProblem.STALE_ACCOUNT, ApiProblem.REAUTHORIZE,
+                ApiProblem.REAUTHORIZING, ApiProblem.API_KEY_MISSING, ApiProblem.STORAGE)) {
+            if (problem != ApiProblem.NO_MODELS) clearChat()
+            prepared = null
+            mutableState.value = ProofState(stage = ProofStage.FAILED, problem = problem, mode = state.value.mode)
         }
     }
     private fun publishChat() { mutableChat.value = conversation.state }
@@ -177,6 +199,7 @@ class InferenceViewModel(
             is SecureStorageException -> ApiProblem.STORAGE
             else -> ApiProblem.PROTOCOL
         }
+        invalidateModel(problem)
         mutableState.update { it.copy(stage = ProofStage.FAILED, problem = problem,
             protocolDetail = (failure as? ApiFailure)?.protocolDetail
                 ?: ProtocolDetail.CLIENT_RESPONSE.takeIf { problem == ApiProblem.PROTOCOL },

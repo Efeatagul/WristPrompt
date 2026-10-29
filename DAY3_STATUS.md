@@ -3,7 +3,7 @@
 Phase A is implemented. Phase B is complete as investigation/test hardening;
 its historical physical anomaly remains unresolved. Phase C text chat/context is
 implemented below. Phase D streaming/Stop ownership is hardened below. Day 2
-remains PASS WITH KNOWN DEBT. D3-E is unstarted; this is not a completed Day 3
+remains PASS WITH KNOWN DEBT. Phase E state/error hardening is implemented below; this is not a completed Day 3
 physical/release gate.
 
 ## Phase A scope and evidence
@@ -545,3 +545,220 @@ request may remain STARTING while bounded previous cleanup/refresh finishes;
 there is no automatic retry or overlap to hide that wait.
 
 Suggested commit: `fix: harden chat streaming ownership and Stop races`.
+
+## Phase E — chat/auth/model/billing/error transitions (2026-10-29)
+
+**VERIFIED AUTOMATICALLY:** 263 Wear tests, zero failures/errors/skips (249 D3-D
+baseline + 14 new tests). D3-E only. No commit/push, physical-device operation,
+credential migration, production Data Layer change or D3-F harness work.
+
+### A. Explicit transition matrix
+
+These are meaningful domain states, not independent persisted flags. Existing
+immutable ChatStage/ProofStage, repository access state and owning coroutine Job
+remain authoritative; no second state machine or saved busy flag was introduced.
+
+| Domain | States and allowed transitions | Forbidden combinations / enforcement |
+| --- | --- | --- |
+| Authentication | Signed out/unusable -> explicit watch setup pending -> validated authenticated profile. Authenticated -> serialized refresh -> renewed usable profile, transient retry gate, or reauth required. Explicit sign-out -> signing out -> signed out with revocation outcome. | UI connection alone never authorizes inference: current lease, account generation, mode/revision and plan permission must pass. Pending setup, storage failure, unusable/uncertain grants and sign-out cannot dispatch. |
+| Billing | Persisted ChatGPT plan <-> API key only through explicit selection; every selection revises mode ownership. | No error/credential absence selects another mode. Catalog, selected model and replay context cannot cross an incompatible revision, even when switching back to the same mode. |
+| Models | No catalog -> loading -> fresh catalog + restored exact slug, or deterministic first current entry if saved slug is absent; empty discovery -> NO_MODELS; discovery failure -> FAILED with no selection. | Old catalog cannot publish after account/mode/epoch changes or after its lease becomes stale during preference read. A model removed during bearer rediscovery or explicitly rejected as model_not_found invalidates selection; reload is required before another Send. No implicit preference writeback. |
+| Chat | Empty -> composing -> starting -> receiving -> completed, failed or cancelled. Starting may directly complete/fail/cancel. Editing a terminal draft -> composing; New Chat -> empty. | Only a current completed whole exchange enters replay. Cancelled/failed/incomplete attempts cannot later become completed. Draft editing clears the old error category; it never sends. |
+| Request | Idle -> starting/queued -> active -> terminal; Stop/access invalidation -> cancelling/cleanup -> terminal. New work may queue while old cleanup finishes. | One provider generation under the session mutex. Terminal chat completion is published only after provider return/resource cleanup and final lease validation. Visible Stop/STARTING may end immediately on cancellation while old transport cleanup finishes; no new provider overlaps it. |
+| Error/recovery | A safe error is terminal for that attempt. Explicit compose/send or reload can recover when guards permit. Cancellation is a separate terminal state. | No automatic generation replay, OAuth loop, billing fallback, raw response display, or busy state left behind by shared-session cancellation. |
+| Recreation | Activity recreation retains its ViewModels and active work. New ViewModel/process starts with empty chat/idle request and reloads protected settings/catalog. | No SavedStateHandle/chat persistence, restored busy flag, recreated request, duplicate message, or old callback into a new conversation owner. UI-local navigation/input launcher metadata may reset; a lost keyboard result is not automatically resent. |
+
+Authentication detail: same-account **replacement** and different-account selection
+increment repository generation, invalidating model/context/work. Ordinary successful
+bearer rotation preserves the access identity/generation and conversation; the
+session rediscovers with the renewed bearer before inference. Transient refresh
+503/429 and definitely-unsent IO preserve the token tuple and use the existing
+cooldown. An ambiguously transmitted rotating grant remains unusable under the
+existing durable refresh-intent rule; this is not ordinary transient sign-out and
+was not redesigned. Terminal refresh errors retain registration identity for
+reauthorization. Pending/failed/expired phone setup remains owned by existing auth
+ViewModels, never reconstructed from chat state.
+
+### B–C. Concrete findings and hardening
+
+Code inspection identified these gaps; the new deterministic tests verify their
+corrected behavior. No claim that they caused the historical physical anomalies.
+
+1. Shared InferenceSession cancellation previously rethrew from proof/catalog
+   operations without ending LOADING/STREAMING. Current-epoch cancellation now
+   publishes CANCELLED, retains partial proof text and allows explicit recovery.
+   Stop's own epoch and newer operations still reject obsolete cancellation.
+2. Chat rejected a missing selected slug after token renewal, but kept the old
+   ready/selected catalog visible. NO_MODELS now invalidates prepared catalog,
+   selection and Ready status for both chat/proof. Reload restores a deterministic
+   current model. Replay remains dormant until reload; switching to a different
+   restored model clears it under D3-C. Same-model reload preserves it.
+3. Lease validity was checked after discovery but not after the asynchronous saved
+   preference read. InferenceSession.validate rechecks the lease and cancellation
+   before publication. Catalog provider boundaries also explicitly check owning
+   coroutine cancellation.
+4. Access collectors can be queued behind a UI action. Send/test/selection now
+   synchronously compare the latest access StateFlow's usable/client/generation/
+   mode/revision against the prepared lease. No old user turn is appended while
+   awaiting the access collector; session's durable checks remain mandatory.
+5. Auth-required/stale/storage/key-missing failures now invalidate prepared model
+   state and clear incompatible replay even if repository notification has not yet
+   arrived. This touches no stored credentials. Transient request failures keep
+   valid completed context and model selection.
+6. Exact model_not_found now maps to existing NO_MODELS instead of generic invalid
+   request. Chat has short class-specific recovery guidance through existing
+   navigation; editing a draft removes the old error category.
+7. Emulator scrolling exposed list content drawing over the fixed action button.
+   ShellList now clips to its allocated viewport. Longer recovery guidance uses
+   the existing lossless independently scrollable text chunks. No navigation or
+   round-screen redesign.
+
+### D–F. Error mapping, context and recovery
+
+| Evidence / category | Safe presentation | Explicit recovery; credential effect |
+| --- | --- | --- |
+| Offline/pre-stream IO: NETWORK | Network error | Restore connection, compose/send again; no credential deletion. |
+| Mid-stream IO/EOF: INTERRUPTED | Stream interrupted; partial excluded | Compose another attempt; no replay of unfinished exchange. |
+| No usable plan authentication: REAUTHORIZE; missing API key: API_KEY_MISSING | Authentication required / API key not configured | Connection/settings -> sign-in or API setup for the selected mode. No fallback. |
+| Terminal/uncertain plan renewal: REAUTHORIZE; pending setup: REAUTHORIZING | Authentication required / finish sign-in on phone | Existing watch setup with retained registration. No automatic OAuth retry. |
+| API 401: INVALID_API_KEY | API key rejected; no fallback | Configure/replace the API key explicitly. Never tries plan credentials. |
+| ChatGPT admission 401: PERMISSION | Permission not accepted | Check selected account and plan permission. A bare inference 401 alone does not delete credentials or establish terminal refresh failure. Never tries API credentials. |
+| 429 inference: USAGE_LIMIT / API_LIMIT | ChatGPT usage limit / API rate or credit limit | Existing Manage usage for plan; check API usage/credits for key. No invented reset time or automatic retry. |
+| Generic 5xx: TEMPORARY; specific usage-unavailable code retained | Temporarily unavailable / usage unavailable | Retry later explicitly; preserve credentials and completed context. |
+| Empty/missing selected model or model_not_found: NO_MODELS | No models available | Choose model -> Reload models. No Send until a current selection exists. |
+| Cancellation | Stopped, partial/excluded; no ordinary failure | Compose/send again or New Chat. Cleanup serialization and duplicate guards still apply. |
+| Malformed/unexpected response: PROTOCOL; INCOMPLETE distinct | Response could not be processed / response incomplete | Safe generic category, no raw body or exception text. Explicit fresh attempt; unfinished exchange excluded. |
+
+Existing specific eligibility, configuration, plan-disabled and protected-storage
+categories remain intact. API-specific errors never advertise ChatGPT fallback.
+No extra buttons or automatic retry were introduced. Existing Compose, Choose
+model/Reload, Connection/settings, Manage usage and New Chat remain the recovery
+paths. Storage failure requires recovery of protected storage; New Chat cannot
+bypass it. Cancelled and ordinary failures do not become completed context.
+
+D3-C/D3-D invariants retained: clear on distinct account/access state, generation,
+mode/revision, actual selected-model change/fallback and New Chat. Preserve on
+ordinary retry, transient service failure, same-model reload and retained-VM
+Activity recreation. Late callbacks fail owning-Job/current-lease/epoch checks and
+cannot repopulate cleared context. Process death intentionally loses messages,
+drafts and replay; persisted credential/model preferences restore independently.
+
+### G–H. Files, tests and exact automated evidence
+
+Production:
+- openai/InferenceViewModel.kt — access guards, terminal cancellation, model and
+  incompatible-context invalidation, delayed preference validation.
+- openai/InferenceSession.kt — reusable lease validation and catalog cancellation.
+- openai/ApiFailure.kt — exact model_not_found classification.
+- openai/ChatConversation.kt — remove stale error when editing a draft.
+- ui/ChatItems.kt — safe recovery guidance using existing scrollable chunks.
+- ui/WearShell.kt — clip list viewport below fixed controls.
+
+Tests:
+- New TransitionTest.kt: 12 tests (several table-driven), controlled gates/Main
+  test scheduler, no sleep-based races. Covers shared catalog/proof/chat cancellation
+  and recovery, missing model after refresh, delayed-preference lease invalidation,
+  pre-collector access changes, reauth/context clearing, transient recovery,
+  cancelled-owner reconstruction, stale draft error, model mapping, and active
+  generation/access/revision invalidation with late completion attempts.
+- New ErrorTransitionTest.kt: 2 tests. Real OpenAiProvider/OpenAiHttp with synthetic
+  intercepted responses exercises 401/429/503/IO/malformed SSE in **both** modes,
+  single-call/no-fallback and sanitized failure checks, plus recovery guidance.
+- ApiKeyProviderTest.kt updates one expected model_not_found category to NO_MODELS.
+  Existing routing/record-immutability, refresh, D3-B restoration, D3-C context and
+  D3-D race/HTTP cancellation tests remain passing.
+
+Documentation: DAY3_STATUS.md and durable rule D20 in DECISIONS.md. ROADMAP.md
+unchanged: phase evidence belongs here; no Day 3 physical/release gate checked.
+
+Commands actually run using DEVELOPMENT.md's unchanged persistent environment:
+
+```sh
+export JAVA_HOME=$HOME/.local/share/wristprompt/jdk-17.0.21+9
+export ANDROID_HOME=$HOME/Android/Sdk
+export ANDROID_USER_HOME=$HOME/.local/share/wristprompt/android
+export GRADLE_USER_HOME=$HOME/.gradle
+./gradlew :wear:testDebugUnitTest --tests '*TransitionTest' --console=plain
+./gradlew :wear:testDebugUnitTest --tests '*openai.*' --tests '*auth.*' --tests '*ui.*' --console=plain
+./gradlew :wear:testDebugUnitTest :wear:assembleDebug :wear:lintDebug \
+  :wear:processReleaseMainManifest --console=plain
+git diff --check
+```
+
+First transition-only run: 10 tests PASS, before two additional cancellation/
+invalidation tests were added. Initial broader run: 233 tests, one failure from
+an existing model_not_found expectation; updated for the intentional mapping.
+Final focused gate: **235 tests**, zero failures/errors/skips. Final full gate:
+**263 tests**, zero failures/errors/skips. Wear assembleDebug/lintDebug and release
+manifest processing PASS. Lint: zero errors, five unchanged warning instances
+(two AGP advisories, ExportedService, VectorPath, WearRecents). Release manifest
+excludes StreamingPreviewActivity. No suppression/dependency/toolchain/signing
+change. Sandbox could not acquire the persistent cache's read-only lock; approved
+execution with the existing cache succeeded. No mobile/shared code changed, so
+mobile tests/build/lint are NOT RERUN, not claimed as current evidence.
+
+Changed/new UTF-8 text checked for trailing whitespace and final newlines in
+addition to git diff --check. Tests use synthetic credentials and intercepted
+transport only, with no provider/service requests or raw authenticated logging.
+
+### I. Emulator acceptance — current D3-E run
+
+Used only existing **WristPrompt_Watch7**, verified with emulator-5554's AVD name
+and `emulator,nosdcard,watch` characteristics. Updated in place with `adb -s
+emulator-5554 install -r` using the existing debug signing identity. No uninstall,
+data clear, re-pair, AVD recreation, physical target, CapabilityClient probe or
+real authentication request. ADB required approved host access because the
+sandbox could not connect to its local socket. Phone emulator not needed.
+
+| State/check | Current evidence |
+| --- | --- |
+| Signed out / no selected model | VERIFIED ON EMULATOR — actual MainActivity shows Using ChatGPT plan, Model: Not selected, Authentication required and Compose; no busy/Stop. |
+| Authenticated-like synthetic state | VERIFIED ON EMULATOR — existing standalone preview discovers its fixed synthetic model through the actual VM/session. This does not exercise production authenticated account/settings UI or credential storage. |
+| Models loading | NOT EXERCISED as a rendered state; deterministic JVM coverage only. |
+| Model unavailable / reauth required | NOT EXERCISED on emulator; deterministic JVM coverage only. |
+| Streaming / stopped | VERIFIED ON EMULATOR — fixed Stop while synthetic generation runs; stopped partial output stays marked excluded after the late-callback interval. |
+| Recovery guidance / round readability | VERIFIED ON EMULATOR — unfinished-context explanation and Compose guidance readable by scrolling; no content draws above the viewport into the fixed button after clipping fix. |
+| Recreation after Stop | VERIFIED ON EMULATOR — existing Recreate screen action retained stopped/unfinished state and Next prompt, with no revived Stop or generation. |
+| Clean completion after Stop/recreation | VERIFIED ON EMULATOR — Next prompt completed; rendered answer says input items: 1, so cancelled exchange was excluded. No old completion replaced it. |
+| API-key 401 / 429 / 503 / offline | NOT EXERCISED on emulator; real HTTP adapter with synthetic intercepted failures covered automatically in both billing modes. |
+| Long error text / error-specific recovery navigation | NOT EXERCISED on emulator. Existing preview has no error scenarios; no D3-F harness added. Longer general recovery guidance/partial output scrolling is verified above. |
+| Real production auth/inference | NOT EXERCISED; capability-dependent authentication remains NOT VERIFIABLE ON CURRENT EMULATOR LAB. |
+
+Current-run synthetic screenshots/UI hierarchy checks were kept under /tmp
+(d3e-final-streaming.png, d3e-final-stopped.png, d3e-cancelled-recreated.png,
+d3e-recovered-status.png). Initial pre-fix scrolling captures demonstrated content
+over the fixed button and are not accepted as final layout evidence. No physical
+verification is claimed. Existing consolidated end-of-day physical checklist stays
+pending; no routine physical testing was requested or performed.
+
+### J–L. Security, remaining debt and phase boundary
+
+- Explicit routing and no credential fallback retained; router/repositories unchanged.
+- No credential-format/storage/encryption/signing or production Data Layer change.
+- Current generation, mode revision, operation epoch, owning Job and transport
+  cancellation checks retained. store=false and explicit completed-only request
+  history retained. No prompt/token/header/raw-response/unsanitized exception logging.
+- No inference request fields, endpoint, provider, feature, attachment/image/voice,
+  web/tool/MCP integration or persistent chat history added. Test/debug mechanisms
+  remain synthetic and separate from real credentials; preview excluded from release.
+- Historical Terra -> Sol physical restoration anomaly remains UNRESOLVED debt;
+  not reproduced, no claimed fix. All 15 existing restoration tests still pass.
+- Transient reauthorization exchange/context-expiry anomaly remains UNRESOLVED;
+  this phase does not establish its cause or resolution. Day 5 disposition remains.
+- Real successful funded-BYOK verification remains BLOCKED by no funded credential;
+  no purchase/key/device test requested. Synthetic success and failure routing pass.
+- Emulator CapabilityClient limitation unchanged; investigation not reopened.
+- Remaining acceptance: real network/device transitions, full error-state round
+  rendering, rotary/font-scale checks and production auth with a consenting account
+  remain separate from automatic/synthetic evidence. Local Stop cannot promise zero
+  server-side usage; a next request can wait for existing bounded cleanup/refresh.
+
+**D3-F deferred:** debug scenario harness, expanded emulator scenarios and scenario
+automation remain unstarted. Existing preview was used without modification.
+D3-E completion does not authorize D3-F or establish a Day 3 physical/release gate.
+
+### M. Suggested commit
+
+`fix: harden chat auth model billing and error transitions`
+
+No commit or push performed.
