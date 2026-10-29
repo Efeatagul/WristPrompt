@@ -1,10 +1,11 @@
 # Day 4 status — 2026-10-29
 
-**Current D4-D result: PASS WITH KNOWN DEBT.** See the D4-D section below:
-326 Wear / 26 Python tests, both Wear builds/lint/release isolation, and six
-synthetic phone-absence scenarios verified on WristPrompt_Watch7. No production
-change required. Physical updated-build phone-off/refresh acceptance remains
-pending. D4-E is not begun. Earlier sections preserve historical handoff counts.
+**Current D4-E result: PASS WITH KNOWN DEBT — VERIFIED AUTOMATICALLY.**
+340 Wear / 70 mobile / 26 Python tests, both Wear builds, lint and release isolation
+pass. No production change required. See D4-E below for the final durability matrix,
+137-test focused evidence and platform/device limits. No D4-E emulator or physical
+acceptance claimed. Physical persistence/reboot checks, D4-F and D4-G remain pending.
+Earlier sections preserve historical handoff counts.
 
 # D4-A handoff — historical phase record
 
@@ -1160,5 +1161,306 @@ DebugScenariosTest.kt; wear_phone_absence.py; test_wear_phone_absence.py;
 test_wear_scenarios.py; DAY4_STATUS.md; WEAR_SCENARIOS.md; ROADMAP.md.
 
 Suggested message: `test: verify watch-only operation without phone companion`
+
+No commit or push performed.
+
+# D4-E — persistence / recovery edge cases — 2026-10-29
+
+## A. Executive result
+
+**PASS WITH KNOWN DEBT — VERIFIED AUTOMATICALLY.** 340 Wear tests (326 baseline
++ 14 new), 70 mobile tests and 26 Python tests pass, zero failures/errors/skips.
+**NO PRODUCTION CHANGE REQUIRED.** Only tests, this status and roadmap evidence
+changed. D4-F harness consolidation and D4-G final acceptance are not begun.
+No physical testing, emulator credential manipulation, credential migration,
+real authentication, commit or push occurred. Starting working tree was clean.
+
+## B. Final durability matrix
+
+DURABLE means committed local storage, subject to safe storage availability;
+it does not imply an Android/OEM reboot guarantee established by JVM tests.
+PROCESS-MEMORY means retained owner/process state; TRANSIENT means an operation
+resource or derived snapshot that must be acquired anew. Neither latter class
+survives a fresh process. Classification matches current implementation.
+
+| State | Classification | Owner / reconstruction rule |
+| --- | --- | --- |
+| Installation host identity | DURABLE | Preferences DataStore UUIDv4 host URI. Missing preference creates once; invalid/unreadable existing data fails closed. |
+| Registration / issued client identity | DURABLE | WatchVault profile identity/host; phone encrypted IssuedRegistrationStore retains issued client before exchange. Sign-out retains registration. |
+| OAuth profile | DURABLE | Version-1 encrypted WatchVault, validated on each read. |
+| Access token | DURABLE | Protected profile tuple; cleared on terminal refresh/sign-out. |
+| Refresh token | DURABLE | Same atomic tuple; intent makes a potentially consumed token inert. |
+| Scopes | DURABLE | Validated profile; never inferred from credential presence. |
+| Expiry / saved time | DURABLE | Profile tuple; runtime renewal scheduling is derived. |
+| Selected account | DURABLE | WatchVault.selectedClientId; no automatic account fallback. |
+| Account generation | DURABLE | WatchVault.generation; stale operations rejected. |
+| Plan confirmation state | DURABLE | confirmedPlanClients scoped to issued client. |
+| Billing mode | DURABLE | Separate encrypted ApiVault; absent record defaults explicitly to CHATGPT_PLAN. |
+| Billing revision | DURABLE | ApiVault.modeRevision; away-and-back invalidates old leases. |
+| API key | DURABLE | Separate encrypted record/key alias; never substitutes for plan failure. |
+| API-key revision | DURABLE | ApiVault.keyRevision; changes with replacement/removal. |
+| Selected plan model | DURABLE | WatchVault.selectedModels per issued client. Only explicit selection writes. |
+| Selected API model | DURABLE | ApiVault.model, separate from plan; reset by key replacement/removal. |
+| Refresh intent | DURABLE | refreshPending persisted before dispatch. |
+| Refresh uncertainty | DURABLE | Retained refreshPending or reauthorizationRequired; no separate uncertainty file. |
+| Sign-out intent | DURABLE | signOutPending plus generation; abandoned intent triggers conservative local cleanup. |
+| Revocation outcome | DURABLE | signOutResults; abandoned/unknown work restores UNCONFIRMED. |
+| Transfer receipts / anti-replay metadata | DURABLE | Pending node/request/host/generation/expiry and accepted transfer/digest receipts; exact bounded retry only. |
+| Current model catalog | TRANSIENT | Fresh discovery, never persisted; service order drives fallback. |
+| Credential lease | TRANSIENT | Reacquired and checked for account/generation/mode/revision/bearer ownership. |
+| Conversation | PROCESS-MEMORY | ChatConversation owned by InferenceViewModel. |
+| Completed request history | PROCESS-MEMORY | Completed eligible context only; empty after fresh process. |
+| Reasoning replay items | PROCESS-MEMORY | In-memory completed context; absent on restart. |
+| Partial assistant output | PROCESS-MEMORY | Explicit incomplete/cancelled state; never durable or replayed. |
+| Active request | TRANSIENT | Current coroutine/HTTP call, no persistent queue. |
+| Operation Job | TRANSIENT | ViewModel scope; final owner clear cancels transport. |
+| Busy / Stop state | PROCESS-MEMORY | Derived from current operation/UI state, resets on restart. |
+| Draft | PROCESS-MEMORY | ChatConversation; no saved-state/durable restoration. |
+| Current page | PROCESS-MEMORY | ShellNavigationViewModel; fresh owner starts at chat. |
+
+Other process-only recovery coordination: active refresh/sign-out locks, blocked
+sign-outs, renewed marker, manual refresh cooldown and deletion guard. Durable
+markers, rather than those collections, establish safe fresh-process recovery.
+Phone pending credential envelopes remain bounded process memory, never durable.
+
+## C. Baseline defects reproduced
+
+No production defect reproduced. Initial new-test execution exposed two test
+synchronization mistakes, corrected before final validation: a blocking assertion
+inside a dispatcher-owned callback, and a same-model ready predicate returning
+before an asynchronous explicit preference save. Neither established an app defect.
+Terra -> Sol remains unresolved; synthetic restoration success is not a fix.
+
+## D. Production changes
+
+**NO PRODUCTION CHANGE REQUIRED.** No storage format, key, migration, provider,
+OAuth, billing, Data Layer, lifecycle or inference implementation changed.
+DECISIONS.md unchanged: this phase verifies existing rules D05/D06/D07/D10–D13,
+D20 and D23 rather than introducing a new durable recovery policy.
+
+## E. Encrypted storage failure result
+
+**VERIFIED AUTOMATICALLY:** production GcmRecord AES-GCM with synthetic JVM keys
+and real repository decoding rejects empty/truncated ciphertext, modified tag,
+wrong key/AAD, unknown encryption version, missing key, injected unavailable key,
+malformed decoded payload, unknown vault version and invalid references/revisions.
+Fresh owners expose safe storage failure, do not generate credentials or ACK a
+failed handoff, and do not replace damaged records. Buffer zeroing and sanitized
+SecureStorageException behavior retain existing negative coverage.
+
+Missing record is explicitly supported first run: empty/unconfigured repository,
+no invented credential, and plan mode default only when the API vault is absent.
+Existing unreadable bytes are not treated as missing. File deletion cannot be
+distinguished from absence by this record API; no new sentinel or migration added.
+Missing registration returns no saved client; malformed/unreadable registration
+is not silently repaired. IssuedRegistrationStore was inspected, not changed.
+
+**Code audit / platform boundary, not runtime fault injection:** EncryptedRecord
+uses app-private noBackupFilesDir, alias-bound authenticated data, no plaintext
+fallback, synchronized methods, AtomicFile start/finish/fail, fd.sync and encrypted
+readback comparison. Missing key with an existing base/backup is rejected, including
+on write. Base/legacy backup presence is checked before reading; platform AtomicFile
+owns incomplete-write recovery. Current [AtomicFile contract](https://developer.android.com/reference/android/util/AtomicFile)
+was rechecked: finish/fail and read recovery remain delegated to Android.
+No production AtomicFile implementation was replaced by a JVM fake. Repository
+fault tests model failure before replacement and an error after completed replacement;
+they do not prove Android AtomicFile recovery, Keystore invalidation or OEM power-loss
+behavior. These remain later non-destructive platform/device acceptance debt.
+
+Host tests reopen real DataStore storage and reject malformed UUID, empty value,
+non-host text, non-v4 UUID and unreadable DataStore without replacement. Missing
+preference creates the installation identity once under atomic edit; normal
+reconstruction never invokes its generator.
+
+## F. Model preference recovery result
+
+**VERIFIED AUTOMATICALLY:** missing saved model selects the first fresh service
+entry deterministically without writing fallback. Dormant preference survives a
+new encrypted-file graph, another account's explicit selection, switching back,
+and model reappearance. Reload/reconstruction then restores the exact saved slug
+if listed; order, labels and case do not substitute another slug. Explicit user
+selection can deliberately replace the dormant preference.
+
+Per-client plan preferences remain separate, including same-email accounts;
+same-client reauthorization preserves preference. API selection stays in ApiVault.
+Switching plan/API and reconstructing both repositories preserves both preferences,
+registration, account generation, billing revision and key revision. Old mode leases
+are rejected even after returning to the same mode.
+
+Preference save is **persist before publish**. A failed user selection presents
+STORAGE, invalidates the prepared model state, and never publishes the failed slug
+as remembered. Fresh reconstruction uses the previously saved slug. Failed API
+model/mode/removal writes restore the prior durable tuple; no UI success is claimed.
+
+## G. Refresh atomicity result
+
+| Boundary | Observed durable recovery / evidence |
+| --- | --- |
+| A: intent write fails before commit | No refresh callback/dispatch; original tuple survives fresh owner. |
+| B: intent committed, not acknowledged / before dispatch | No dispatch if save throws; fresh snapshot with intent requires reauthorization conservatively. |
+| C: definitely unsent | Intent cleared only through successful durable save; original tokens retained; bounded manual retry, never inference replay. Existing transport test proves pre-send failure category. |
+| D: uncertain post-dispatch / cancellation / timeout / malformed success | Intent remains; restart blocks old refresh-token reuse and discovery/inference until explicit reauthorization. |
+| E: success response, replacement write fails before commit | Old tuple plus intent remains, inert; registration/preferences/confirmation survive. |
+| F: replacement committed, save reports failure | Fresh owner reads complete new tuple and cleared intent; replacement is not lost or re-rotated. |
+| G: successful commit | Updated token/scope/expiry tuple and intent removal published after durable save; fresh lease uses replacement. |
+| H: reconstruction | D4-B plus new intent snapshots and both sides of uncertain commit reconstruct without inference replay. |
+
+There is **no independent intent-clear write** after replacement: one WatchVault
+save commits replacement plus refreshPending removal. A separate F failure window
+would misrepresent the implementation. EncryptedRecord verifies ciphertext readback
+inside that one write. Router publication follows save; a save error cannot claim
+renewal. Active refresh patches the latest vault, preserving concurrent unrelated
+account/preference updates. Existing bounded NonCancellable protection is unchanged.
+
+## H. Sign-out / revocation recovery result
+
+**VERIFIED AUTOMATICALLY:** intent/generation precede cancellation and network work;
+new leases blocked. Existing tests cover pending revocation, cancellation, unknown
+outcome, refresh overlap and fresh-process cleanup. New pre/post-cleanup-commit faults
+restore either pending intent -> local clearing + UNCONFIRMED, or already-cleared
+credentials + committed CONFIRMED result. No usable access/refresh/ID token resurrects.
+Registration/host and model preference remain; no account/billing fallback.
+Storage failure never reports local success. Remote success is not required for
+safe local sign-out; uncertainty is never promoted to confirmed revocation.
+No real sign-out or revocation performed.
+
+## I. Startup ordering and required evidence map
+
+**VERIFIED AUTOMATICALLY:** actual repositories/router/session/ViewModel with
+controlled deferreds/flows test profile-first, billing-first, API-key-first with
+profile delayed, delayed catalog, delayed preference, repeated startup loads and
+account/generation changes while discovery/preference callbacks are pending.
+No catalog/request runs through the wrong selected mode. Stale callbacks cannot
+publish old account state or persist fallback. API secure-state failure blocks the
+router, even with valid plan credentials; broken plan in selected plan mode cannot
+use an available API key. Selected API mode can operate independently of plan.
+No sleep-based test was added. Existing historical suites retain their own timing
+implementation; this phase does not consolidate them.
+
+Coverage for the requested 32 items (all suites rerun):
+
+| Required items | Evidence suites |
+| --- | --- |
+| 1–4 valid/missing/malformed/wrong-key records | PersistenceRecoveryTest, ProtectedFailureMatrixTest, WatchProfilesTest, GcmRecordTest |
+| 5 no credential fallback | PersistenceRecoveryTest, CredentialRouterTest, ProcessReconstructionTest |
+| 6–7 host reconstruction/invalid identity | HostIdRepositoryTest, ProcessReconstructionTest |
+| 8 registration stability | WatchProfilesTest, WatchRefreshTest, WatchSignOutTest, PersistenceRecoveryTest |
+| 9–12 account preferences/fallback/dormant/reappearance | ModelRestorationIntegrationTest, PersistenceRecoveryTest |
+| 13–17 plan/API isolation, mode/revisions/key reconstruction/failure | ApiKeyRepositoryTest, CredentialRouterTest, PersistenceRecoveryTest |
+| 18–23 intent/unsent/uncertain/write-failure/atomic-clear/replacement | WatchRefreshTest, RefreshTransportTest, ProcessReconstructionTest, PersistenceRecoveryTest |
+| 24–25 interrupted sign-out/unknown revocation | WatchSignOutTest, OpenAiRevocationTest, PersistenceRecoveryTest |
+| 26 replay receipt reconstruction | PersistenceRecoveryTest, ProtectedFailureMatrixTest, WatchProfilesTest, ApiKeyRepositoryTest |
+| 27–29 startup ordering/preference/generation | ModelRestorationIntegrationTest, ProcessReconstructionTest, InferenceSessionTest |
+| 30 D4-B semantics | ProcessReconstructionTest (11) |
+| 31 D4-C semantics | ConnectivityTransitionsTest (7), ConnectivityCredentialTest (2), RefreshTransportTest (2) |
+| 32 D4-D semantics | PhoneIndependenceTest (6) |
+
+New reconstructed receipt tests ACK only exact bounded retry without rewriting;
+wrong node, changed host/body and expired receipt reject without mutation. Existing
+protocol/repository tests cover unsolicited/stale transaction/context and transfer
+replacement. Lost ACK after rotation cannot reinstall stale tokens.
+
+## J. Debug scenarios
+
+None added. JVM crypto/repository integration provides stronger deterministic
+fault evidence; existing presentation scenarios are sufficient for unchanged UI.
+WEAR_SCENARIOS.md and scenario tooling unchanged. No harness consolidation performed.
+
+## K. Automated results and commands actually run
+
+| Check | Result |
+| --- | --- |
+| D4-E PersistenceRecoveryTest | 13 passed |
+| HostIdRepositoryTest | 6 passed (one new; five baseline) |
+| Combined focused persistence/recovery/D3-B/D4-B/C/D suites | 137 passed; zero failures/errors/skips |
+| Full Wear suite | 340 passed, 44 suites; zero failures/errors/skips |
+| Full mobile suite (additional unchanged-code regression) | 70 passed, 11 suites; zero failures/errors/skips |
+| Wear debug / release assemblies | BUILD SUCCESSFUL |
+| Wear lintDebug | Zero errors; six existing warning entries (two AGP, one ExportedService, one VectorPath, two WearRecents) |
+| Release-isolation checker | PASS, debug-only manifests/DEX, no production references/storage/network fixture dependencies |
+| Python unit tests | 26 passed; no tooling changes |
+| Python syntax | All 10 tools/*.py parsed successfully |
+| git diff --check / changed and new text whitespace | PASS |
+
+Environment: DEVELOPMENT.md's existing JDK 17 and preserved ANDROID_USER_HOME.
+Initial sandbox launch failed on read-only Gradle cache lock; authorized rerun
+outside that restriction succeeded. No cache/signing migration or dependency change.
+
+```sh
+export JAVA_HOME="$HOME/.local/share/wristprompt/jdk-17.0.21+9"
+export ANDROID_USER_HOME="$HOME/.local/share/wristprompt/android"
+./gradlew :wear:testDebugUnitTest --tests '*PersistenceRecoveryTest' \
+  --tests '*HostIdRepositoryTest' --tests '*GcmRecordTest' \
+  --tests '*ProtectedFailureMatrixTest' --tests '*ModelRestorationIntegrationTest' \
+  --tests '*ProcessReconstructionTest' --tests '*Connectivity*Test' \
+  --tests '*WatchRefreshTest' --tests '*RefreshTransportTest' --tests '*RefreshUpgradeTest' \
+  --tests '*PhoneIndependenceTest' --tests '*WatchSignOutTest' --tests '*OpenAiRevocationTest' \
+  --tests '*WatchProfilesTest' --tests '*ApiKeyRepositoryTest' --tests '*CredentialRouterTest' --console=plain
+./gradlew :wear:testDebugUnitTest :mobile:testDebugUnitTest \
+  :wear:assembleDebug :wear:assembleRelease :wear:lintDebug --console=plain
+python3 tools/check_scenario_isolation.py
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tools -p 'test_*.py'
+git diff --check
+```
+
+Python syntax used ast.parse on every tools/*.py; changed/new-file whitespace used
+an explicit trailing-space/tab and final-newline scan, including the untracked test.
+
+## L. Emulator acceptance matrix
+
+| Case | This phase's evidence / classification |
+| --- | --- |
+| Recovery reauthorization, signed-out/unconfirmed, secure storage unavailable, missing/reappeared model, restored billing | No D4-E emulator run or new scenario; repository/ViewModel assertions VERIFIED AUTOMATICALLY only. No new PASS — VERIFIED ON EMULATOR claim. |
+| Existing REAUTH_REQUIRED_PHONE_ABSENT / watch-only billing presentation | Historical D4-D PASS — VERIFIED ON EMULATOR retained, not rerun or counted as D4-E acceptance. |
+| Actual Keystore corruption / interrupted AtomicFile | Not exercised; JVM synthetic tests cannot establish platform behavior. No destructive simulation. |
+| Capability-dependent auth/handoff | BLOCKED — EMULATOR LIMITATION, unchanged; not reopened. |
+
+No changed presentation required new emulator acceptance. No emulator/physical app
+data cleared, credentials damaged, device storage read or device access performed.
+
+## M. Security / architecture invariants
+
+Source audit of shared/main, wear/main and mobile/main logging found only
+allowlisted BridgeLog.warn(BridgeDiagnostic) callers and its single safe Log.w
+implementation. No sensitive persistence logging, arbitrary text/Throwable overload,
+raw crypto cause, token/key/account identifier, plaintext record, prompt or response
+logging added. Protocol DTOs remain redacted; safe static storage UI guidance.
+
+Confirmed unchanged: no conversation persistence, request persistence, partial
+output persistence, inference replay, credential fallback, unsafe uncertain refresh
+reuse, production Data Layer bypass, phone inference proxy, OAuth/billing redesign,
+storage migration, new encryption format, foreground service, WorkManager, wake lock
+or added automatic retry. Debug scenarios excluded from release by checker.
+
+## N. Remaining debt / deferred physical checklist
+
+**PENDING END-OF-DAY PHYSICAL TEST / RC:** updated APKs on phone/Galaxy Watch,
+ADB reconnect/pairing as needed, normal non-destructive watch reboot, credential/
+model/billing reconstruction, phone absent with watch independently online, empty
+conversation after fresh process and no replay. No forced Keystore corruption,
+credential damage, forced expiry, app-data clearing or automatic destructive test.
+Android Keystore and actual AtomicFile interrupted-write behavior remain platform
+validation limits; synthetic JVM faults are not physical evidence.
+
+Terra -> Sol anomaly remains unresolved. Transient reauthorization anomaly remains
+for Day 5 disposition. Funded BYOK physical success remains externally constrained;
+no funded key required. Emulator CapabilityClient limitation unchanged. D4-A/B/C/D
+hardware and release-candidate gates remain open. D4-F and D4-G remain pending.
+
+## O. Deferred to D4-F
+
+Harness consolidation, shared fixture/tool cleanup and coordinated scenario
+acceptance remain unstarted. This phase only adds a D4-E test suite using existing
+ReconstructionFixture and one host negative test; no fixture redesign or new
+scenario infrastructure. Final Day 4 acceptance belongs to D4-G, not this result.
+
+## P. Changed files / suggested commit
+
+- wear/src/test/kotlin/io/github/grassified/wristprompt/openai/PersistenceRecoveryTest.kt
+- wear/src/test/kotlin/io/github/grassified/wristprompt/storage/HostIdRepositoryTest.kt
+- DAY4_STATUS.md
+- ROADMAP.md
+
+Suggested message: `test: verify durable credential and recovery failure boundaries`
 
 No commit or push performed.

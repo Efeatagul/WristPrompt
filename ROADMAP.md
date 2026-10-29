@@ -31,7 +31,10 @@ acceptance remains pending. D4-C network transitions are PASS WITH KNOWN DEBT:
 transitions remain pending hardware evidence. D4-D is PASS WITH KNOWN DEBT:
 326 Wear / 26 Python tests, six synthetic emulator phone-absence scenarios, no
 production change required. Updated-build hardware acceptance remains pending;
-D4-E is not begun. Reauthorization debt still requires Day 5 disposition before freeze.
+D4-E is PASS WITH KNOWN DEBT — VERIFIED AUTOMATICALLY: 340 Wear / 70 mobile /
+26 Python tests, both Wear builds/lint/release isolation; no production change
+required. Physical persistence/reboot acceptance, D4-F and D4-G remain pending.
+Reauthorization debt still requires Day 5 disposition before freeze.
 
 Day numbers are execution stages, not a claim that work has started. A failed
 release gate blocks progression; retain evidence without credentials. Scope and
@@ -223,7 +226,13 @@ capability isolation evidence remains unchanged. No production fallback.
   No production change required; phone is setup/reauth companion, not inference proxy.
 - [ ] D4-D updated-build physical phone-off/watch-Wi-Fi and natural refresh
   acceptance, deferred to DAY4_STATUS.md's targeted hardware session; no forced expiry.
-- [ ] D4-E persistence/recovery edge-case work; not begun.
+- [x] D4-E persistence/recovery edge cases: VERIFIED AUTOMATICALLY, 137 focused /
+  340 full Wear tests, 70 mobile tests, both Wear builds/lint/release isolation.
+  No production change required; final durability matrix in DAY4_STATUS.md.
+- [ ] D4-E physical persistence/reboot/Keystore/platform AtomicFile acceptance,
+  deferred to the non-destructive consolidated Day 4/RC checklist.
+- [ ] D4-F harness consolidation; not begun.
+- [ ] D4-G final Day 4 acceptance; not begun.
 
 - [ ] Add platform voice input only if earlier gates are green; otherwise cut it.
 - [ ] Check permission denial, recognizer absence, phone absence, process death,

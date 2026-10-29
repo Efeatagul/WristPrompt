@@ -70,4 +70,17 @@ class HostIdRepositoryTest {
         }
         assertNull(data.data.first()[HostIdRepository.HOST_ID])
     }
+    @Test fun unexpectedStoredIdentityValuesNeverRegenerateOrChangeOnReopening() = runBlocking {
+        val data = store()
+        for (value in listOf("", "urn:uuid:not-a-uuid", "user@example.test", "urn:uuid:00000000-0000-0000-0000-000000000000")) {
+            data.edit { it[HostIdRepository.HOST_ID] = value }
+            repeat(2) {
+                assertThrows(IllegalStateException::class.java) {
+                    runBlocking { HostIdRepository(data) { error("Must not replace established identity") }.getOrCreate() }
+                }
+                assertEquals(value, data.data.first()[HostIdRepository.HOST_ID])
+            }
+        }
+    }
+
 }
