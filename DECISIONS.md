@@ -902,3 +902,54 @@ uses the platform RemoteInput activity and keyboard; Done returns a draft for a
 separate app Send action. No voice feature, new dependency, auth/storage/billing
 contract or Data Layer routing change. D3-D retains detailed streaming/Stop and
 scroll-follow hardening. Current test/emulator evidence belongs in DAY3_STATUS.md.
+
+## D19 — serialized generation ownership and Stop (2026-10-29)
+
+Keep the existing ViewModel operation epoch as the UI request identity. Assign a
+lazy Job to the operation field before starting it, including Main.immediate
+execution, so synchronous/reentrant completion cannot publish an unowned job.
+All chat mutations remain on Main. Busy state prevents duplicate Send; a new
+prompt does not implicitly cancel/replay an active prompt.
+
+InferenceSession serializes proof/chat generation through one mutex per session.
+Register both active and queued generation Jobs before resolving credentials or
+waiting for that lock. Resolve/revalidate the current account/generation/mode/
+revision after acquiring it. Stop can immediately accept a new prompt into
+STARTING, but its provider/HTTP work waits until the cancelled generation and
+its transport cleanup have exited. Discovery-only calls retain their existing
+behavior. No second authenticated generation overlaps the old cleanup.
+
+Validate the captured owning Job before and after suspended lease checks and
+progress callbacks, even if a provider invokes a callback in NonCancellable.
+The ViewModel epoch rejects superseded state/error/completion publication. After
+an accepted completed terminal, ignore further provider events; the real SSE
+adapter already stops reading at the first terminal. Informational/unknown
+well-formed events do not publish text progress. Only response.completed permits
+successful finalization and completed-exchange context commit. EOF, failed,
+incomplete, malformed and cancelled results remain distinct; no automatic replay.
+
+Stop is a no-op while idle. While active it invalidates the epoch, cancels the
+owning coroutine and marks the unfinished chat user turn excluded, retaining the
+latest partial output. OpenAiHttp's existing cancellable await finally cancels
+the actual OkHttp Call, unblocks the IO reader and closes the response. Keep this
+existing transport behavior; tests now exercise it through the chat ViewModel.
+Stop disappears when no request is active. Partial display remains until a new
+request or New Chat replaces it; unfinished exchanges never enter replay context.
+Cancellation cannot promise zero server-side usage.
+
+Cache completed-message display chunks only when the immutable message list
+changes, rather than re-splitting all history for every delta. Lazy content must
+capture the chat snapshot and matching cache together: a live delegated state
+read inside a deferred lazy builder can otherwise see newer message IDs with an
+older cache. Emulator acceptance caught and verified the repair of this initial
+cache integration error. No forced auto-scroll; manual upward scrolling is
+preserved. Bounds and replay ownership remain D18's contract.
+
+Official plan inference and streaming guides rechecked on 2026-10-29:
+[plan terminal rules](https://developers.openai.com/siwc/token-sharing-open-source/models-and-inference),
+[streaming events](https://developers.openai.com/api/docs/guides/streaming-responses).
+No endpoint, payload field, OAuth, credential format, billing selection or Data
+Layer routing change. A standalone debug-source-set synthetic preview exercises
+the real ViewModel/session and shared chat renderer without credential stores,
+network, capability bypass or intent-provided data. It is absent from the merged
+release manifest. DAY3_STATUS.md owns exact validation and emulator limitations.

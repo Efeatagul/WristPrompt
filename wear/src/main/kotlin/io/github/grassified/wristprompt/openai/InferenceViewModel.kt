@@ -50,7 +50,7 @@ class InferenceViewModel(
         if (operation?.isActive == true || state.value.busy || state.value.models.none { it.slug == slug }) return
         val catalog = prepared ?: return
         val run = epoch
-        operation = viewModelScope.launch {
+        launchOperation {
             try {
                 saveModel(catalog.credential, slug)
                 if (run == epoch) {
@@ -67,12 +67,12 @@ class InferenceViewModel(
         val priorModel = contextModel ?: state.value.selectedSlug
         val run = ++epoch
         mutableState.value = ProofState(stage = ProofStage.LOADING, mode = state.value.mode)
-        operation = viewModelScope.launch {
+        launchOperation {
             try {
                 val catalog = session.catalog()
-                if (run != epoch) return@launch
+                if (run != epoch) return@launchOperation
                 val saved = selectedModel(catalog.credential)
-                if (run != epoch) return@launch
+                if (run != epoch) return@launchOperation
                 prepared = catalog
                 val restored = catalog.models.firstOrNull { it.slug == saved }?.slug ?: catalog.models.first().slug
                 if (priorModel != null && priorModel != restored) clearChat()
@@ -88,7 +88,7 @@ class InferenceViewModel(
         val selected = state.value.selectedSlug ?: return
         val run = ++epoch
         mutableState.value = state.value.copy(stage = ProofStage.LOADING, output = "", completedObserved = false, problem = null, protocolDetail = null, httpStatus = null, errorCode = null, requestId = null, errorShape = null)
-        operation = viewModelScope.launch {
+        launchOperation {
             try {
                 val result = session.test(catalog, selected, onCatalog = { fresh ->
                     if (run == epoch) {
@@ -109,9 +109,10 @@ class InferenceViewModel(
     }
     fun stop() {
         val wasChatBusy = conversation.state.busy
+        if (!wasChatBusy && !state.value.busy) return
         cancelOperation()
         if (wasChatBusy) { conversation.fail(null, cancelled = true); publishChat() }
-        mutableState.value = state.value.copy(stage = ProofStage.CANCELLED)
+        if (state.value.busy) mutableState.value = state.value.copy(stage = ProofStage.CANCELLED)
     }
     // Input results are accepted only for the context that launched the platform composer.
     fun inputToken(): Long? = inputRevision.takeIf { !state.value.busy && !chat.value.busy }
@@ -135,7 +136,7 @@ class InferenceViewModel(
         if (input == null) return
         val run = ++epoch
         inputRevision++
-        operation = viewModelScope.launch {
+        launchOperation {
             try {
                 val result = session.chat(catalog, selected, input) { progress ->
                     withContext(Dispatchers.Main.immediate) {
@@ -162,6 +163,12 @@ class InferenceViewModel(
     private fun clearChat() { inputRevision++; contextModel = null; conversation.reset(); publishChat() }
     // Future phone-browser hook; never substitute an API-key billing path.
     fun manageUsage() { mutableState.update { it.copy(usageHint = true) } }
+    // Publish ownership before executing a Main.immediate coroutine that may finish/re-enter synchronously.
+    private fun launchOperation(block: suspend () -> Unit) {
+        val job = viewModelScope.launch(start = CoroutineStart.LAZY) { block() }
+        operation = job
+        job.start()
+    }
     private fun cancelOperation() { epoch++; operation?.cancel(); operation = null }
     private fun failed(run: Long, failure: Exception) {
         if (run != epoch) return

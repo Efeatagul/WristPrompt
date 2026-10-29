@@ -39,6 +39,11 @@ internal fun WearShell(auth: WatchAuthViewModel, settings: ApiKeySettingsViewMod
     val changing by settings.busy.collectAsStateWithLifecycle()
     val state by proof.state.collectAsStateWithLifecycle()
     val chat by proof.chat.collectAsStateWithLifecycle()
+    // Lazy content executes later: capture state and cached rows from the same snapshot.
+    val renderedChat = chat
+    val messageChunks = remember(renderedChat.messages) {
+        renderedChat.messages.associate { it.id to readableChunks(it.text) }
+    }
     var surface by remember { mutableStateOf(Surface.CHAT) }
     var inputToken by remember { mutableStateOf<Long?>(null) }
     var inputUnavailable by remember { mutableStateOf(false) }
@@ -111,7 +116,7 @@ internal fun WearShell(auth: WatchAuthViewModel, settings: ApiKeySettingsViewMod
                             Surface.CHAT -> {
                                 item { ShellText("Model: ${ui.model}", compact = true) }
                                 if (!ui.proofAvailable || state.selectedSlug == null) item { ShellText(ui.status) }
-                                chatItems(chat)
+                                chatItems(renderedChat, messageChunks)
                                 action("New Chat", onClick = proof::newChat)
                                 action("Choose model", ui.proofAvailable && !state.busy && !chat.busy) { surface = Surface.MODELS }
                                 action("Connection / settings", onClick = { surface = Surface.CONNECTION })
@@ -222,7 +227,7 @@ internal fun WearShell(auth: WatchAuthViewModel, settings: ApiKeySettingsViewMod
 }
 
 @Composable
-private fun ShellList(modifier: Modifier, content: TransformingLazyColumnScope.() -> Unit) {
+internal fun ShellList(modifier: Modifier, content: TransformingLazyColumnScope.() -> Unit) {
     val scroll = rememberTransformingLazyColumnState()
     ScreenScaffold(scrollState = scroll, modifier = modifier, timeText = {},
         contentPadding = PaddingValues(top = 8.dp, bottom = 40.dp)) { padding ->

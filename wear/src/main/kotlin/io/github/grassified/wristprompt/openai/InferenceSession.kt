@@ -7,6 +7,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.job
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonObject
 
 class PreparedCatalog(val credential: CredentialLease, val models: List<AiModel>) {
@@ -18,6 +21,7 @@ class InferenceSession(
     private val provider: AiProvider,
     private val isCurrent: suspend (CredentialLease) -> Boolean,
 ) {
+    private val generation = Mutex()
     private val active = ConcurrentHashMap<Job, String>()
     fun cancelAll() { active.keys.forEach { it.cancel(CancellationException("Credential mode changed")) } }
     fun cancel(clientId: String) {
@@ -47,32 +51,43 @@ class InferenceSession(
 
     private suspend fun generate(catalog: PreparedCatalog, selected: String, input: List<JsonObject>?,
         onCatalog: (PreparedCatalog) -> Unit, onProgress: suspend (StreamResult) -> Unit): StreamResult = coroutineScope {
-        val current = credentials.current()
-        // A stale action must never turn into a request for another account or bill.
-        if (current.clientId != catalog.credential.clientId || current.generation != catalog.credential.generation ||
-            current.mode != catalog.credential.mode || current.modeRevision != catalog.credential.modeRevision) {
-            throw ApiFailure(ApiProblem.STALE_ACCOUNT)
-        }
         val job = currentCoroutineContext().job
-        active[job] = current.clientId
-        try {
+        // Track queued work too, so account/mode cancellation cannot miss a waiting generation.
+        active[job] = catalog.credential.clientId
+        try { generation.withLock {
+            job.ensureActive()
+            val current = credentials.current()
+            job.ensureActive()
+            // A stale action must never turn into a request for another account or bill.
+            if (current.clientId != catalog.credential.clientId || current.generation != catalog.credential.generation ||
+                current.mode != catalog.credential.mode || current.modeRevision != catalog.credential.modeRevision) {
+                throw ApiFailure(ApiProblem.STALE_ACCOUNT)
+            }
             // Discovery and inference must use the same bearer. Refresh invalidates the old catalog.
-            val prepared = if (current.accessToken == catalog.credential.accessToken && current.generation == catalog.credential.generation &&
-                current.clientId == catalog.credential.clientId && current.mode == catalog.credential.mode && current.modeRevision == catalog.credential.modeRevision) catalog else catalog(current)
+            val prepared = if (current.accessToken == catalog.credential.accessToken) catalog else catalog(current)
+            job.ensureActive()
             onCatalog(prepared)
             if (prepared.models.none { it.slug == selected }) throw ApiFailure(ApiProblem.NO_MODELS)
             if (!isCurrent(prepared.credential)) throw ApiFailure(ApiProblem.STALE_ACCOUNT)
+            job.ensureActive()
             val result = StreamResult(ResponsesProtocol.expected(current.mode))
-            val receive: suspend (ResponseEvent) -> Unit = { event ->
+            val receive: suspend (ResponseEvent) -> Unit = receive@{ event ->
+                // Check the owning Job, even if a misbehaving provider invokes us in NonCancellable.
+                job.ensureActive()
+                if (result.completed) return@receive
                 if (!isCurrent(prepared.credential)) throw ApiFailure(ApiProblem.STALE_ACCOUNT)
+                job.ensureActive()
                 result.accept(event)
-                onProgress(result)
+                if (event != ResponseEvent.Ignored) onProgress(result)
+                job.ensureActive()
             }
             if (input == null) provider.stream(prepared.credential, selected, receive)
             else provider.stream(prepared.credential, selected, input, receive)
+            job.ensureActive()
             result.end()
             if (!isCurrent(prepared.credential)) throw ApiFailure(ApiProblem.STALE_ACCOUNT)
+            job.ensureActive()
             result
-        } finally { active.remove(job) }
+        } } finally { active.remove(job) }
     }
 }

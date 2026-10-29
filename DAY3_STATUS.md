@@ -2,8 +2,9 @@
 
 Phase A is implemented. Phase B is complete as investigation/test hardening;
 its historical physical anomaly remains unresolved. Phase C text chat/context is
-implemented below. Day 2 remains PASS WITH KNOWN DEBT. D3-D redesign is unstarted;
-this is not a completed Day 3 physical/release gate.
+implemented below. Phase D streaming/Stop ownership is hardened below. Day 2
+remains PASS WITH KNOWN DEBT. D3-E is unstarted; this is not a completed Day 3
+physical/release gate.
 
 ## Phase A scope and evidence
 
@@ -47,8 +48,8 @@ install, live request, credential operation, commit or push.
 - Terra -> Sol model restoration: D3-B investigation below; not reproduced on
   current code, unchanged and unresolved. No physical resolution is claimed.
 - Native text input/in-memory multi-turn chat: D3-C foundation implemented below.
-- Detailed streaming/Stop/scroll-follow hardening: D3-D; existing transport and
-  basic Stop are reused for D3-C, without claiming D3-D acceptance.
+- Streaming/Stop ownership: D3-D evidence below. Live-network and consolidated
+  physical acceptance remain separate; no routine physical test is requested.
 - Transient reauthorization exchange/context-expiry anomaly: tracked debt, no
   claimed cause/fix; preserve retry from watch and phone guidance. Day 5 disposition.
 - Real successful paid BYOK: BLOCKED by no funded credential; existing synthetic
@@ -232,7 +233,8 @@ Suggested commit: `test: cover model restoration across encrypted startup recons
 multi-turn context. **VERIFIED ON EMULATOR (partial acceptance):** chat/composer
 entry, system keyboard entry using on-screen keys, returned draft review and
 cancel-to-composer behavior. No real inference or physical-device evidence is
-claimed. D3-D redesign remains unstarted. The D3-B investigation is not reopened;
+claimed. D3-D was unstarted at the D3-C handoff; the section below records its
+current evidence. The D3-B investigation is not reopened;
 historical Terra -> Sol remains unresolved physical debt.
 
 ### Architecture and context rules
@@ -373,3 +375,173 @@ anomaly and funded-BYOK physical-success constraint remain unchanged. No routine
 physical test was requested, milestone checked off, commit made or push performed.
 
 Suggested commit: `feat: add Wear text chat with bounded in-memory conversation context`.
+
+
+## Phase D — streaming, Stop and request races (2026-10-29)
+
+**VERIFIED AUTOMATICALLY:** 249 Wear tests pass, including 17 new streaming/race
+and integrated HTTP-cancellation tests. **VERIFIED ON EMULATOR:** synthetic
+streaming/Stop/clean follow-up through the actual ViewModel/session and shared
+chat renderer. No production authentication, live OpenAI inference or physical
+behavior is inferred. D3-E is unstarted. No commit or push.
+
+### Baseline findings and corrections
+
+The first new StreamingRaceTest run against committed D3-C reproduced four
+failures (11 tests, four failed): idle Stop mutated proof state; independent
+session generation callers overlapped; Stop -> immediate Send entered the next
+provider before the cancelled provider exited; duplicate completion callbacks
+turned a completed result into a failure. D3-C's epoch rejection already protected
+many UI late-result cases, and its HTTP cancellation adapter already worked.
+Do not misreport those existing protections as newly implemented or broken.
+
+- InferenceViewModel now assigns a lazy coroutine Job before starting it, keeping
+  operation ownership valid under immediate/reentrant execution. Epoch remains
+  the existing request identity. Duplicate Send stays blocked synchronously.
+- Stop while idle is a no-op. Active Stop increments the epoch, cancels the Job,
+  marks the chat cancelled and its user turn excluded, and retains partial text.
+  It no longer changes unrelated idle proof state when stopping chat.
+- InferenceSession registers queued and active generation Jobs, serializes
+  generation under one mutex, and checks the captured owning Job around lease
+  checks, event acceptance, progress and final publication. NonCancellable fake
+  callbacks cannot bypass cancellation. Both active and queued work respond to
+  session/account cancellation. A following prompt can enter STARTING immediately
+  but waits for old provider/transport cleanup before entering its provider.
+- First completed terminal wins; later provider callbacks cannot duplicate text,
+  finalize a second assistant message or replace completion with a failed event.
+  The actual provider already stops parsing at its first terminal event.
+- Whole completed exchanges still enter context exactly once. Failed, incomplete,
+  interrupted and cancelled exchanges stay excluded. Stop -> B tests verify B's
+  input contains only B when no earlier completed exchange exists.
+
+### Stream/event and transport audit
+
+response.created/in-progress, reasoning/item notifications and unknown well-formed
+non-text events are informational and do not append text or establish completion.
+They no longer trigger unnecessary UI progress publication. Completed output items
+and opaque replay data remain retained from response.completed as in D3-C.
+
+Ordered output_text.delta events append once, including legitimately repeated
+text chunks. No content-based deduplication would be correct for repeated words.
+Only response.completed establishes success. response.failed preserves safe error
+categories; incomplete, malformed/type-conflicting events, premature EOF and IO
+interruption remain failures with partial output retained. Cancellation remains
+CancellationException, rather than being converted to a network error.
+
+OpenAiHttp, OpenAiProvider, ResponsesProtocol, SseReader and ChatConversation are
+unchanged in this phase. The existing HTTP await finally calls Call.cancel()
+while the IO child may be blocked reading; response use closes the body before
+the session releases its generation lock. Integrated tests use the actual OkHttp
+Call with synthetic blocking/intercepted bodies, not a real OpenAI connection or
+physical radio. They confirm cancelled Call state, unblocked read, closed body,
+retained partial state and a successful next prompt in both billing modes. They
+also test Stop before response headers arrive. No rotating-token behavior changed.
+
+### Wear rendering and performance
+
+Stop remains outside scrolling content while busy, disappears afterward and
+requires no navigation to reach. Long partial output remains chunked/scrollable.
+No auto-scroll or scroll-follow infrastructure was added; user scrolling is not
+continually overridden. Per-delta state updates retain the same message-list
+instance (verified over 2000 identical text deltas). Completed-message chunks are
+cached by that list, avoiding repeat full-history text splitting on every delta.
+
+The first cache implementation introduced a renderer race: deferred lazy content
+read a newer delegated ChatState while holding an older chunk map. The emulator
+reproduced a NoSuchElementException at ChatItems' cache lookup. Both production
+and preview now capture immutable renderedChat alongside the matching cache.
+Repeated streaming/Stop/follow-up acceptance after this correction no longer
+crashed. This is an emulator-discovered and repaired D3-D integration defect,
+not a claimed prior D3-C defect. No raw crash messages/payloads were printed;
+inspection emitted exception classes and app frame names only.
+
+### Tests and final automatic results
+
+New StreamingRaceTest: 13 tests covering idle Stop, immediate next send and
+single-provider occupancy, late delta/completion/failure after Stop, stale errors,
+multiple ViewModel owners, duplicate Send/pre-dispatch Stop, duplicate terminal,
+partial failures, 2000 ordered repeated deltas with unchanged history-list
+identity, New Chat epochs, NonCancellable callbacks, queued cancellation and
+ViewModel disposal.
+
+New StreamingHttpCancellationTest: four tests covering actual Call cancellation/
+blocked read/body closure/clean B request in both modes; Stop before headers;
+EOF/malformed/malformed terminal/incomplete/server-failed SSE after partial text;
+and lifecycle events plus unread trailing events after completion. Existing D3-C
+context, D3-B restoration, Day 2 credential/billing/cancellation and protocol
+suites remain passing.
+
+Final focused gate: **85 tests**, zero failures/errors/skips. Full Wear suite:
+**249 tests**, zero failures/errors/skips. :wear:assembleDebug, :wear:lintDebug and
+:wear:processReleaseMainManifest PASS. Lint: zero errors, five unchanged warning
+instances (two AGP advisories, ExportedService, VectorPath and the existing debug
+DataLayerDiagnosticsActivity WearRecents warning). The new preview uses noHistory
+with excludeFromRecents and adds no final lint warning. The merged release
+manifest was explicitly checked and excludes StreamingPreviewActivity.
+
+Commands run with DEVELOPMENT.md's persistent JDK/SDK/cache/signing environment:
+
+```sh
+./gradlew :wear:testDebugUnitTest \
+  --tests 'io.github.grassified.wristprompt.openai.StreamingRaceTest' --console=plain
+./gradlew :wear:testDebugUnitTest \
+  --tests 'io.github.grassified.wristprompt.openai.Streaming*Test' \
+  --tests 'io.github.grassified.wristprompt.openai.Chat*Test' \
+  --tests 'io.github.grassified.wristprompt.openai.Inference*Test' \
+  --tests 'io.github.grassified.wristprompt.openai.ApiKeyCancellationTest' \
+  --tests 'io.github.grassified.wristprompt.openai.OpenAiProviderTest' \
+  --tests 'io.github.grassified.wristprompt.openai.SseReaderTest' --console=plain
+./gradlew :wear:testDebugUnitTest :wear:assembleDebug :wear:lintDebug \
+  :wear:processReleaseMainManifest --console=plain
+git diff --check
+```
+
+Also assembled during debug-preview iterations and checked new text files for
+trailing whitespace and final newlines. No shared/mobile implementation changed;
+mobile tests/build/lint were not rerun and previous results are not current-run
+evidence. No dependency, signing identity, SDK/license or storage change.
+
+### Debug-only emulator acceptance
+
+Used existing WristPrompt_Watch7, confirmed by AVD name and emulator/watch
+characteristics before install -r. Only emulator-5554 was targeted. Physical
+devices were not selected. No uninstall/data wipe/re-pair/AVD recreation/capability
+probe. Earlier returned-clock captures followed preview renderer crashes and
+were discarded; they are not attributed to GMS or the capability limitation.
+
+StreamingPreviewActivity is an explicitly launched standalone debug activity.
+It constructs a synthetic lease, fake in-process provider and real
+InferenceViewModel/InferenceSession; it shares ShellList/chatItems with production.
+No Application credential store, real key, OAuth, bridge or network client is
+used. It accepts no external prompt/scenario extras. It keeps only its own visible
+window awake and is excluded from release. Its provider deliberately attempts a
+late completion 1.2 seconds after cancellation; owning-Job rejection prevents it
+from becoming a visible completed message.
+
+VERIFIED ON EMULATOR: incremental long output, manual scrolling with fixed Stop
+reachable, mid-stream Stop, stopped/excluded state, and a following short response
+completed with input items: 1 (cancelled exchange omitted), without a stale late
+completion replacing it. A further stopped partial remained visibly marked
+excluded after waiting past the 1.2-second late callback. Activity.recreate kept
+the completed conversation/response without starting another generation.
+Screenshots/UI hierarchies contain synthetic text only.
+This verifies shared rendering and actual VM/session behavior with a fake source;
+it does not verify real HTTP transport/radio cancellation on a device. Actual Call
+cancellation has separate automated evidence above.
+
+Production capability-dependent authentication remains NOT VERIFIABLE ON CURRENT
+EMULATOR LAB. No production emulator fallback was added. No routine physical test
+is requested. Real-service latency/network loss and physical touch/rotary behavior
+remain for consolidated acceptance.
+
+### Retained debt / boundaries
+
+D3-E is not started. No OAuth, billing, credential format/store, Data Layer,
+provider feature, attachment, voice, web/tool/MCP or persistent-history work.
+Historical Terra -> Sol remains unresolved physical debt; reauthorization anomaly,
+funded-BYOK physical-success constraint and emulator capability limitation remain.
+Stop cannot promise zero provider-side usage after local cancellation. A next
+request may remain STARTING while bounded previous cleanup/refresh finishes;
+there is no automatic retry or overlap to hide that wait.
+
+Suggested commit: `fix: harden chat streaming ownership and Stop races`.

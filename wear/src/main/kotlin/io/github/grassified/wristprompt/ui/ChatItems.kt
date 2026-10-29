@@ -20,7 +20,7 @@ internal fun chatInputIntent(): Intent = Intent("android.support.wearable.input.
             }).build()))
     .putExtra("android.support.wearable.input.extra.CONFIRM_LABEL", "Done")
 
-internal fun TransformingLazyColumnScope.chatItems(chat: ChatState) {
+internal fun TransformingLazyColumnScope.chatItems(chat: ChatState, messageChunks: Map<Long, List<String>>) {
     if (chat.messages.isEmpty()) item { ShellText("Start a conversation. History stays in memory for this session.") }
     for (message in chat.messages) {
         item(key = "message-${message.id}") {
@@ -30,7 +30,7 @@ internal fun TransformingLazyColumnScope.chatItems(chat: ChatState) {
                 else -> "You"
             }, heading = true)
         }
-        paragraphs(message.text)
+        for (chunk in messageChunks.getValue(message.id)) item { ShellText(chunk) }
     }
     if (chat.partial.isNotEmpty()) {
         item { ShellText(if (chat.busy) "Assistant · receiving" else "Assistant · partial, excluded from context", heading = true) }
