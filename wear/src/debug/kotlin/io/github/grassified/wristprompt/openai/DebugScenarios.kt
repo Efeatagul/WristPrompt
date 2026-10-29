@@ -15,7 +15,9 @@ internal enum class DebugScenario {
     RECREATED_COMPLETED_STATE, RECREATED_CANCELLED_STATE,
     ACTIVE_STREAM_RECREATION, BACKGROUNDED_STREAM, SCREEN_OFF_STYLE_RESUME, COMPOSER_RECREATION,
     PROCESS_RESTART_IDLE, PROCESS_RESTART_AFTER_COMPLETED,
-    PROCESS_RESTART_DURING_ACTIVE, PROCESS_RESTART_AFTER_PARTIAL;
+    PROCESS_RESTART_DURING_ACTIVE, PROCESS_RESTART_AFTER_PARTIAL,
+    NETWORK_LOST_BEFORE_SEND, NETWORK_LOST_DURING_STREAM, NETWORK_RECOVERED,
+    MODEL_DISCOVERY_OFFLINE, MODEL_DISCOVERY_RECOVERED, STOP_NETWORK_RACE;
     companion object { fun parse(name: String?): DebugScenario? = entries.singleOrNull { it.name == name } }
 }
 
@@ -28,7 +30,8 @@ internal class DebugScenarios(val scenario: DebugScenario) {
         activeClientId = "debug".takeUnless { scenario == DebugScenario.SIGNED_OUT })
     val key = ApiKeyState(loaded = true, mode = mode, configured = mode == CredentialMode.OPENAI_API_KEY)
     val surface = when (scenario) {
-        DebugScenario.MANY_MODELS, DebugScenario.MODELS_LOADED, DebugScenario.MODEL_UNAVAILABLE -> Surface.MODELS
+        DebugScenario.MANY_MODELS, DebugScenario.MODELS_LOADED, DebugScenario.MODEL_UNAVAILABLE,
+        DebugScenario.MODEL_DISCOVERY_OFFLINE, DebugScenario.MODEL_DISCOVERY_RECOVERED -> Surface.MODELS
         DebugScenario.LONG_USER_PROMPT, DebugScenario.COMPOSER_RECREATION -> Surface.COMPOSER
         DebugScenario.SIGNED_OUT -> Surface.CONNECTION
         else -> Surface.CHAT
@@ -43,6 +46,14 @@ internal class DebugScenarios(val scenario: DebugScenario) {
     val lifecycleScenario get() = scenario in setOf(DebugScenario.ACTIVE_STREAM_RECREATION,
         DebugScenario.BACKGROUNDED_STREAM, DebugScenario.SCREEN_OFF_STYLE_RESUME)
     val processScenario get() = scenario.name.startsWith("PROCESS_RESTART_")
+    val networkScenario get() = scenario in setOf(DebugScenario.NETWORK_LOST_BEFORE_SEND,
+        DebugScenario.NETWORK_LOST_DURING_STREAM, DebugScenario.NETWORK_RECOVERED,
+        DebugScenario.MODEL_DISCOVERY_OFFLINE, DebugScenario.MODEL_DISCOVERY_RECOVERED, DebugScenario.STOP_NETWORK_RACE)
+    private var online = !networkScenario
+    private val networkLoss = CompletableDeferred<Unit>()
+    fun restoreNetwork() { if (networkScenario) online = true } // No action/reload/replay.
+    fun nextRequest() { if (networkScenario) { vm.draft("Explicit recovered request"); vm.send() } }
+    fun failAndStop() { if (scenario == DebugScenario.STOP_NETWORK_RACE) { networkLoss.complete(Unit); vm.stop() } }
     private var seeded = false
     suspend fun seedProcess() {
         if (!processScenario || seeded) return
@@ -65,6 +76,8 @@ internal class DebugScenarios(val scenario: DebugScenario) {
     private val provider = object : AiProvider {
         override suspend fun models(credential: CredentialLease): List<AiModel> {
             discoveries++
+            if (scenario in setOf(DebugScenario.MODEL_DISCOVERY_OFFLINE, DebugScenario.MODEL_DISCOVERY_RECOVERED) && !online)
+                throw ApiFailure(ApiProblem.NETWORK)
             if (loading) awaitCancellation()
             if (unavailable) { unavailable = false; throw ApiFailure(ApiProblem.NO_MODELS) }
             return (1..if (scenario == DebugScenario.MANY_MODELS) 40 else 3).map { AiModel("debug-$it", "Synthetic model $it") }
@@ -73,6 +86,15 @@ internal class DebugScenarios(val scenario: DebugScenario) {
         override suspend fun stream(credential: CredentialLease, model: String, input: List<JsonObject>, onEvent: suspend (ResponseEvent) -> Unit) {
             generations++; inputs += input
             failure()?.let { throw it }
+            if (networkScenario && !online) {
+                if (scenario == DebugScenario.STOP_NETWORK_RACE) {
+                    onEvent(ResponseEvent.Delta("Synthetic interrupted partial")); networkLoss.await()
+                } else if (scenario == DebugScenario.NETWORK_LOST_DURING_STREAM) {
+                    onEvent(ResponseEvent.Delta("Synthetic interrupted partial"))
+                }
+                throw ApiFailure(if (scenario in setOf(DebugScenario.NETWORK_LOST_DURING_STREAM, DebugScenario.STOP_NETWORK_RACE))
+                    ApiProblem.INTERRUPTED else ApiProblem.NETWORK)
+            }
             if (scenario == DebugScenario.PROCESS_RESTART_DURING_ACTIVE) awaitCancellation()
             if (scenario == DebugScenario.PROCESS_RESTART_AFTER_PARTIAL) {
                 onEvent(ResponseEvent.Delta("Synthetic process partial")); awaitCancellation()
@@ -114,7 +136,15 @@ internal class DebugScenarios(val scenario: DebugScenario) {
         if (scenario == DebugScenario.SIGNED_OUT) return
         if (scenario == DebugScenario.MODELS_LOADING) { vm.state.first { it.stage == ProofStage.LOADING }; return }
         if (scenario == DebugScenario.MODEL_UNAVAILABLE) { vm.state.first { it.problem == ApiProblem.NO_MODELS }; vm.draft("Blocked until models reload"); return }
+        if (scenario in setOf(DebugScenario.MODEL_DISCOVERY_OFFLINE, DebugScenario.MODEL_DISCOVERY_RECOVERED)) {
+            vm.state.first { it.stage == ProofStage.FAILED && it.problem == ApiProblem.NETWORK }; return
+        }
         vm.state.first { it.stage == ProofStage.READY }
+        if (networkScenario) {
+            vm.draft("Synthetic network failure request"); vm.send()
+            vm.chat.first { if (scenario == DebugScenario.STOP_NETWORK_RACE) it.stage == ChatStage.RECEIVING else it.stage == ChatStage.FAILED }
+            return
+        }
         when (scenario) {
             DebugScenario.LONG_USER_PROMPT -> vm.draft("Long synthetic question with readable words. ".repeat(190).take(ChatConversation.MAX_PROMPT_CHARS))
             DebugScenario.ONE_TURN_COMPLETED, DebugScenario.RECREATED_COMPLETED_STATE,

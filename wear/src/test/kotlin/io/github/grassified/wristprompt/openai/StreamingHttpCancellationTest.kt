@@ -165,6 +165,7 @@ class StreamingHttpCancellationTest {
     @Test fun eofMalformedAndFailedTerminalAfterPartialRemainDistinctAndExcluded(): Unit = runBlocking {
         val tails = listOf(
             "" to ApiProblem.INTERRUPTED,
+            "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\"}}" to ApiProblem.INTERRUPTED,
             "data: nope\n\n" to ApiProblem.PROTOCOL,
             "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"incomplete\"}}\n\n" to ApiProblem.PROTOCOL,
             "data: {\"type\":\"response.incomplete\",\"response\":{\"status\":\"incomplete\"}}\n\n" to ApiProblem.INCOMPLETE,
@@ -187,4 +188,123 @@ class StreamingHttpCancellationTest {
         assertEquals(listOf("A", "fresh"), state.messages.map { it.text })
         assertEquals("", state.partial)
     }
+    @Test fun routeLossAfterPartialClosesActualBodyAndExplicitRecoveryKeepsOnlyCompletedHistory(): Unit = runBlocking {
+        for (mode in CredentialMode.entries) {
+            val release = CountDownLatch(1); val reading = CompletableDeferred<Unit>(); val closed = CompletableDeferred<Unit>()
+            val lostCall = AtomicReference<Call>()
+            val inputs = java.util.concurrent.CopyOnWriteArrayList<JsonArray>()
+            val client = OkHttpClient.Builder().retryOnConnectionFailure(false).addInterceptor { chain ->
+                inputs += Json.parseToJsonElement(Buffer().also { chain.request().body!!.writeTo(it) }.readUtf8()).jsonObject["input"]!!.jsonArray
+                if (inputs.size != 2) return@addInterceptor response(chain, completed.toResponseBody("text/event-stream".toMediaType()))
+                lostCall.set(chain.call())
+                val source = object : Source {
+                    var delivered = false
+                    override fun timeout() = Timeout.NONE
+                    override fun close() { closed.complete(Unit) }
+                    override fun read(sink: Buffer, byteCount: Long): Long {
+                        if (!delivered) { delivered = true; sink.writeUtf8(partial); return partial.toByteArray().size.toLong() }
+                        reading.complete(Unit)
+                        check(release.await(5, TimeUnit.SECONDS)) { "Synthetic route-loss gate deadline" }
+                        throw IOException("Synthetic private route-loss detail")
+                    }
+                }.buffer()
+                response(chain, object : ResponseBody() {
+                    override fun contentType() = "text/event-stream".toMediaType()
+                    override fun contentLength() = -1L
+                    override fun source() = source
+                })
+            }.build()
+            val vm = model(client, mode)
+            try {
+                withContext(main) { vm.draft("Previous"); vm.send() }
+                withTimeout(3000) { vm.chat.first { it.stage == ChatStage.COMPLETED } }
+                withContext(main) { vm.draft("A"); vm.send() }
+                withTimeout(3000) { reading.await(); vm.chat.first { it.partial == "partial" } }
+                release.countDown()
+                val failed = withTimeout(3000) { vm.chat.first { it.stage == ChatStage.FAILED } }
+                withTimeout(3000) { closed.await() }
+                assertEquals(ApiProblem.INTERRUPTED, failed.problem); assertEquals("partial", failed.partial)
+                assertEquals(ChatMessageStatus.EXCLUDED, failed.messages.last().status)
+                assertFalse(failed.busy); assertTrue(lostCall.get().isCanceled())
+                // Main barrier after failure: restored transport itself never starts work.
+                withContext(main) { vm.stop(); assertEquals(failed, vm.chat.value); assertEquals(2, inputs.size) }
+                withContext(main) { vm.draft("B"); vm.send(); vm.send() }
+                withTimeout(3000) { vm.chat.first { it.stage == ChatStage.COMPLETED } }
+                assertEquals(3, inputs.last().size)
+                assertEquals("Previous", inputs.last()[0].jsonObject["content"]!!.jsonPrimitive.content)
+                assertEquals("fresh", inputs.last()[1].jsonObject["content"]!!.jsonArray.single().jsonObject["text"]!!.jsonPrimitive.content)
+                assertEquals("B", inputs.last()[2].jsonObject["content"]!!.jsonPrimitive.content)
+                assertEquals(3, inputs.size); assertEquals(mode, vm.state.value.mode)
+            } finally { release.countDown(); vm.viewModelScope.coroutineContext[Job]!!.cancelAndJoin() }
+        }
+    }
+
+    @Test fun stopAndRouteLossHaveOneConsistentTerminalForEitherOwnershipOrder(): Unit = runBlocking {
+        for (stopFirst in listOf(false, true)) {
+            val release = CountDownLatch(1); val reading = CompletableDeferred<Unit>(); val closed = CompletableDeferred<Unit>()
+            val call = AtomicReference<Call>(); var count = 0
+            val client = OkHttpClient.Builder().retryOnConnectionFailure(false).eventListener(object : EventListener() {
+                override fun canceled(call: Call) { release.countDown() }
+            }).addInterceptor { chain ->
+                count++
+                if (count > 1) return@addInterceptor response(chain, completed.toResponseBody("text/event-stream".toMediaType()))
+                call.set(chain.call())
+                val source = object : Source {
+                    var delivered = false
+                    override fun timeout() = Timeout.NONE
+                    override fun close() { closed.complete(Unit) }
+                    override fun read(sink: Buffer, byteCount: Long): Long {
+                        if (!delivered) { delivered = true; sink.writeUtf8(partial); return partial.toByteArray().size.toLong() }
+                        reading.complete(Unit); check(release.await(5, TimeUnit.SECONDS))
+                        throw IOException("Synthetic loss or cancellation")
+                    }
+                }.buffer()
+                response(chain, object : ResponseBody() {
+                    override fun contentType() = "text/event-stream".toMediaType()
+                    override fun contentLength() = -1L
+                    override fun source() = source
+                })
+            }.build()
+            val vm = model(client)
+            try {
+                withContext(main) { vm.draft("A"); vm.send() }
+                withTimeout(3000) { reading.await(); vm.chat.first { it.partial == "partial" } }
+                if (stopFirst) withContext(main) { release.countDown(); vm.stop() }
+                else { release.countDown(); withTimeout(3000) { vm.chat.first { it.stage == ChatStage.FAILED } }; withContext(main) { vm.stop() } }
+                withTimeout(3000) { closed.await() }
+                val terminal = withContext(main) { vm.chat.value }
+                assertEquals(if (stopFirst) ChatStage.CANCELLED else ChatStage.FAILED, terminal.stage)
+                assertEquals("partial", terminal.partial); assertFalse(terminal.busy)
+                assertEquals(ChatMessageStatus.EXCLUDED, terminal.messages.single().status)
+                assertTrue(call.get().isCanceled()); assertEquals(1, count)
+                withContext(main) { vm.draft("B"); vm.send() }
+                withTimeout(3000) { vm.chat.first { it.stage == ChatStage.COMPLETED } }
+                assertEquals(listOf("A", "B", "fresh"), vm.chat.value.messages.map { it.text })
+                assertEquals(2, count)
+            } finally { release.countDown(); vm.viewModelScope.coroutineContext[Job]!!.cancelAndJoin() }
+        }
+    }
+
+    @Test fun failureBeforeHttpDispatchIsNetworkAndExplicitNextSendUsesSameMode(): Unit = runBlocking {
+        for (mode in CredentialMode.entries) {
+            var healthy = false; val calls = java.util.concurrent.atomic.AtomicInteger()
+            val client = OkHttpClient.Builder().retryOnConnectionFailure(false).addInterceptor { chain ->
+                calls.incrementAndGet()
+                // This interceptor never proceeds to the network, so failure is known unsent.
+                if (!healthy) throw IOException("Synthetic offline before dispatch")
+                response(chain, completed.toResponseBody("text/event-stream".toMediaType()))
+            }.build()
+            val vm = model(client, mode)
+            withContext(main) { vm.draft("A"); vm.send() }
+            val failed = withTimeout(3000) { vm.chat.first { it.stage == ChatStage.FAILED } }
+            assertEquals(ApiProblem.NETWORK, failed.problem); assertEquals("", failed.partial)
+            assertEquals(ChatMessageStatus.EXCLUDED, failed.messages.single().status)
+            withContext(main) { healthy = true; assertEquals(1, calls.get()); assertEquals(failed, vm.chat.value) }
+            withContext(main) { vm.draft("B"); vm.send() }
+            withTimeout(3000) { vm.chat.first { it.stage == ChatStage.COMPLETED } }
+            assertEquals(2, calls.get()); assertEquals(mode, vm.state.value.mode)
+            vm.viewModelScope.coroutineContext[Job]!!.cancelAndJoin()
+        }
+    }
+
 }

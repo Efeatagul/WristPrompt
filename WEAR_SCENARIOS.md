@@ -1,7 +1,7 @@
-# Offline Wear scenarios — Day 3 Phase F / Day 4 Phases A–B
+# Offline Wear scenarios — Day 3 Phase F / Day 4 Phases A–C
 
 The explicitly launched `DebugScenarioActivity` replaces `StreamingPreviewActivity`.
-All 31 fixtures live under `wear/src/debug`; the Activity is declared only in the
+All 37 fixtures live under `wear/src/debug`; the Activity is declared only in the
 debug manifest overlay. There is one scenario entrypoint and one production UI.
 `ScenarioOwner` retains a fixture and its `InferenceViewModel` across Activity
 recreation, starts preparation once, and clears that VM through its own ViewModelStore when finally cleared.
@@ -50,7 +50,7 @@ Every launch clears the previous Activity task, not app data, and supplies a fre
 a valid identifier. A fixed app-private `debug-scenario-ready.txt` acknowledgement
 contains safe launch/scenario/state metadata and the counters described below. The launcher
 requires its matching acknowledgement plus a live app process within 20 seconds.
-It does not read logs, credentials or chat payloads. Smoke runs all 31 states;
+It does not read logs, credentials or chat payloads. Smoke runs all 37 states;
 it proves readiness/liveness, **not visual acceptance**. Optional screenshots use
 ADB screencap; there is no OCR, image comparison or accessibility framework.
 
@@ -226,3 +226,55 @@ an Activity-owned UI ViewModel. They survive retained recreation, but Android's
 saved Bundle cannot restore them into a new process. Composer request tokens
 still belong only to their composition, so retained recreation discards returned
 text with guidance; a fresh process starts without the interruption marker/token.
+
+
+## Day 4 Phase C — connectivity transitions
+
+Six additional debug-only scenarios (37 total) exercise the real VM/session/chat
+state machine using deterministic provider failures. They do not call HTTP,
+inspect installed credentials, toggle Android radios or simulate successful OAuth.
+
+| Scenario | Initial condition | Explicit recovery |
+| --- | --- | --- |
+| NETWORK_LOST_BEFORE_SEND | NETWORK, FAILED, visible excluded user attempt, no assistant | Restore provider, then explicitly send a new prompt |
+| NETWORK_LOST_DURING_STREAM | INTERRUPTED, retained partial, excluded attempt, no completion | Restore provider, then explicitly send a new prompt |
+| NETWORK_RECOVERED | Same pre-dispatch failure, held until commands | Restoration alone does nothing; NEXT_REQUEST succeeds once |
+| MODEL_DISCOVERY_OFFLINE | NETWORK, failed discovery, no catalog/selection | Restore provider, then Reload models |
+| MODEL_DISCOVERY_RECOVERED | Same discovery failure, held until commands | Restoration alone does nothing; RELOAD_MODELS succeeds once |
+| STOP_NETWORK_RACE | Partial stream waits at a deferred loss gate | FAIL_STOP orders loss/Stop; excluded non-success, then explicit next request |
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 python3 tools/wear_connectivity.py --install \
+  --screenshots /tmp/wristprompt-d4c
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tools -p 'test_wear*.py'
+```
+
+The runner shares dynamic emulator/watch discovery and requires the exact AVD
+WristPrompt_Watch7. Physical devices and other AVDs are rejected. It updates with
+install -r only when --install is supplied. No data clearing, process killing,
+radio mutation, host firewall modification or Android Studio dependency.
+
+Fixed commands RESTORE_NETWORK, NEXT_REQUEST, RELOAD_MODELS and FAIL_STOP share
+the existing debug receiver and fresh launch-ID guard. RESTORE_NETWORK changes
+only a provider boolean: it cannot dispatch. NEXT_REQUEST drafts/sends a fixed
+synthetic new prompt; RELOAD_MODELS calls the real VM action. FAIL_STOP releases
+the waiting stream and invokes real Stop. Existing RECREATE/STOP commands also
+work for these fixtures. No extra production connectivity epoch was introduced.
+
+Safe acknowledgements add commandRevision (command-consumption barrier), excluded
+user count, assistant count, last-input item count and static error enums. No
+text, headers, credential values, account IDs or raw failures are reported.
+The runner requires failure/exclusion/partial consistency, acknowledges restoration
+without any request or discovery count/state changes, and then requires exactly
+one explicit recovery. The recovered input contains one new user item, proving
+that the failed fixture exchange was excluded; preservation of earlier valid
+history is covered by JVM integration tests. These commands are debug controls,
+not evidence of tapping the actual keyboard or a real networking operation.
+
+D4-C acceptance: **all six PASS — VERIFIED ON EMULATOR**. The provider is
+synthetic; actual OpenAiHttp/SSE route-loss/resource closure is tested separately
+on the JVM. No emulator network-toggle runner was added: these fixtures have no
+network dependency, so toggling the AVD would not exercise production transport.
+There is no claim of real radio/interface transition acceptance. The existing
+production transport remains reachability-driven, without ConnectivityManager,
+automatic inference/model-discovery replay or credential fallback.

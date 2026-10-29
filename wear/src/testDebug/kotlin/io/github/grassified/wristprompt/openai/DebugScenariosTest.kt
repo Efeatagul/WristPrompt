@@ -14,7 +14,7 @@ class DebugScenariosTest {
     @After fun cleanup() { fixtures.forEach { it.vm.viewModelScope.cancel() }; Dispatchers.resetMain() }
     private fun fixture(s: DebugScenario) = DebugScenarios(s).also { fixtures += it }
     @Test fun namesAreUniqueAndRoundTrip() {
-        assertEquals(31, DebugScenario.entries.size)
+        assertEquals(37, DebugScenario.entries.size)
         DebugScenario.entries.forEach { assertSame(it, DebugScenario.parse(it.name)) }
     }
     @Test fun unknownFailsClosed() { listOf(null, "", "streaming_long", "../SIGNED_OUT").forEach { assertNull(DebugScenario.parse(it)) } }
@@ -101,4 +101,31 @@ class DebugScenariosTest {
             assertFalse(owner.fixture.vm.chat.value.busy); owner.viewModelScope.cancel()
         }
     }
+    @Test fun connectivityRestorationNeverReplaysAndExplicitRecoveryExcludesFailedAttempt(): Unit = runTest {
+        for (s in listOf(DebugScenario.NETWORK_LOST_BEFORE_SEND, DebugScenario.NETWORK_LOST_DURING_STREAM,
+            DebugScenario.NETWORK_RECOVERED, DebugScenario.STOP_NETWORK_RACE)) {
+            val f = fixture(s); launch { f.prepare() }; runCurrent()
+            if (s == DebugScenario.STOP_NETWORK_RACE) { f.failAndStop(); runCurrent() }
+            val failed = f.vm.chat.value
+            assertTrue(failed.stage in setOf(ChatStage.FAILED, ChatStage.CANCELLED))
+            assertEquals(ChatMessageStatus.EXCLUDED, failed.messages.single().status)
+            f.restoreNetwork(); advanceUntilIdle()
+            assertEquals(failed, f.vm.chat.value); assertEquals(1, f.generations); assertEquals(1, f.discoveries)
+            f.nextRequest(); runCurrent()
+            assertEquals(ChatStage.COMPLETED, f.vm.chat.value.stage); assertEquals(2, f.generations)
+            assertEquals(1, f.completions); assertEquals(1, f.inputs.last().size)
+        }
+    }
+    @Test fun modelConnectivityRestorationRequiresExplicitReload(): Unit = runTest {
+        for (s in listOf(DebugScenario.MODEL_DISCOVERY_OFFLINE, DebugScenario.MODEL_DISCOVERY_RECOVERED)) {
+            val f = fixture(s); launch { f.prepare() }; runCurrent()
+            assertEquals(ApiProblem.NETWORK, f.vm.state.value.problem); assertTrue(f.vm.state.value.models.isEmpty())
+            f.restoreNetwork(); advanceUntilIdle()
+            assertEquals(1, f.discoveries); assertEquals(ProofStage.FAILED, f.vm.state.value.stage)
+            f.vm.loadModels(); runCurrent()
+            assertEquals(ProofStage.READY, f.vm.state.value.stage); assertEquals("debug-1", f.vm.state.value.selectedSlug)
+            assertEquals(2, f.discoveries); assertEquals(0, f.generations)
+        }
+    }
+
 }

@@ -71,19 +71,20 @@ class ProcessReconstructionTest : ReconstructionFixture() {
         assertEquals("New explicit request", fresh.catalog.inputs.single().single()["content"]!!.jsonPrimitive.content)
     }
     @Test fun activePartialCancelledAndFailedExchangesNeverReconstructOrReplay(): Unit = runBlocking {
-        for (stage in listOf("active", "partial", "cancelled", "failed")) {
+        for (stage in listOf("active", "partial", "cancelled", "failed", "interrupted")) {
             val oauth = Disk("oauth-$stage"); val api = Disk("api-$stage"); seed(oauth, api)
             val entered = CompletableDeferred<Unit>()
             val catalog = Catalog().apply { answer = { emit ->
                 if (stage != "active") emit(ResponseEvent.Delta("Synthetic partial"))
                 entered.complete(Unit)
                 if (stage == "failed") throw ApiFailure(ApiProblem.NETWORK)
+                if (stage == "interrupted") throw ApiFailure(ApiProblem.INTERRUPTED)
                 awaitCancellation()
             } }
             val old = runtime(oauth, api, catalog); old.start(); old.ready(terra); send(old)
             withTimeout(5000) { entered.await() }
             if (stage == "cancelled") withContext(main) { old.vm.stop() }
-            if (stage == "failed") terminal(old)
+            if (stage in setOf("failed", "interrupted")) terminal(old)
             old.close()
             val fresh = runtime(oauth, api); fresh.start(); fresh.ready(terra); empty(fresh)
             // No load/reload action is an instruction to retry an old prompt.

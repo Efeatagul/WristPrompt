@@ -1,8 +1,9 @@
 # Day 4 status — 2026-10-29
 
-**Current D4-B result: PASS WITH KNOWN DEBT.** See the D4-B section below for
-303 Wear / 16 Python tests and actual emulator PID-change acceptance. D4-C is
-unstarted. The Phase A sections retain the 962452c handoff evidence and counts.
+**Current D4-C result: PASS WITH KNOWN DEBT.** See the D4-C section below for
+317 Wear / 22 Python tests and all six synthetic connectivity scenarios verified
+on WristPrompt_Watch7. Real radio transitions remain pending hardware acceptance.
+D4-D is unstarted. Earlier sections preserve their historical handoff counts.
 
 # D4-A handoff — historical phase record
 
@@ -629,3 +630,248 @@ DebugScenarios.kt, DebugScenarioActivity.kt, DebugScenariosTest.kt,
 wear_scenarios.py, wear_process_restart.py, test_wear_scenarios.py,
 test_wear_process_restart.py, DAY4_STATUS.md, WEAR_SCENARIOS.md,
 DECISIONS.md and ROADMAP.md. DAY3_REPORT.md remains unchanged.
+
+# D4-C — network/connectivity transitions
+
+## A. Executive result
+
+**PASS WITH KNOWN DEBT — VERIFIED AUTOMATICALLY; six synthetic scenarios PASS —
+VERIFIED ON EMULATOR.** D4-A/B were complete at entry; baseline clean, 303 Wear
+tests. Final 317 Wear tests, 22 Python tests, both Wear APK builds, lint and
+release isolation pass. No physical testing, real-credential operation, commit
+or push. D4-D phone independence remains unstarted.
+
+## B. Final connectivity contract
+
+| Boundary | Final contract |
+| --- | --- |
+| Offline before Send | Send may be attempted. Transport failure leaves the user attempt visible and EXCLUDED; no assistant completion. Earlier completed context and credentials remain intact. Explicit later Send can work. |
+| Before HTTP dispatch | NETWORK; no history inclusion or automatic retry. Inference does not claim dispatch certainty it does not track. Only refresh's existing HTTP send-boundary evidence can set requestNotSent. |
+| Loss during accepted SSE | IOException becomes INTERRUPTED. Partial output remains visible, exchange excluded, owner inactive, Stop ends, body closes. No successful assistant/history entry. |
+| EOF / bad termination | EOF or truncated frame without a dispatched response.completed is INTERRUPTED; malformed framed event is PROTOCOL. response.failed preserves its failure category; response.incomplete is INCOMPLETE. None completes. |
+| Connectivity restored | No observer, request, reload or replay is triggered. Existing understandable failure remains until explicit user action. A new prompt uses only earlier completed context plus the new prompt. |
+| Model discovery | Failure is visible; no empty/fake successful catalog. Current catalog/selection is withheld until successful explicit Reload models. Saved preference is reconciled against fresh service order; missing preference falls back in memory without writeback. Same-model completed context survives; changed model clears it. |
+| Refresh | Definitely-unsent and definitive rejection follow existing safe cooldown paths. Possibly consumed rotation retains durable uncertainty and requires reauthentication, including after fresh-process reconstruction. |
+
+Only response.completed establishes streaming success. No promise of seamless
+network-interface migration. An existing platform call may
+continue or fail; only coherent failure/exclusion and explicit recovery are
+application guarantees. Initial/account-change catalog discovery and discovery
+inside an already-defined credential-refresh operation remain existing behavior;
+connectivity restoration never creates a new operation.
+
+## C. Baseline defects reproduced
+
+No production network, stream-ownership, refresh, stale-result or automatic-replay
+defect reproduced. These were coverage gaps, now closed with controlled gates and
+real HTTP/SSE ownership tests. Existing chat NETWORK recovery used generic Compose
+guidance without explicitly suggesting a connection check; copy now adds that.
+No production connectivity state/infrastructure repair was justified.
+
+During test development, two new fixture assertions incorrectly assumed flat
+assistant content and an existing unconfigured API-key disk record. Corrected to
+inspect structured assistant output and allow an absent key record. The full run
+also caught the existing capitalized “Compose a new message” copy assertion;
+the improved guidance retains that action wording. These were test/copy iteration
+failures, not reproduced transport defects; only final passing counts are below.
+
+## D. Production changes
+
+Only ChatItems.kt: NETWORK recovery now says “Check the watch’s internet
+connection. Compose a new message to retry.” Existing static categories distinguish
+network, partial interrupted/incomplete output, invalid API key and reauthorization.
+The model picker retains its explicit Reload models action; refresh uncertainty
+uses existing Authentication required / Continue with ChatGPT guidance without
+exposing rotating-token mechanics. No raw exception text is rendered.
+
+No production transport/session/VM/repository, OAuth, billing, storage, credential
+format, dependencies, signing or Data Layer routing changes. DECISIONS.md remains
+unchanged: D07/D11/D18–D20 already own these rules; no new architecture choice.
+
+## E. Transport / stream terminal behavior
+
+Extended StreamingHttpCancellationTest to eight test methods. Controlled Sources
+emit one SSE delta then block on a latch; releasing the gate throws IOException.
+The real VM -> session -> provider -> OpenAiHttp -> OkHttp/body/SSE path retains
+partial text, closes its body, cancels the call, releases generation ownership and
+accepts a later explicit prompt. Both billing modes are exercised. Recovery after
+an earlier completed exchange sends exactly Previous / completed output / B;
+failed A never enters that payload and no duplicate request is dispatched.
+
+Stop-first and failure-first orderings are separately gated: CANCELLED or FAILED /
+INTERRUPTED respectively, never completion; one excluded user row, no assistant,
+closed transport and a working next Send. No sleep-based race tests were added.
+Existing EOF/malformed/failed/incomplete matrix now separately includes a complete
+JSON terminal with no SSE blank-line terminator, which cannot establish success.
+
+ConnectivityTransitionsTest also rejects a captured late completion callback after
+interruption and after B succeeds. Account generation, billing revision and mode
+changes while an old error unwinds cannot publish into new context. Late failed
+catalogs after Stop/explicit reload or account/billing changes cannot overwrite
+recovered catalogs. Background collection resumes the latest retained failure
+without reload/replay. D4-A retained-owner and D4-B fresh-process suites still pass;
+D4-B's existing reconstruction matrix now explicitly includes INTERRUPTED.
+
+## F. Refresh safety
+
+- **Definitely unsent:** actual DNS failure before requestHeadersStart is classified
+  NETWORK/requestNotSent, with no raw cause. The repository preserves the whole
+  profile, clears durable intent safely and permits retry only after the existing
+  five-second in-process cooldown. Fresh-graph safe renewal remains covered.
+- **Definitive server response:** existing 429/5xx transient paths preserve the
+  credential tuple, resolve intent and apply cooldown. Terminal rotating-token
+  rejection requires reauthentication; invalid_client stays configuration failure.
+  No new interpretation of status codes/contracts or classification broadening.
+- **Uncertain after dispatch:** real loopback connection loss after request headers
+  proves requestNotSent=false. Timeout, malformed success, cancellation or unknown
+  grant outcome retain refreshPending; no reuse of the old rotating token, no
+  ordinary retry. Fresh encrypted-disk graph still blocks catalog/inference and
+  requires reauthentication. Protected NonCancellable commit behavior unchanged.
+
+All 35 refresh-suite tests and 11 reconstruction tests pass. Connectivity cannot
+clear uncertainty; obtaining a new explicit authorization remains separate from
+ordinary inference/model connectivity recovery.
+
+## G. Debug scenarios / tooling
+
+Added NETWORK_LOST_BEFORE_SEND, NETWORK_LOST_DURING_STREAM, NETWORK_RECOVERED,
+MODEL_DISCOVERY_OFFLINE, MODEL_DISCOVERY_RECOVERED and STOP_NETWORK_RACE (37 total).
+Fixtures use the real VM/session/conversation with an empty transient bearer,
+synthetic provider and inert credential controls. No installed records are read.
+Restoration flips only provider availability; separate explicit actions dispatch.
+
+New tools/wear_connectivity.py discovers exactly one watch emulator and requires
+WristPrompt_Watch7. Fresh launch-ID commands and commandRevision acknowledgement
+prove restoration was consumed without work/state change. Count and history
+assertions verify recovery, exclusion and no replay. Added six host-only runner
+tests; existing launcher count assertions updated. No real emulator network toggle
+was implemented: the safe fixture has no network operation, so a radio toggle
+would not test production transport. Real auth remains inappropriate in this
+CapabilityClient-limited lab. This does not claim toggling is technically impossible
+or that synthetic failures establish radio behavior.
+
+## H. Automated results — VERIFIED AUTOMATICALLY
+
+| Check | Exact final result |
+| --- | --- |
+| Focused connectivity/streaming/D3 transition/D4-A/B/refresh/model/API-key run | 172 tests, 0 failures/errors/skips (before copy-only edit; full final rerun covers it) |
+| Full Wear unit suite | **317 tests, 0 failures/errors/skips**, 14 new methods over 303 baseline |
+| New connectivity suites | 7 transition + 2 real credential-record tests; included in full count |
+| Real HTTP streaming/cancellation | 8 tests; includes 3 new route-loss/pre-dispatch/Stop-race methods |
+| Debug scenario suite | 13 tests; includes 2 new restoration/no-replay methods |
+| D4-A lifecycle / composer / navigation | 8 / 6 / 2 tests, included above |
+| D4-B reconstruction | 11 tests, including expanded interrupted-state matrix |
+| D3 streaming race / transition-error | 13 / 14 tests, included above |
+| Refresh (WatchRefresh / Upgrade / Protocol / Transport) | 21 + 6 + 6 + 2 = **35**, included above |
+| Model restoration integration | 15 tests, included above |
+| API-key repository/protocol/provider/cancellation | 5 + 3 + 6 + 3 = 17 tests, included above |
+| Python launcher/process/connectivity suites | **22 tests**, 0 failures/errors/skips |
+| Wear assembleDebug / assembleRelease | PASS / PASS; unsigned release, no publication |
+| Wear lintDebug | PASS, 0 errors, same 6 warnings as baseline |
+| Release scenario manifest/DEX/source/dependency isolation | PASS |
+| Python AST syntax | PASS, all **8** tools/*.py files |
+| git diff --check / changed-new text whitespace | PASS, all 14 changed/new text files |
+| Mobile suite/build/lint | Not rerun: no shared/mobile changes; historical counts are not current results |
+
+Coverage of requested cases 1–29: pre-dispatch/no replay/recovery and late callbacks
+are in ConnectivityTransitionsTest; actual partial IOException, resource closure,
+Stop orderings, EOF/truncated/malformed/failed/incomplete are in
+StreamingHttpCancellationTest; credential-preserving plan/API failures and model
+recovery are in ConnectivityCredentialTest; 401 remains distinct in existing
+ApiKeyProvider/ErrorTransition suites. Lifecycle/reconstruction/refresh tests above
+cover retained/fresh owner behavior and all dispatch-certainty boundaries. Scenario
+tests separately prove restoration cannot start inference or model discovery.
+
+Commands actually run, with DEVELOPMENT.md's JDK/SDK/signing environment:
+
+```sh
+export JAVA_HOME="$HOME/.local/share/wristprompt/jdk-17.0.21+9"
+export ANDROID_USER_HOME="$HOME/.local/share/wristprompt/android"
+./gradlew :wear:testDebugUnitTest --tests '*Connectivity*Test' \
+  --tests '*StreamingHttpCancellationTest' --tests '*DebugScenariosTest' \
+  --tests '*StreamingRaceTest' --tests '*ChatTransportTest' --tests '*SseReaderTest' \
+  --tests '*ErrorTransitionTest' --tests '*TransitionTest' \
+  --tests '*LifecycleOwnershipTest' --tests '*ProcessReconstructionTest' \
+  --tests '*ShellNavigationViewModelTest' --tests '*ComposerInteractionTest' \
+  --tests '*Refresh*Test' --tests '*ModelRestorationIntegrationTest' \
+  --tests '*InferenceViewModelTest' --tests '*ApiKey*Test' --console=plain
+./gradlew :wear:testDebugUnitTest :wear:assembleDebug :wear:assembleRelease :wear:lintDebug --console=plain
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tools -p 'test_wear*.py'
+python3 tools/check_scenario_isolation.py
+PYTHONDONTWRITEBYTECODE=1 python3 tools/wear_connectivity.py --install --screenshots /tmp/wristprompt-d4c
+git diff --check
+```
+
+The temporary emulator-only /tmp/d4c-render-review.py was also run to scroll and
+inspect synthetic error/partial/reload screens using screenshots and UI text.
+Python ast.parse was also run over all eight tools/*.py. Changed/new text was
+checked separately, including untracked files. Test/build logs and screenshots
+are temporary local evidence under /tmp, not release artifacts.
+
+## I. Emulator acceptance matrix
+
+Existing WristPrompt_Watch7 launched with -no-snapshot-save, no Android Studio.
+Dynamically verified watch characteristics/AVD name; install -r retained signing
+and app data. No physical device was selected.
+
+| Scenario | Verified assertion | Result |
+| --- | --- | --- |
+| NETWORK_LOST_BEFORE_SEND | Failed excluded user, zero assistant/completion, Compose available; restore alone idle; explicit next Send succeeds | PASS — VERIFIED ON EMULATOR |
+| NETWORK_LOST_DURING_STREAM | Partial retained, INTERRUPTED/non-success, excluded; explicit next Send has one new input | PASS — VERIFIED ON EMULATOR |
+| NETWORK_RECOVERED | Restore leaves request/discovery counts/state unchanged; explicit new prompt is the second and sole recovered generation | PASS — VERIFIED ON EMULATOR |
+| MODEL_DISCOVERY_OFFLINE | Visible Network error, selection NONE, no fake successful catalog; restoration alone does not reload | PASS — VERIFIED ON EMULATOR |
+| MODEL_DISCOVERY_RECOVERED | Explicit reload creates second discovery, READY/debug-1, no inference | PASS — VERIFIED ON EMULATOR |
+| STOP_NETWORK_RACE | One excluded non-success with partial, no completion; explicit new prompt completes once | PASS — VERIFIED ON EMULATOR |
+
+Each chat row ends with exactly two generations, one completion, one excluded
+user, one assistant, three visible messages and lastInput=1. Discovery rows end
+with exactly two discoveries and zero generations/messages. JVM tests additionally
+preserve previous completed context and both billing modes.
+
+All rows are **synthetic provider evidence on an actual emulator**. No
+PASS — VERIFIED WITH EMULATOR NETWORK TOGGLE is claimed. Actual transport-read loss
+is deterministic JVM evidence, not Android radio evidence. Rendered screenshots
+confirm Compose/excluded labeling and model failure/selection recovery; additional
+scroll review checks error guidance, partial output and Reload models access.
+
+## J–K. Observer decision / security and architecture invariants
+
+No ConnectivityManager observer/network callback/preflight added. No reproduced
+defect requires it; an online signal would not prove OpenAI reachability. The
+actual HTTP outcome remains authoritative. No call migration between networks.
+
+No automatic inference retry/replay or model-discovery replay, credential fallback,
+unsafe refresh-token reuse, Data Layer bypass, sensitive logging, active-request or
+conversation persistence. Existing retryOnConnectionFailure=false remains. No
+foreground service, WorkManager, wake lock, host firewall change or credential
+migration. Debug classes/controls remain excluded from release. Ordinary network
+failure does not imply credential invalidation. Tests inspect complete protected
+record bytes/write counts and selected mode before/after transient failures.
+
+## L–M. Remaining debt / deferred to D4-D
+
+**PENDING END-OF-DAY PHYSICAL TEST / later concise hardware session:** rebuild/update
+both physical phone and Galaxy Watch APKs with the preserved signing identity;
+reconnect ADB; exercise one real stream losing watch connectivity, inspect retained
+partial/interrupted exclusion, restore connectivity and explicitly send again;
+include representative Wi-Fi loss/restoration and verify no ordinary-network
+sign-out. Do not repeat the full Day 3 suite. None performed during D4-C.
+
+Real Galaxy Watch radio/interface behavior remains unverified. D4-A/B hardware and
+release-candidate checks remain. D4-D phone-independence/watch-only-with-phone-absent
+work is deferred and **not begun**. Historical Terra -> Sol anomaly remains
+unreproduced/unresolved; reauthorization anomaly still needs Day 5 disposition.
+Successful funded BYOK remains constrained by no funded credential, with no
+purchase/live paid call required. Emulator CapabilityClient limitation is unchanged,
+not reinvestigated; capability-dependent auth remains NOT VERIFIABLE ON CURRENT
+EMULATOR LAB. Synthetic connectivity tests do not resolve those debts.
+
+## N. Suggested commit
+
+`test: verify explicit connectivity recovery and stream failure safety`
+
+No commit or push. Changed files: ChatItems.kt; ConnectivityTransitionsTest.kt;
+ConnectivityCredentialTest.kt; StreamingHttpCancellationTest.kt;
+ProcessReconstructionTest.kt; DebugScenarios.kt; DebugScenarioActivity.kt;
+DebugScenariosTest.kt; wear_connectivity.py; test_wear_connectivity.py;
+test_wear_scenarios.py; DAY4_STATUS.md; WEAR_SCENARIOS.md; ROADMAP.md.

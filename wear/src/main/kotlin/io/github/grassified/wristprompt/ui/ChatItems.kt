@@ -63,6 +63,7 @@ internal fun chatRecovery(problem: ApiProblem?): String = when (problem) {
     ApiProblem.USAGE_LIMIT, ApiProblem.USAGE_UNAVAILABLE, ApiProblem.NOT_ELIGIBLE -> "Open Connection / settings for Manage usage."
     ApiProblem.API_LIMIT -> "Check API usage and credits before trying again."
     ApiProblem.STORAGE -> "Protected storage is unavailable. Check Connection / settings before continuing."
+    ApiProblem.NETWORK -> "Check the watch’s internet connection. Compose a new message to retry."
     ApiProblem.CONFIGURATION, ApiProblem.INVALID_REQUEST -> "Check connection and model settings before trying again."
     else -> "Compose a new message to try again when ready."
 }

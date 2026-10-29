@@ -26,7 +26,9 @@ complete; D4-A retained-process lifecycle hardening is PASS WITH KNOWN DEBT for
 automated/emulator scope (DAY4_STATUS.md). D4-B process reconstruction is also
 PASS WITH KNOWN DEBT: 303 Wear / 16 Python tests, both Wear builds/lint, release
 isolation and all four am-kill/task-resume scenarios pass. Hardware process/reboot
-acceptance remains pending. D4-C network transitions are unstarted; reauthorization
+acceptance remains pending. D4-C network transitions are PASS WITH KNOWN DEBT:
+317 Wear / 22 Python tests and six synthetic emulator scenarios pass; real radio
+transitions remain pending hardware evidence. D4-D is unstarted; reauthorization
 debt still requires Day 5 disposition before freeze.
 
 Day numbers are execution stages, not a claim that work has started. A failed
@@ -211,7 +213,8 @@ capability isolation evidence remains unchanged. No production fallback.
   replay, conservative refresh/sign-out recovery; 303 Wear / 16 Python tests pass.
 - [ ] D4-B physical process/reboot/Keystore and release-build lifecycle acceptance,
   deferred to the consolidated Day 4/RC hardware checklist.
-- [ ] D4-C network transitions: pending, not begun.
+- [x] D4-C network transitions: VERIFIED AUTOMATICALLY and six synthetic scenarios
+  VERIFIED ON EMULATOR; real Galaxy Watch radio transitions pending. See DAY4_STATUS.md.
 
 - [ ] Add platform voice input only if earlier gates are green; otherwise cut it.
 - [ ] Check permission denial, recognizer absence, phone absence, process death,

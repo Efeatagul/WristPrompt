@@ -64,18 +64,25 @@ class DebugScenarioActivity : ComponentActivity() {
     private var registered = false
     private var collecting = false
     private var observedLength = 0
+    private var commandRevision = 0
     private val command = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.getStringExtra("launch_id") != launchId) return
             val f = fixture ?: return
-            if (!f.lifecycleScenario && !f.processScenario && f.scenario != DebugScenario.COMPOSER_RECREATION) return
+            if (!f.lifecycleScenario && !f.processScenario && !f.networkScenario && f.scenario != DebugScenario.COMPOSER_RECREATION) return
+            commandRevision++
             when (intent?.getStringExtra("command")) {
+                "RESTORE_NETWORK" -> { f.restoreNetwork(); report() }
+                "NEXT_REQUEST" -> f.nextRequest()
+                "RELOAD_MODELS" -> if (f.networkScenario) f.vm.loadModels()
+                "FAIL_STOP" -> f.failAndStop()
                 "SEED" -> owner?.viewModelScope?.launch { f.seedProcess(); report() }
                 "ADVANCE" -> f.advance()
                 "COMPLETE" -> f.advance(complete = true)
                 "STOP" -> f.vm.stop()
                 "RECREATE" -> recreate()
             }
+            report()
         }
     }
     private fun report() {
@@ -86,12 +93,15 @@ class DebugScenarioActivity : ComponentActivity() {
         val chat = f.vm.chat.value
         openFileOutput("debug-scenario-ready.txt", MODE_PRIVATE).bufferedWriter().use {
             it.write("${launchId} ${f.scenario.name} READY generations=${f.generations} stage=${chat.stage}" +
-                " discoveries=${f.discoveries} completions=${f.completions} chars=${chat.partial.length}" +
+                " commandRevision=$commandRevision discoveries=${f.discoveries} completions=${f.completions} chars=${chat.partial.length}" +
                 " draftChars=${chat.draft.length} messages=${chat.messages.size} owner=${o.identity} creations=${o.creations}" +
                 " collecting=$collecting observedChars=$observedLength lifecycle=${lifecycle.currentState}" +
                 " pid=${android.os.Process.myPid()} processOwner=$processOwner busy=${chat.busy}" +
                 " proof=${f.vm.state.value.stage} model=${f.vm.state.value.selectedSlug ?: "NONE"} billing=${f.mode}" +
                 " surface=${navigation?.surface?.value ?: Surface.CHAT} pendingInput=${navigation?.inputPending?.value ?: false}" +
+                " excluded=${chat.messages.count { it.status == ChatMessageStatus.EXCLUDED }}" +
+                " assistants=${chat.messages.count { it.role == ChatRole.ASSISTANT }} lastInput=${f.inputs.lastOrNull()?.size ?: 0}" +
+                " problem=${chat.problem ?: "NONE"} discoveryProblem=${f.vm.state.value.problem ?: "NONE"}" +
                 " keepScreenOn=${window.attributes.flags and WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON != 0}")
         }
     }
