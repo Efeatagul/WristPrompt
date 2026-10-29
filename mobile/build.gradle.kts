@@ -22,6 +22,7 @@ android {
 
     // One protocol implementation, compiled into both apps without another Gradle module.
     sourceSets {
+        getByName("debug").kotlin.directories.add(rootProject.file("shared/src/debug/kotlin").path)
         getByName("main").kotlin.directories.add(rootProject.file("shared/src/main/kotlin").path)
         getByName("test").kotlin.directories.add(rootProject.file("shared/src/test/kotlin").path)
     }

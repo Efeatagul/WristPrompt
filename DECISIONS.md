@@ -812,3 +812,18 @@ remain unchanged. Terra -> Sol is still D3-2; text chat is D3-3; streaming chat
 integration is later Day 3. Physical readability is not claimed; evidence and
 the single end-of-day check are in DAY3_STATUS.md. Prior D16 STOPPED wording is
 historical and superseded by final Day 2 acceptance, not a current gate.
+
+## Emulator capability investigation — 2026-10-29
+
+VERIFIED AUTOMATICALLY on the two named AVDs: matching installed APK identity,
+connected nearby nodes and bidirectional debug RPC/listener reception, but empty
+remote static and programmatically registered capabilities with both discovery
+filters. Production reachablePeers therefore returns empty before auth send.
+This isolates the observed failure to GMS capability synchronization/discovery;
+it does not prove a specific Google defect or justify bypassing capability checks.
+Keep production behavior unchanged. Debug-only source-set probes and an
+emulator-only runner provide safe retests without credentials or alternate
+transports. Original lab signing key continuity requires its existing
+ANDROID_USER_HOME; the default debug key differed and updates were rejected safely.
+Full evidence, passing validation, unresolved attribution and recovery steps:
+[EMULATOR_DATA_LAYER_REPORT.md](EMULATOR_DATA_LAYER_REPORT.md).
