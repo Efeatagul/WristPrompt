@@ -827,3 +827,23 @@ transports. Original lab signing key continuity requires its existing
 ANDROID_USER_HOME; the default debug key differed and updates were rejected safely.
 Full evidence, passing validation, unresolved attribution and recovery steps:
 [EMULATOR_DATA_LAYER_REPORT.md](EMULATOR_DATA_LAYER_REPORT.md).
+
+
+## Emulator capability follow-up — 2026-10-29
+
+VERIFIED ON EMULATOR: GMS lists each original static capability in its local-node
+table, but remote discovery remains empty through 30 seconds for static and fresh
+dynamic advertisements. Both getAllCapabilities filters are empty; registered
+listeners deliver only empty-node events. Nearby nodes and bidirectional debug RPC
+remain healthy after restoring the saved connection following an ordinary guest
+restart. No re-pair, data clearing, forwarding rule or physical-device operation.
+Moving the array to wear.xml produced byte-identical resource tables; literal
+items also failed to restore discovery. Both experiments were reverted. Production
+routing/resources stay unchanged; retain only debug timing/listener diagnostics.
+All full tests (Wear 189/mobile 70), focused bridge suites, both debug builds/lint
+and whitespace checks pass. No daily physical testing requirement is introduced.
+Capability-dependent authentication is NOT VERIFIABLE ON CURRENT EMULATOR LAB;
+defer it to physical RC acceptance unless discovery recovers. App-scoped API
+results do not prove that unrelated applications have the same problem. Full
+evidence and proposed, unimplemented debug scenario strategy are in
+[EMULATOR_CAPABILITY_INVESTIGATION.md](EMULATOR_CAPABILITY_INVESTIGATION.md).

@@ -9,7 +9,6 @@ import android.widget.ScrollView
 import android.widget.TextView
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.api.ApiException
-import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.Node
 import com.google.android.gms.wearable.Wearable
 import java.security.MessageDigest
@@ -27,7 +26,7 @@ class DataLayerDiagnosticsActivity : Activity() {
         val view = TextView(this).apply { text = "Collecting Data Layer snapshot…"; setPadding(36, 36, 36, 36) }
         setContentView(ScrollView(this).apply { addView(view) })
         scope.launch {
-            val report = snapshot()
+            val report = snapshot() + "completedTimestamp=${System.currentTimeMillis()}\n"
             withContext(Dispatchers.IO) { filesDir.resolve("data-layer-diagnostics.txt").writeText(report) }
             view.text = report
         }
@@ -56,26 +55,13 @@ class DataLayerDiagnosticsActivity : Activity() {
         appendLine("packaged local capability present=${localCapability in declarations}")
         appendLine("Local declaration is a packaged resource; CapabilityClient never returns its own node.")
         val nodeClient = Wearable.getNodeClient(this@DataLayerDiagnosticsActivity)
-        val capabilityClient = Wearable.getCapabilityClient(this@DataLayerDiagnosticsActivity)
         query("local node") { nodeClient.localNode.await().let(::nodeSummary) }
         query("connectedNodes") {
             val nodes = nodeClient.connectedNodes.await()
             if (nodes.isEmpty()) appendLine("decision=NO_CONNECTED_NODES (before capability/filter/send)")
             nodes.joinToString(prefix = "[", postfix = "]", transform = ::nodeSummary)
         }
-        query("temporary debug capability registration") {
-            capabilityClient.addLocalCapability(DiagnosticListenerService.CAPABILITY).await()
-            "OK"
-        }
-        delay(2_000)
-        for (filter in listOf(CapabilityClient.FILTER_ALL, CapabilityClient.FILTER_REACHABLE)) {
-            for (capability in listOf(localCapability, expected, DiagnosticListenerService.CAPABILITY)) {
-                query("capability=$capability filter=$filter") {
-                    capabilityClient.getCapability(capability, filter).await().nodes
-                        .joinToString(prefix = "[", postfix = "]", transform = ::nodeSummary)
-                }
-            }
-        }
+        append(CapabilityTimingExperiment(this@DataLayerDiagnosticsActivity, ::nodeSummary).collect(localCapability, expected))
         query("production discovery decision") {
             val nodes = nodeClient.connectedNodes.await()
             val peers = WearConnectivity(this@DataLayerDiagnosticsActivity, expected).reachablePeers()
@@ -110,7 +96,6 @@ class DataLayerDiagnosticsActivity : Activity() {
         "idSuffix=${node.id.takeLast(6)} name=${node.displayName.filter { !it.isISOControl() }.take(64)} nearby=${node.isNearby}"
 
     override fun onDestroy() {
-        Wearable.getCapabilityClient(this).removeLocalCapability(DiagnosticListenerService.CAPABILITY)
         scope.cancel()
         super.onDestroy()
     }

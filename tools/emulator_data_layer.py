@@ -40,6 +40,8 @@ for name, (serial, module) in found.items():
     print(f'{name}: {serial}', flush=True)
     if args.install:
         print(call('-s', serial, 'install', '-r', str(root / module / 'build/outputs/apk/debug' / f'{module}-debug.apk')), flush=True)
+    # Stop the previous debug observation before starting a new window. No app data is cleared.
+    call('-s', serial, 'shell', 'am', 'force-stop', package)
     call('-s', serial, 'shell', 'run-as', package, 'rm', '-f', 'files/data-layer-diagnostics.txt')
     # Finish the previous diagnostic screen so the next snapshot is fresh.
     call('-s', serial, 'shell', 'am', 'start', '-n', activity, '-f', '0x10008000')
@@ -49,7 +51,7 @@ for name, (serial, _) in found.items():
     while True:
         try:
             report = call('-s', serial, 'shell', 'run-as', package, 'cat', 'files/data-layer-diagnostics.txt')
-            stamp = int(report.split('timestamp=', 1)[1].splitlines()[0])
+            stamp = int(report.split('completedTimestamp=', 1)[1].splitlines()[0])
             # Emulator and host clocks may differ: compare with the emulator clock.
             now_ms = int(call('-s', serial, 'shell', 'date', '+%s')) * 1000
             if 0 <= now_ms - stamp < 15_000:

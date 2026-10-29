@@ -1,5 +1,9 @@
 # Paired-emulator Data Layer investigation — 2026-10-29
 
+This is the initial investigation record at `35eed8d`. The current, expanded
+resource/timing/restart audit and probe lifecycle are documented in
+[EMULATOR_CAPABILITY_INVESTIGATION.md](EMULATOR_CAPABILITY_INVESTIGATION.md).
+
 Status: **VERIFIED AUTOMATICALLY** (unit/build/lint and paired-emulator evidence).
 Physical-device evidence: none collected in this investigation. The physical phone
 and Galaxy Watch were not accessed or modified. No milestone is advanced.
