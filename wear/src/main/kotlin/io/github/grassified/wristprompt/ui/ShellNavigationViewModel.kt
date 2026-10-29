@@ -8,6 +8,10 @@ internal enum class Surface { CHAT, COMPOSER, MENU, MODELS, CONNECTION, SETTINGS
 /** Retained UI state only; no saved-state restoration into a fresh process. */
 internal class ShellNavigationViewModel(initialSurface: Surface = Surface.CHAT) : ViewModel() {
     val surface = mutableStateOf(initialSurface)
+    var chatPosition: ChatReadingPosition? = null
+    val latestVisible = mutableStateOf(false)
+    val latestRequests = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    fun latest() { latestRequests.tryEmit(Unit) }
     val inputPending = mutableStateOf(false)
     private var welcomePosition: ReadingPosition? = null
     private val parents = mutableListOf<Surface>()

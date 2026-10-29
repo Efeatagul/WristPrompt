@@ -39,6 +39,7 @@ import androidx.wear.compose.material3.Text
 import kotlinx.coroutines.launch
 
 internal class ScenarioOwner(val fixture: DebugScenarios) : ViewModel() {
+    val presentationMetrics = PresentationMetrics()
     var ready by mutableStateOf(false)
     var recreated = false
     var creations = 0
@@ -58,6 +59,7 @@ class DebugScenarioActivity : ComponentActivity() {
     }
     private var activityReportEpoch = -1L
     private var navigation: ShellNavigationViewModel? = null
+    private var presentationMetrics: PresentationMetrics? = null
     private var fixture: DebugScenarios? = null
     private var owner: ScenarioOwner? = null
     private var launchId: String? = null
@@ -65,11 +67,14 @@ class DebugScenarioActivity : ComponentActivity() {
     private var collecting = false
     private var observedLength = 0
     private var commandRevision = 0
+    private var lastReportAt = 0L
+    private var lastReportStage: ChatStage? = null
     private val command = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.getStringExtra("launch_id") != launchId) return
             val f = fixture ?: return
-            if (!f.lifecycleScenario && !f.processScenario && !f.networkScenario && f.scenario != DebugScenario.COMPOSER_RECREATION) return
+            if (intent?.getStringExtra("command") == "REPORT") { report(force = true); return }
+            if (!f.presentationScenario && !f.lifecycleScenario && !f.processScenario && !f.networkScenario && f.scenario != DebugScenario.COMPOSER_RECREATION) return
             commandRevision++
             when (intent?.getStringExtra("command")) {
                 "RESTORE_NETWORK" -> { f.restoreNetwork(); report() }
@@ -85,12 +90,17 @@ class DebugScenarioActivity : ComponentActivity() {
             report()
         }
     }
-    private fun report() {
+    private fun report(force: Boolean = false) {
         if (activityReportEpoch != reportEpoch || lifecycle.currentState == Lifecycle.State.DESTROYED) return
         val f = fixture ?: return
         val o = owner ?: return
         if (!o.ready) return
         val chat = f.vm.chat.value
+        // Fine deltas must not turn the existing debug acknowledgement into per-character disk IO.
+        val now = android.os.SystemClock.uptimeMillis()
+        if (!force && f.scenario == DebugScenario.STREAMING_FINE_GRAINED &&
+            chat.stage == lastReportStage && now - lastReportAt < 100) return
+        lastReportAt = now; lastReportStage = chat.stage
         openFileOutput("debug-scenario-ready.txt", MODE_PRIVATE).bufferedWriter().use {
             it.write("${launchId} ${f.scenario.name} READY generations=${f.generations} stage=${chat.stage}" +
                 " bridgeLookups=${f.bridgeLookups} bridgeRequests=${f.bridgeRequests} refreshes=${f.refreshes}" +
@@ -103,6 +113,7 @@ class DebugScenarioActivity : ComponentActivity() {
                 " excluded=${chat.messages.count { it.status == ChatMessageStatus.EXCLUDED }}" +
                 " assistants=${chat.messages.count { it.role == ChatRole.ASSISTANT }} lastInput=${f.inputs.lastOrNull()?.size ?: 0}" +
                 " problem=${chat.problem ?: "NONE"} discoveryProblem=${f.vm.state.value.problem ?: "NONE"}" +
+                " presentationFlushes=${presentationMetrics?.flushes ?: 0} presentationSegments=${presentationMetrics?.segmentations ?: 0} presentationChars=${presentationMetrics?.projectedChars ?: 0}" +
                 " keepScreenOn=${window.attributes.flags and WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON != 0}")
         }
     }
@@ -127,6 +138,8 @@ class DebugScenarioActivity : ComponentActivity() {
         setContent {
             val owner: ScenarioOwner = viewModel(factory = viewModelFactory { initializer { ScenarioOwner(DebugScenarios(scenario)) } })
             val f = owner.fixture
+            val metrics = owner.presentationMetrics
+            presentationMetrics = metrics
             val nav: ShellNavigationViewModel = viewModel(factory = viewModelFactory {
                 initializer { ShellNavigationViewModel(f.surface) }
             })
@@ -158,7 +171,7 @@ class DebugScenarioActivity : ComponentActivity() {
                         WearShellContent(f.accounts, f.authState, f.key, KeySetupStatus.IDLE, false, f.vm,
                             ConnectionActions({}, {}, {}, {}, {}, {}, {}), f.surface,
                             if (scenario == DebugScenario.LONG_ERROR_MESSAGE)
-                                (getString(problemText(ApiProblem.TEMPORARY)) + " " + chatRecovery(ApiProblem.TEMPORARY) + " ").repeat(15) else null)
+                                (getString(problemText(ApiProblem.TEMPORARY)) + " " + chatRecovery(ApiProblem.TEMPORARY) + " ").repeat(15) else null, metrics)
                     }
                 }
             }

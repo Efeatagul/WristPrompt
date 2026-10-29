@@ -1105,3 +1105,70 @@ D5-D constraint: picker rows display only the authoritative discovered name and
 selection state; raw ID when no friendly name is supplied. No inferred speed,
 quality, reasoning, capability, descriptions or ranking. D5-B/C/D/E and D6 remain
 unstarted. DAY5_STATUS.md owns evidence and physical/performance limitations.
+
+## D25 — bounded plain-text transcript presentation (2026-10-30)
+
+D5-B replaces only the chat transcript's centered 80-character presentation.
+Keep canonical ChatState, ViewModel epochs, monotonic local message IDs, session
+serialization, Stop/HTTP cancellation and completed-only replay authoritative.
+No request, credential, storage, auth, bridge, billing or dependency change.
+
+An Activity-owned ChatPresentationOwner remains retained across navigation and
+recreation. It continuously receives cheap canonical notifications, but projects
+only while Chat is STARTED and visible. Pause cancels pending work. Resume uses
+one latest snapshot; empty/reset state also releases hidden projections. No
+request is owned or invoked by this adapter, and no UI/layout object is retained
+in navigation. No SavedStateHandle or durable conversation content.
+
+An event-triggered coalescer publishes first text and state/attempt/terminal/reset
+boundaries immediately. Text-only changes schedule one 100 ms flush, reading the
+newest canonical snapshot at execution. There is no debounce starvation, queue,
+polling or idle ticker. A scheduling generation plus existing monotonic user
+message/attempt ID rejects stale delayed work; canonical busy state is rechecked
+before flush. Projection/publication is synchronous on Main, so an asynchronous
+old projection cannot race a terminal. Duplicate identical canonical snapshots
+are weakly tracked without retaining another full partial string.
+
+PlainTextProjection uses newline boundaries within a normal 512 UTF-16-unit row
+budget. Multiple short paragraphs can share a bounded row; exceptional long
+paragraphs use Unicode-safe internal cuts and zero added inter-segment spacing.
+Preserve surrogate pairs, combining sequences, ZWJ/modifier/tag emoji and flags.
+A single exceptionally long grapheme can exceed the normal budget rather than
+be corrupted. Completed rows reference ranges of canonical text. Streaming rows
+copy only settled slices and the bounded unfinished tail, never retaining a chain
+of old full partial strings. Settled rows are reused during deltas; authoritative
+terminal reconciliation preserves matching settled boundaries and replaces their
+slices with canonical ranges. Corrections replace incompatible projections.
+
+Cache only disposable message projections, estimating 128 bytes per range/key
+plus 64 bytes per message, capped at 256 KiB. No TextLayoutResult, styled full-text
+copy, replay context or measured Compose node is cached. Eviction never mutates
+canonical state. The current stream's settled slices are separately bounded by
+the existing 65,536-unit output limit. Counters are opt-in and supplied only by
+tests/debug host; normal production/release does not allocate/update metrics.
+
+Lazy keys derive from user/message ID and stable segment number; tail and settled
+versions of a logical row share a key. Content types distinguish user, assistant,
+tail, status and recovery, with header/action types for shell rows. Default body
+is 16 sp / 20 sp, user 15 sp with 8 dp inset, start-aligned and native font-scaled.
+Flat assistant text replaces enclosing bubbles and permanent completion labels.
+A lazy boundary substitutes only its matching newline visually; accessibility
+retains the original text, including whitespace and terminal trailing newlines.
+
+There is no forced follow. Latest appears when transcript content is below the
+viewport and is explicitly clicked; it shares the existing control band with a
+separate Stop target. Large-font mode uses an accessible downward arrow labelled
+Latest. Wear's scrollToItem centers a row, so one bounded follow-on scroll reaches
+the bottom of a tall last row. Logical key plus offset restores reading state;
+index is only a fallback if content genuinely disappeared. Existing library keys
+maintain the anchor during list changes.
+
+The D5-C seam is the row projection, not a parser/AST. D5-C can supply richer native
+rows without changing shell actions or generation ownership. No Markdown syntax,
+HTML, links or WebView is interpreted here. Existing string accumulation in
+StreamResult remains unchanged; current debug samples do not isolate it as a
+material runtime bottleneck. Consolidated release profiling remains D5-F.
+
+Official native scrolling semantics checked against the pinned local API and
+[Android's TransformingLazyColumnState reference](https://developer.android.com/reference/kotlin/androidx/wear/compose/foundation/lazy/TransformingLazyColumnState).
+DAY5_STATUS.md owns exact test/emulator/performance evidence and physical debt.

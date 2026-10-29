@@ -62,7 +62,7 @@ frame; they do not establish visual correctness or settled compositor state.
 ## Harness architecture and evidence contract
 
 - `wear_scenarios.py`: primary launcher; `--list`, single scenario, 11-case bounded
-  `--smoke`, explicit 43-case non-destructive `--all`, category filtering, screenshots.
+  `--smoke`, explicit 47-case non-destructive `--all`, category filtering, screenshots.
   Full and smoke runs verify launch, accepted scenario, fresh readiness, RESUMED
   Activity and matching live PID; no OCR, golden images or visual acceptance claim.
   Watch-only scenarios additionally assert bridge lookups/requests are both zero.
@@ -126,7 +126,7 @@ Generic launch/full acceptance does not execute these lifecycle command sequence
 
 ## Complete scenario inventory
 
-All 43 names below are manually launchable, useful, and mutate only synthetic
+All 47 names below are manually launchable, useful, and mutate only synthetic
 in-memory application state (plus the fixed non-secret acknowledgement file).
 Those three properties apply to **every row**. All remain public; none removed or
 renamed. “Special” identifies additional acceptance operations beyond generic
@@ -185,8 +185,13 @@ recovery = RECOVERY / PERSISTENCE PRESENTATION.
 | REAUTH_REQUIRED_PHONE_ABSENT | phone | Yes | Phone runner: bridge-zero/rendering | Distinct presentation/state | REAUTHORIZE, no model/inference; existing Authentication required / Connection recovery UI |
 | API_KEY_WATCH_ONLY | phone | No | Phone runner: bridge-zero/rendering | Distinct presentation/state | Configured API route, visible separate billing, completed synthetic chat |
 
-Category counts: presentation 5, auth 3, model 4, streaming 3, error 6,
-lifecycle 4, process 4, connectivity 6, phone 6, recovery 2 = **43**.
+| DENSE_LONG_ANSWER | presentation | No | Latest / rotary / New Chat | D5-B plain-text fixture | 200 paragraphs near the current output limit; production range projection and lazy rows |
+| LONG_UNBROKEN_TEXT | presentation | No | Latest / rotary | D5-B plain-text fixture | 60,023-character synthetic URL/token; bounded layout, no network action |
+| UNICODE_LONG_RESPONSE | presentation | No | Latest / rotary | D5-B plain-text fixture | Turkish, Arabic, Chinese, combining accents, ZWJ family, flags and skin tone sequences |
+| STREAMING_FINE_GRAINED | streaming | No | Latest / Stop / lifecycle | D5-B plain-text fixture | 11,000 one-character deltas at nominal 1 ms intervals; production ViewModel/session/presentation; no real transport |
+
+Category counts: presentation 8, auth 3, model 4, streaming 4, error 6,
+lifecycle 4, process 4, connectivity 6, phone 6, recovery 2 = **47**.
 The smoke set is exactly the 11 “Yes” rows; process smoke checks only the fresh
 fixture, while the specialized runner verifies actual PID changes.
 
@@ -209,7 +214,7 @@ reconstruction and refresh/sign-out atomicity remain integration-test coverage.
 ## Release isolation, labels and limitations
 
 The checker requires Activity/classes, acknowledgement filename and command action
-in debug manifest/DEX and absent from release; all 43 public names must be absent
+in debug manifest/DEX and absent from release; all 47 public names must be absent
 from release DEX. It rejects production runtime scenario/debug-condition references
 and harness dependencies on real credentials/repositories/storage/network clients.
 Synthetic fixture sources cannot import Android/file storage; source and binary
@@ -232,3 +237,29 @@ fixtures. Screen-off continuation remains best effort. Physical lifecycle/networ
 watch-only and persistence acceptance awaits D4-G / targeted hardware session.
 Terra -> Sol restoration and transient reauthorization anomalies remain open;
 this consolidation changes neither their evidence nor disposition.
+
+## D5-B presentation acceptance — 2026-10-30
+
+The original 43 public names and 11-name smoke set are preserved; four additive
+fixtures bring the catalog to 47. These use the same production chat renderer,
+canonical conversation/session and synthetic provider, with no credentials or
+network. D5-C Markdown fixtures are intentionally absent.
+
+Latest is explicit and appears while transcript content lies below the viewport.
+It shares the fixed Ask/Stop band. At large font it uses a downward arrow with the
+accessible label Latest, preserving Stop's separate target. Latest centers the
+last row then finishes at its bottom, including rows taller than the viewport.
+There is no follow timer or automatic scroll on incoming text.
+
+Presentation fixtures also accept the existing explicit NEXT_REQUEST command
+(after New Chat), STOP and RECREATE through DEBUG_LIFECYCLE with the current
+launch_id. REPORT refreshes only the safe acknowledgement, without generation.
+The acknowledgement adds aggregate presentationFlushes, presentationSegments and
+presentationChars; it never contains prompt/answer text. Counters belong to the
+retained debug owner and survive recreation. Fine-grained acknowledgements are
+event-throttled to 100 ms for unchanged stages; terminal/forced REPORT is immediate.
+This is no idle timer and adds no production reporting/storage.
+
+DAY5_STATUS.md owns D5-B exact test counts, actual emulator interactions,
+performance samples and limitations. These fixtures establish neither real
+OpenAI latency/usage nor physical watch behavior. Physical UX remains D5-G.

@@ -49,7 +49,7 @@ def require_debug(device):
 
 
 # Explicit metadata allowlist: never echo unknown fields or raw acknowledgement content.
-ACK_FIELDS = frozenset("generations stage bridgeLookups bridgeRequests refreshes commandRevision discoveries completions chars draftChars messages owner creations collecting observedChars lifecycle pid processOwner busy proof model billing surface pendingInput excluded assistants lastInput problem discoveryProblem keepScreenOn".split())
+ACK_FIELDS = frozenset("generations stage bridgeLookups bridgeRequests refreshes commandRevision discoveries completions chars draftChars messages owner creations collecting observedChars lifecycle pid processOwner busy proof model billing surface pendingInput excluded assistants lastInput problem discoveryProblem keepScreenOn presentationFlushes presentationSegments presentationChars".split())
 
 
 def fields(raw, token, scenario):

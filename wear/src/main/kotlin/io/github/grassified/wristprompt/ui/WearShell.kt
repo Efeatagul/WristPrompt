@@ -16,6 +16,9 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -57,7 +60,7 @@ internal fun WearShellContent(
     accounts: WatchAccountState, bridge: WatchAuthState, key: ApiKeyState,
     setup: KeySetupStatus, changing: Boolean, proof: InferenceViewModel,
     actions: ConnectionActions, initialSurface: Surface = Surface.CHAT,
-    supplementalGuidance: String? = null,
+    supplementalGuidance: String? = null, presentationMetrics: PresentationMetrics? = null,
 ) {
     val state by proof.state.collectAsStateWithLifecycle()
     // Only the low-frequency busy boundary belongs to the shell. Transcript text is read in ChatScreen.
@@ -110,7 +113,7 @@ internal fun WearShellContent(
                         paragraphs(messages.getValue(R.string.plan_welcome))
                         action(messages.getValue(R.string.got_it), onClick = actions.confirm)
                     }
-                    surface == Surface.CHAT -> ChatScreen(proof, state, ui, navigation, supplementalGuidance)
+                    surface == Surface.CHAT -> ChatScreen(proof, state, ui, navigation, supplementalGuidance, presentationMetrics)
                     surface == Surface.COMPOSER -> ComposerScreen(proof, state, ui, navigation,
                         interruptedInput, inputUnavailable, write)
                     else -> ShellList(Modifier.fillMaxSize(), rememberShellScroll(navigation, surface)) {
@@ -216,7 +219,7 @@ internal fun WearShellContent(
                     }
                 }
             }
-            PrimaryControl(surface, welcome, state, chatBusy, ui, proof, interaction)
+            PrimaryControl(surface, welcome, state, chatBusy, ui, proof, interaction, navigation)
         }
     }
 }
@@ -224,7 +227,7 @@ internal fun WearShellContent(
 @Composable
 private fun PrimaryControl(
     surface: Surface, welcome: Boolean, state: ProofState, chatBusy: Boolean,
-    ui: ShellPresentation, proof: InferenceViewModel, interaction: ShellInteraction,
+    ui: ShellPresentation, proof: InferenceViewModel, interaction: ShellInteraction, navigation: ShellNavigationViewModel,
 ) {
     val action = primaryAction(surface, state.busy || chatBusy, welcome) ?: return
     val canSend = if (action == PrimaryAction.SEND) {
@@ -235,13 +238,22 @@ private fun PrimaryControl(
     if (action == PrimaryAction.SEND) Text(billingDisclosure(ui.billing),
         modifier = Modifier.fillMaxWidth().padding(horizontal = 36.dp),
         style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
-    // Measured, non-overlaid and reachable at any scroll position; native font scaling.
-    Button(onClick = when (action) {
-        PrimaryAction.ASK -> interaction::ask
-        PrimaryAction.SEND -> interaction::send
-        PrimaryAction.STOP -> interaction::stop
-    }, enabled = canSend, modifier = Modifier.fillMaxWidth().padding(start = 36.dp, end = 36.dp, bottom = 16.dp)
-        .heightIn(min = 48.dp), label = { Text(action.label) })
+    // Latest shares the existing measured control band. Stop retains its own full tap target.
+    val latest = surface == Surface.CHAT && navigation.latestVisible.value
+    Row(Modifier.fillMaxWidth().padding(start = 36.dp, end = 36.dp, bottom = 16.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        if (latest) TextButton(onClick = navigation::latest,
+            modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+                .semantics { contentDescription = "Latest" }) {
+            Text(if (LocalDensity.current.fontScale > 1.2f) "↓" else "Latest")
+        }
+        Button(onClick = when (action) {
+            PrimaryAction.ASK -> interaction::ask
+            PrimaryAction.SEND -> interaction::send
+            PrimaryAction.STOP -> interaction::stop
+        }, enabled = canSend, modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp), label = { Text(action.label) })
+    }
 }
 
 @Composable
@@ -259,13 +271,13 @@ internal fun rememberShellScroll(
 }
 
 @Composable
-internal fun ShellList(modifier: Modifier, scroll: TransformingLazyColumnState, content: TransformingLazyColumnScope.() -> Unit) {
+internal fun ShellList(modifier: Modifier, scroll: TransformingLazyColumnState, spacing: androidx.compose.ui.unit.Dp = 10.dp, content: TransformingLazyColumnScope.() -> Unit) {
     ScreenScaffold(scrollState = scroll, modifier = modifier.clipToBounds(), timeText = {},
         contentPadding = PaddingValues(top = 24.dp, bottom = 40.dp)) { padding ->
         TransformingLazyColumn(state = scroll, modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 24.dp, end = 24.dp,
                 top = padding.calculateTopPadding(), bottom = padding.calculateBottomPadding()),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(spacing),
             horizontalAlignment = Alignment.CenterHorizontally, content = content)
     }
 }

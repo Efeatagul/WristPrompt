@@ -9,9 +9,14 @@ import androidx.wear.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import kotlinx.coroutines.awaitCancellation
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.Color
@@ -26,46 +31,76 @@ import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.TextButton
 import io.github.grassified.wristprompt.openai.*
 
-/** D5-A shell only. Existing centered text, chunking, terminal and recovery rendering remain. */
+/** Plain-text projection is observed only in this transcript subtree. */
 @Composable
 internal fun ChatScreen(
     proof: InferenceViewModel, state: ProofState, ui: ShellPresentation,
-    navigation: ShellNavigationViewModel, supplementalGuidance: String?,
+    navigation: ShellNavigationViewModel, supplementalGuidance: String?, metrics: PresentationMetrics? = null,
 ) {
-    val chat by proof.chat.collectAsStateWithLifecycle()
-    val renderedChat = chat
-    // Capture matching messages/cache together for the deferred lazy builder (D3-D).
-    val chunks = remember(renderedChat.messages) {
-        renderedChat.messages.associate { it.id to readableChunks(it.text) }
+    val owner: ChatPresentationOwner = viewModel(factory = viewModelFactory {
+        initializer { ChatPresentationOwner(proof.chat, metrics) }
+    })
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(owner, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            owner.visible(true)
+            try { awaitCancellation() } finally { owner.visible(false) }
+        }
     }
+    val presentation by owner.state.collectAsStateWithLifecycle()
     val largeFont = LocalDensity.current.fontScale > 1.2f
-    ShellList(Modifier.fillMaxSize(), rememberShellScroll(navigation, Surface.CHAT)) {
+    val keys = buildList {
+        if (largeFont) addAll(listOf("chat-title", "chat-menu", "chat-model", "chat-billing"))
+        else add("chat-header")
+        if (!ui.proofAvailable || state.selectedSlug == null) addAll(listOf("chat-unavailable", "chat-setup"))
+        if (presentation.rows.isEmpty()) add("chat-empty") else addAll(presentation.rows.map { it.key })
+    }
+    val scroll = rememberChatScroll(navigation, keys)
+    val latest by remember(presentation.rows, scroll) {
+        derivedStateOf { latestAvailable(presentation.rows.isNotEmpty(), scroll.canScrollForward) }
+    }
+    LaunchedEffect(latest, navigation) { navigation.latestVisible.value = latest }
+    DisposableEffect(navigation) { onDispose { navigation.latestVisible.value = false } }
+    LaunchedEffect(navigation, scroll) {
+        navigation.latestRequests.collect { scrollToLatest(scroll) }
+    }
+    ShellList(Modifier.fillMaxSize(), scroll, spacing = 0.dp) {
         if (largeFont) {
-            item(key = "chat-title") { ShellText("WristPrompt", heading = true) }
-            action("Menu") { navigation.open(Surface.MENU) }
-            item(key = "chat-model") { ModelAffordance(ui, navigation, false) }
-            item(key = "chat-billing") { BillingText(ui) }
-        } else item(key = "chat-header") {
-            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("WristPrompt", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
-                    TextButton(onClick = { navigation.open(Surface.MENU) },
-                        modifier = Modifier.heightIn(min = 48.dp)) { Text("Menu") }
-                }
-                ModelAffordance(ui, navigation, true)
+            item(key = "chat-title", contentType = "header") { ShellText("WristPrompt", heading = true) }
+            item(key = "chat-menu", contentType = "header") {
+                TextButton(onClick = { navigation.open(Surface.MENU) }) { Text("Menu") }
             }
+            item(key = "chat-model", contentType = "header") { ModelAffordance(ui, navigation, false) }
+            item(key = "chat-billing", contentType = "header") { BillingText(ui) }
+        } else item(key = "chat-header", contentType = "header") {
+            ChatHeader(ui, navigation)
         }
         if (!ui.proofAvailable || state.selectedSlug == null) {
-            item { ShellText(ui.status) }
-            action(if (ui.proofAvailable) "Choose model" else "Account & Connection") {
-                navigation.open(if (ui.proofAvailable) Surface.MODELS else Surface.CONNECTION)
+            item(key = "chat-unavailable", contentType = "status") { ShellText(ui.status) }
+            item(key = "chat-setup", contentType = "action") {
+                Button(onClick = { navigation.open(if (ui.proofAvailable) Surface.MODELS else Surface.CONNECTION) },
+                    label = { Text(if (ui.proofAvailable) "Choose model" else "Account & Connection") })
             }
         }
-        if (renderedChat.messages.isEmpty() && renderedChat.stage == ChatStage.EMPTY) {
-            if (ui.proofAvailable && state.selectedSlug != null) item { ShellText("Ask anything") }
-        } else chatItems(renderedChat, chunks)
-        supplementalGuidance?.let { paragraphs(it) }
+        if (presentation.rows.isEmpty()) {
+            item(key = "chat-empty", contentType = "status") { ShellText("Ask anything") }
+        } else chatItems(presentation)
+        supplementalGuidance?.let { text ->
+            item(key = "chat-guidance", contentType = "recovery") { ShellText(text) }
+        }
+    }
+}
+
+@Composable
+private fun ChatHeader(ui: ShellPresentation, navigation: ShellNavigationViewModel) {
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("WristPrompt", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
+            TextButton(onClick = { navigation.open(Surface.MENU) },
+                modifier = Modifier.heightIn(min = 48.dp)) { Text("Menu") }
+        }
+        ModelAffordance(ui, navigation, true)
     }
 }
 

@@ -1,5 +1,14 @@
 package io.github.grassified.wristprompt.ui
 
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.text
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import android.app.RemoteInput
 import android.content.Intent
 import android.os.Bundle
@@ -20,38 +29,31 @@ internal fun chatInputIntent(): Intent = Intent("android.support.wearable.input.
             }).build()))
     .putExtra("android.support.wearable.input.extra.CONFIRM_LABEL", "Done")
 
-internal fun TransformingLazyColumnScope.chatItems(chat: ChatState, messageChunks: Map<Long, List<String>>) {
-    if (chat.messages.isEmpty()) item { ShellText("Start a conversation. History stays in memory for this session.") }
-    for (message in chat.messages) {
-        item(key = "message-${message.id}") {
-            ShellText(when {
-                message.role == ChatRole.ASSISTANT -> "Assistant"
-                message.status == ChatMessageStatus.EXCLUDED -> "You · unfinished, excluded from context"
-                else -> "You"
-            }, heading = true)
-        }
-        for (chunk in messageChunks.getValue(message.id)) item { ShellText(chunk) }
-    }
-    if (chat.partial.isNotEmpty()) {
-        item { ShellText(if (chat.busy) "Assistant · receiving" else "Assistant · partial, excluded from context", heading = true) }
-        paragraphs(chat.partial)
-    }
-    item { ShellText(when (chat.stage) {
-        ChatStage.EMPTY -> "Ready"
-        ChatStage.COMPOSING -> "Draft ready to review"
-        ChatStage.STARTING -> "Sending…"
-        ChatStage.RECEIVING -> "Receiving…"
-        ChatStage.COMPLETED -> "Completed"
-        ChatStage.CANCELLED -> "Stopped · unfinished turn excluded from context"
-        ChatStage.FAILED -> chat.problem?.let(::problemSummary) ?: "Request failed"
-    }) }
-    if (chat.stage == ChatStage.FAILED || chat.stage == ChatStage.CANCELLED) {
-        item { ShellText("Unfinished exchange is not sent as future context.") }
-        paragraphs(chatRecovery(chat.problem))
-    }
-    if (chat.limitReached) item { ShellText("Conversation limit reached. Start New Chat to continue.") }
-    if (chat.problem in setOf(ApiProblem.USAGE_LIMIT, ApiProblem.USAGE_UNAVAILABLE, ApiProblem.NOT_ELIGIBLE))
-        item { ShellText("Manage usage is available in Connection / settings. Billing mode has not changed.") }
+internal fun TransformingLazyColumnScope.chatItems(presentation: ChatPresentation) {
+    for (row in presentation.rows) item(key = row.key, contentType = row.type) { TranscriptText(row) }
+}
+
+@androidx.compose.runtime.Composable
+private fun TranscriptText(row: TranscriptRow) {
+    val user = row.type == TranscriptType.USER
+    // A lazy row boundary supplies the final newline's line break. Other whitespace is literal.
+    val visible = transcriptDisplayText(row)
+    androidx.wear.compose.material3.Text(
+        visible,
+        modifier = androidx.compose.ui.Modifier.fillMaxWidth()
+            .clearAndSetSemantics {
+                text = AnnotatedString(row.text)
+                if (user) stateDescription = "Your message"
+            }
+            .padding(top = if (row.exchangeStart) 10.dp else 0.dp)
+            .then(if (user) androidx.compose.ui.Modifier
+                .background(androidx.wear.compose.material3.MaterialTheme.colorScheme.surfaceContainer,
+                    androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).padding(8.dp)
+                else androidx.compose.ui.Modifier),
+        textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+        style = androidx.wear.compose.material3.MaterialTheme.typography.bodyMedium.copy(
+            fontSize = if (user) 15.sp else 16.sp, lineHeight = 20.sp),
+    )
 }
 
 // Guidance uses existing navigation/actions; never automatically retries or changes billing.

@@ -20,7 +20,8 @@ internal enum class DebugScenario {
     NETWORK_LOST_BEFORE_SEND, NETWORK_LOST_DURING_STREAM, NETWORK_RECOVERED,
     MODEL_DISCOVERY_OFFLINE, MODEL_DISCOVERY_RECOVERED, STOP_NETWORK_RACE,
     PHONE_ABSENT, WATCH_ONLY_AUTHENTICATED, WATCH_ONLY_CHAT, WATCH_ONLY_REFRESHED,
-    REAUTH_REQUIRED_PHONE_ABSENT, API_KEY_WATCH_ONLY;
+    REAUTH_REQUIRED_PHONE_ABSENT, API_KEY_WATCH_ONLY,
+    DENSE_LONG_ANSWER, STREAMING_FINE_GRAINED, LONG_UNBROKEN_TEXT, UNICODE_LONG_RESPONSE;
     companion object { fun parse(name: String?): DebugScenario? = entries.singleOrNull { it.name == name } }
 }
 
@@ -63,6 +64,8 @@ internal class DebugScenarios(val scenario: DebugScenario) {
     var completions = 0; private set
     val lifecycleScenario get() = scenario in setOf(DebugScenario.ACTIVE_STREAM_RECREATION,
         DebugScenario.BACKGROUNDED_STREAM, DebugScenario.SCREEN_OFF_STYLE_RESUME)
+    val presentationScenario get() = scenario in setOf(DebugScenario.STREAMING_LONG, DebugScenario.STREAMING_FINE_GRAINED,
+        DebugScenario.DENSE_LONG_ANSWER, DebugScenario.LONG_UNBROKEN_TEXT, DebugScenario.UNICODE_LONG_RESPONSE)
     val processScenario get() = scenario.name.startsWith("PROCESS_RESTART_")
     val networkScenario get() = scenario in setOf(DebugScenario.NETWORK_LOST_BEFORE_SEND,
         DebugScenario.NETWORK_LOST_DURING_STREAM, DebugScenario.NETWORK_RECOVERED,
@@ -70,7 +73,7 @@ internal class DebugScenarios(val scenario: DebugScenario) {
     private var online = !networkScenario
     private val networkLoss = CompletableDeferred<Unit>()
     fun restoreNetwork() { if (networkScenario) online = true } // No action/reload/replay.
-    fun nextRequest() { if (networkScenario) { vm.draft("Explicit recovered request"); vm.send() } }
+    fun nextRequest() { if (networkScenario || presentationScenario) { vm.draft("Explicit recovered request"); vm.send() } }
     fun failAndStop() { if (scenario == DebugScenario.STOP_NETWORK_RACE) { networkLoss.complete(Unit); vm.stop() } }
     private var seeded = false
     suspend fun seedProcess() {
@@ -126,6 +129,18 @@ internal class DebugScenarios(val scenario: DebugScenario) {
                 }
                 return
             }
+            if (scenario == DebugScenario.STREAMING_FINE_GRAINED) {
+                val text = "Fine-grained synthetic output for presentation testing. ".repeat(200)
+                for (c in text) { onEvent(ResponseEvent.Delta(c.toString())); delay(1) }
+                completions++; onEvent(ResponseEvent.Completed(text)); return
+            }
+            val special = when (scenario) {
+                DebugScenario.DENSE_LONG_ANSWER -> (1..200).joinToString("\n\n") { "Paragraph $it. " + "Plain text for dense reading on the watch. ".repeat(6) }
+                DebugScenario.LONG_UNBROKEN_TEXT -> "https://example.invalid/" + "aB9_".repeat(15000)
+                DebugScenario.UNICODE_LONG_RESPONSE -> "İstanbul: öğle, ışık. العربية 中文 e\u0301 👨‍👩‍👧‍👦 🇹🇷 👍🏽\n".repeat(700)
+                else -> null
+            }
+            if (special != null) { onEvent(ResponseEvent.Delta(special)); completions++; onEvent(ResponseEvent.Completed(special)); return }
             val long = scenario in setOf(DebugScenario.STREAMING_LONG, DebugScenario.LONG_ASSISTANT_OUTPUT)
             val streaming = scenario in setOf(DebugScenario.STREAMING_LONG, DebugScenario.STREAMING_SHORT)
             val stopped = scenario in setOf(DebugScenario.STOPPED_PARTIAL, DebugScenario.RECREATED_CANCELLED_STATE) && generations == 1
@@ -173,13 +188,14 @@ internal class DebugScenarios(val scenario: DebugScenario) {
             DebugScenario.LONG_USER_PROMPT -> vm.draft("Long synthetic question with readable words. ".repeat(190).take(ChatConversation.MAX_PROMPT_CHARS))
             DebugScenario.ONE_TURN_COMPLETED, DebugScenario.RECREATED_COMPLETED_STATE,
             DebugScenario.MULTI_TURN_CHAT, DebugScenario.LONG_ASSISTANT_OUTPUT,
+            DebugScenario.DENSE_LONG_ANSWER, DebugScenario.LONG_UNBROKEN_TEXT, DebugScenario.UNICODE_LONG_RESPONSE,
             DebugScenario.WATCH_ONLY_CHAT, DebugScenario.API_KEY_WATCH_ONLY -> repeat(if (scenario == DebugScenario.MULTI_TURN_CHAT) 4 else if (scenario == DebugScenario.WATCH_ONLY_CHAT) 2 else 1) {
                 vm.draft("Synthetic question ${it + 1}"); vm.send(); vm.chat.first { chat -> chat.stage == ChatStage.COMPLETED }
             }
             DebugScenario.STOPPED_PARTIAL, DebugScenario.RECREATED_CANCELLED_STATE -> {
                 vm.draft("Stop this synthetic request"); vm.send(); vm.chat.first { it.stage == ChatStage.RECEIVING }; vm.stop()
             }
-            DebugScenario.STREAMING_SHORT, DebugScenario.STREAMING_LONG,
+            DebugScenario.STREAMING_SHORT, DebugScenario.STREAMING_LONG, DebugScenario.STREAMING_FINE_GRAINED,
             DebugScenario.ACTIVE_STREAM_RECREATION, DebugScenario.BACKGROUNDED_STREAM,
             DebugScenario.SCREEN_OFF_STYLE_RESUME -> {
                 vm.draft("Stream a synthetic answer"); vm.send(); vm.chat.first { it.stage == ChatStage.RECEIVING }

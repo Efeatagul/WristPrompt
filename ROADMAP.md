@@ -287,7 +287,8 @@ for inference/refresh after setup. Document intentional lifecycle limits.
 
 ## Day 5 — WristPrompt UX 2.0 + Markdown
 
-D5-0 read-only audit completed in chat. Only D5-A implementation is authorized.
+D5-0 read-only audit completed in chat. D5-A and explicitly authorized D5-B are
+implemented; later phases remain unstarted.
 DAY5_STATUS.md owns current phase evidence; Day 4 remains PASS WITH KNOWN DEBT.
 
 - [x] D5-0: read-only UX/performance architecture audit and phase plan.
@@ -296,8 +297,13 @@ DAY5_STATUS.md owns current phase evidence; Day 4 remains PASS WITH KNOWN DEBT.
   358 Wear tests, debug/release builds, lint and isolation pass; 43/43 emulator
   launches, targeted routes/rotary/2x font pass. Native confirmation and memory
   comparison limits remain explicit in DAY5_STATUS.md; hardware deferred to D5-G.
-- [ ] D5-B: dense answer rendering, replace 80-character chunks, presentation
-  coalescing and explicit Latest action. NOT STARTED / NOT AUTHORIZED HERE.
+- [x] D5-B: dense plain-text range/slice rows, replace transcript 80-character
+  chunks, event-triggered 100 ms coalescing and explicit Latest. PASS WITH KNOWN
+  DEBT — 394 Wear tests / 48 suites, 162 focused / 16 suites, debug/release/lint,
+  isolation and 40 Python tests pass. Emulator long/Unicode/Latest/Stop/rotary/
+  lifecycle/2x-font acceptance and bounded reset/memory sampling are recorded in
+  DAY5_STATUS.md. Streaming frame variance and release profiling remain D5-F;
+  physical UX remains D5-G. No Markdown or persistence.
 - [ ] D5-C: native bounded Markdown; no WebView/HTML renderer. NOT STARTED.
 - [ ] D5-D: model/account/settings presentation. Model rows show ONLY discovered
   display name (raw ID when that is all the service supplies) and selected state.

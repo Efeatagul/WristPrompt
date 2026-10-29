@@ -1,3 +1,10 @@
+# Day 5 status — 2026-10-30
+
+Current phase: **D5-B — PASS WITH KNOWN DEBT**, with automated and emulator
+evidence recorded below. D5-C/D/E/F/G and D6 remain unstarted; physical UX is
+deferred to D5-G. The D5-A section is the historical phase-A handoff, including
+its then-current scope statements and measurements.
+
 # Day 5 Phase A — chat-first shell — 2026-10-30
 
 ## A. Executive result
@@ -308,3 +315,334 @@ ShellPresentationTest.kt and untracked SignOutPresentationTest.kt.
 `feat(wear): introduce chat-first shell and shallow navigation`
 
 No commit/push. Only D5-A is implemented. Do not start D5-B automatically.
+
+
+# Day 5 Phase B — dense plain text and streaming presentation — 2026-10-30
+
+## A. Executive result
+
+**PASS WITH KNOWN DEBT — VERIFIED AUTOMATICALLY / VERIFIED ON EMULATOR.**
+Only D5-B implemented. No physical testing, commit or push. No Markdown,
+persistence, authentication, inference protocol or billing changes. Existing
+D5-A and Day 4 evidence remains historical; this phase does not close their
+physical/release gates.
+
+## B. Before / after message presentation
+
+Before: centered 80-character chunks, 10 dp between every chunk, separate role
+rows, partial/context labels and a permanent completion row. Streaming updated
+that renderer from every collected canonical delta.
+
+After: compact dark user surfaces (15 sp, 8 dp inset), flat start-aligned assistant
+text (16 sp / 20 sp), near-full 24 dp safe side insets, no assistant bubble or
+permanent Completed row. Exchanges start with 10 dp separation; internal reading
+segments add no gap. Paragraph/newline whitespace belongs to the original text.
+No system font shrinking, Markdown interpretation or link activation.
+
+Stopped, interrupted, incomplete and failed remain distinct, retaining partial
+text and the explicit exclusion notice. Older excluded user messages keep a
+compact exclusion label after another attempt starts. Existing recovery routes
+and specific problem categories remain; broader copy redesign is D5-E.
+
+## C. Final plain-text architecture
+
+`canonical ChatState → retained ChatPresentationOwner / PresentationCoalescer →
+PlainTextProjection → stable bounded lazy rows → Compose`.
+
+Canonical conversation/session/ViewModel source is unchanged. The new owner never
+calls Send, Stop, discovery or any network/storage API. It is Activity-owned,
+retained across navigation/recreation, and starts empty in a new process. Chat
+visibility and STARTED lifecycle enable projection; inactive UI cancels its pending
+flush. Foreground return projects the newest snapshot once, not missed frames.
+A hidden New Chat/account/model reset also clears cached rows promptly.
+
+Completed rows reference ranges in the authoritative canonical string, avoiding
+another whole-history text copy. Settled streaming rows retain only copied slices,
+plus one unfinished tail; old full partial strings are not retained. Completed
+projection cache is capped at **256 KiB estimated metadata** (128 bytes per row/key,
+64 per message). It stores no layout result, styled full answer, credential,
+network state or replay copy. Current streaming slices are separately bounded by
+the existing 65,536 UTF-16-unit output limit. Reset/owner clear releases them.
+
+Normal row budget: 512 UTF-16 units, choosing the last newline within the bounded
+window; multiple short paragraphs may share a row. Long paragraphs use safe
+character boundaries. Surrogates, combining marks, ZWJ/modifier/tag emoji and flags
+are protected. One unusually long grapheme may exceed the normal budget rather
+than be corrupted. No artificial paragraph gap is added at an internal cut.
+A matching row-boundary newline is represented by layout; accessibility retains
+the original text, and final trailing newlines/carriage returns remain intact.
+
+The row projection is the D5-C seam. No Markdown AST, parser, syntax class,
+dependency, HTML or WebView was added.
+
+## D. Streaming coalescing design
+
+- First visible text: immediate publication, no initial 100 ms wait.
+- Subsequent text-only changes: one event-triggered 100 ms delayed job. The latest
+  canonical snapshot wins; new deltas do not postpone an existing deadline.
+- Pending work: maximum one Job; no queue or continuously running ticker.
+- Terminal/Stop/failure/reset/attempt or metadata changes: cancel pending work and
+  publish synchronously when observed. Identical canonical snapshot publication
+  is deduplicated, including visibility resume.
+- Reconciliation: final canonical text is authoritative. Matching settled
+  boundaries/keys survive; copied settled slices become ranges of that final
+  string. Corrected text replaces incompatible projections.
+- Stale rejection: scheduling generation and existing monotonic local user/attempt
+  identity are checked against newest canonical state, including its busy flag.
+  Main-thread synchronous projection cannot finish later and overwrite a newer
+  terminal. Existing inference epoch/lease guards remain authoritative.
+
+## E. Density result — actual emulator observation
+
+PASS — VERIFIED ON EMULATOR on WristPrompt_Watch7. Long answer text is visibly
+wider, flat and left-aligned in English, with fewer empty gaps and no repeated
+role/completion rows. The compact user surface is visually distinct. Paragraphs,
+long tokens and mixed Turkish/Arabic/Chinese/emoji render and scroll. RTL remains
+content-direction aware through start alignment.
+
+This is qualitative emulator acceptance, not a measured physical reading-speed or
+battery improvement. Normal scroll clipping at the circular viewport boundary is
+expected; no central safe-width overflow or control overlap was observed.
+
+## F. Auto-scroll / Latest policy
+
+Incoming text never calls a scroll action. Upward reading remains where the user
+left it. Latest appears only when transcript content exists below the viewport,
+and hides at the current end. It is user-triggered and shares the existing fixed
+primary-action band, preserving a separate minimum 48 dp Stop/Ask target.
+At fontScale > 1.2 it uses a downward arrow with accessible label Latest, avoiding
+clipped large text beside Stop. No decorative animation.
+
+Wear scrollToItem centers a row; the explicit Latest action therefore finishes
+with one bounded scroll to the actual bottom of a tall last row. No follow loop.
+Reading restoration uses logical row key plus offset, with index fallback only if
+that key disappeared. Native lazy keys preserve position while rows are added.
+
+## G. Stable keys / content types / recomposition
+
+User keys use local message ID; answer keys use monotonic user/attempt ID plus
+segment index. Tail and settled versions share a logical key. Status, excluded
+message and recovery keys are stable. Shell header/setup/guidance keys are fixed.
+No current-list-index-only, text-hash or composition-random key.
+
+Content types: USER, ASSISTANT, TAIL, STATUS, RECOVERY, plus header/action shell
+rows. Completed cache rows and streaming settled rows retain reference identity
+during text deltas. ChatHeader is a separate composable with unchanged inputs.
+The shell observes only distinct busy/Send eligibility, and does not collect
+canonical transcript text. No blanket @Immutable annotations were introduced.
+Recomposition counts were not instrumented; these are structural boundaries and
+unit identity checks, not a claim that every Compose internals call was measured.
+
+## H. Performance results
+
+Deterministic virtual-time burst: **65,000 text deltas over 6,500 virtual ms →
+66 publications, 67 segmentation calls, 81,195 UTF-16 units submitted to segment
+projection** (including the tiny user message). Maximum pending flush = 1.
+The final emulator fine-grained run reported 2,211 received characters with 38
+publications, 39 segmentation calls and 10,536 projected units at its mid-stream
+sample. While Home/backgrounded, canonical characters advanced 2,550 → 3,449
+while publications stayed **43 → 43**, segmentations **44 → 44**, projected units
+**12,101 → 12,101**. Resume/recreation retained one generation; final synthetic
+Stop retained 5,725 partial characters with 82 publications / 83 segmentation
+calls / 25,982 projected units. These are event/IO/scheduler-dependent debug
+samples, not fixed throughput or real network latency guarantees.
+
+The previous plain UI had no cadence limiter; a collector able to observe all
+those deltas could request 65,000 transcript updates. This is a structural
+comparison, not a measured 65,000-frame emulator baseline.
+
+A separate 1,000-delta / 1,000-virtual-ms continuous-stream test publishes 11 times,
+including the immediate first text. Advancing another 10 seconds while idle adds
+zero publications. First text and terminal/Stop publication delay is **0 virtual
+ms** in deterministic tests; real display latency was not instrumented.
+Completed large history is not resegmented per delta; terminal reconciliation
+checks the settled prefix once and segments only its remaining tail.
+
+Matched debug emulator comparison: committed D5-A `f5400a9` was built in an
+isolated temporary source copy, then D5-B restored. Same named AVD, signing key,
+five fixtures, one warm-up pass and three recorded passes per build. Each uses
+six actual rotary events, resetting gfxinfo after fixture readiness. Medians:
+
+| Workload | P90 frame ms, A → B | Janky frames %, A → B | PSS MiB, A → B |
+| --- | ---: | ---: | ---: |
+| ONE_TURN_COMPLETED | 25 → 22 | 2.25 → 1.10 | 78.81 → 79.41 |
+| MULTI_TURN_CHAT | 32 → 21 | 2.27 → 1.12 | 79.89 → 80.13 |
+| LONG_ASSISTANT_OUTPUT | 27 → 25 | 2.15 → 1.12 | 81.63 → 81.56 |
+| STREAMING_LONG | 32 → 32 | 2.06 → 3.30 | 79.76 → 80.27 |
+| STOPPED_PARTIAL | 23 → 25 | 2.17 → 2.15 | 79.42 → 80.07 |
+
+The streaming jank increase is unresolved noisy debug evidence: 1–4 janky frames
+before versus 2–6 after, approximately 90 frames/sample, overlapping ranges,
+unchanged median P90. It does not establish a causal regression or a release pass.
+No median P90/PSS increase above 10% was observed; STOPPED P90 rises about 8.7%.
+No obvious freeze/rotary regression was observed in targeted interactions.
+Release-comparable frame/GC/allocation characterization remains D5-F; do not infer
+battery life or physical performance from these samples.
+
+Sixteen dense-answer → actual New Chat cycles: sampled reset PSS **79.55–81.02
+MiB**, first 81.02 and last 80.06 MiB. Sampled Java Heap PSS **12,924–14,032 KiB**,
+first 14,032 and last 12,924. Completed generations and empty resets were asserted
+each cycle. No sustained growth in this bounded run; not a proof against all
+leaks. No heap dump/forced collection or allocation attribution was performed.
+
+Safe metrics are opt-in only for debug/tests. The debug acknowledgement contains
+counts, never content, and fine-delta disk writes are event-throttled. No heavy
+benchmark dependency or release instrumentation was added.
+
+Evidence retained locally under /tmp/d5b-matched-before, /tmp/d5b-matched-after,
+/tmp/d5b-cycles and /tmp/d5b-acceptance; these temporary files are not committed
+artifacts and may be removed by the host.
+
+## I. String accumulation decision
+
+**Retained `output += event.text` in StreamResult unchanged.** Existing output
+limits/ownership/terminal behavior remain authoritative. Fine-delta integration,
+near-limit virtual streaming and memory/frame samples did not attribute a material
+runtime bottleneck specifically to that operation. Cumulative string copying
+remains a plausible risk; no claim of zero allocation cost or asymptotic efficiency.
+An accumulator change needs actual attribution and equivalent protocol tests;
+that change was not justified by current presentation evidence.
+
+## J / R. Production changes and files changed
+
+All Kotlin paths below are under
+`wear/src/main/kotlin/io/github/grassified/wristprompt/` unless noted.
+
+| File | Final D5-B change |
+| --- | --- |
+| ui/ChatPresentation.kt (new) | Plain-text range/slice rows, bounded cache, safe segmentation, terminal metadata, Latest predicates and opt-in metric sink. |
+| ui/ChatPresentationOwner.kt (new) | Retained lifecycle-visible adapter, event-triggered coalescer and stale/terminal reconciliation. |
+| ui/ChatReadingPosition.kt (new) | Logical key/offset restoration and explicit end-of-last-row jump. |
+| ui/ChatScreen.kt | Observe presentation subtree; stable typed shell rows; isolated header; Latest event binding. Composer behavior unchanged. |
+| ui/ChatItems.kt | Flat assistant / compact user renderer; exact accessible text; transcript-local metadata. Recovery routing unchanged. |
+| ui/ShellNavigationViewModel.kt | Primitive logical chat anchor and Latest visibility/event; no layout or canonical request owner. |
+| ui/WearShell.kt | Optional metric injection; zero transcript spacing option; Latest shares measured primary band with Stop priority. |
+| debug/.../DebugScenarios.kt | Four additive credential/network-free fixtures; explicit repeat/reset acceptance commands. |
+| debug/.../DebugScenarioActivity.kt | Retained aggregate metrics, forced safe REPORT and bounded event-triggered debug acknowledgement IO. |
+| test/.../ui/ChatPresentationTest.kt (new) | 22 projection/Unicode/cache/terminal/Latest/anchor tests. |
+| test/.../ui/PresentationCoalescerTest.kt (new) | 14 scheduler/ownership/visibility/recreation/reset/burst tests. |
+| testDebug/.../DebugScenariosTest.kt | Catalog count 47; existing every-fixture preparation test covers additions. |
+| tools/wear_catalog.py | Classify four added names; original smoke set retained. |
+| tools/wear_adb.py | Allowlist three numeric presentation fields. |
+| tools/test_wear_scenarios.py | Expected catalog count 47. |
+| tools/test_wear_harness.py | Recognize the report method's explicit force parameter in the existing field-allowlist check. |
+| DAY5_STATUS.md | Current D5-B evidence and historical D5-A handoff. |
+| WEAR_SCENARIOS.md | 47-name catalog, new fixtures, metrics/commands and acceptance limits. |
+| ROADMAP.md | D5-B status/evidence only; later phases remain unstarted. |
+| DECISIONS.md | D25 plain-text projection/cadence/anchor/cache architecture and D5-C seam. |
+
+No MainActivity, theme, ShellInteraction, InferenceViewModel, InferenceSession,
+ChatConversation, provider, SSE, shared/mobile, dependency or credential source
+was changed. Working tree was clean before D5-B. No unrelated user changes.
+
+## K. Automated test results
+
+**VERIFIED AUTOMATICALLY:**
+
+- Focused D5-B tests: **36 / 2 suites**, included in the focused selection below.
+- Explicit focused shell/lifecycle/reconstruction/streaming/cancellation/chat/model
+  selection: **162 / 16 suites**, zero failures.
+- Full Wear suite: **394 / 48 suites**, zero failures/errors/skips; D5-A baseline
+  was 358 / 46, so 36 tests and 2 suites are added.
+- Existing relevant coverage includes shell navigation 8, shell interactions 9,
+  shell presentation 12, composer 6, lifecycle 8, reconstruction 11, streaming
+  races 13, real OkHttp cancellation adapter 8, API-key cancellation 3, session 5,
+  chat ViewModel 12, conversation/context 13, chat transport 3 and model
+  restoration 15. These are synthetic/JVM tests, not physical/network proof.
+- `:wear:assembleDebug`, `:wear:assembleRelease`, `:wear:lintDebug`: PASS.
+  Lint: **0 errors, 6 existing warnings** (two newer-version notices, exported
+  service, long vector path, two debug-activity recents warnings).
+- `python tools/check_scenario_isolation.py`: PASS, including debug/release
+  manifest/DEX and all 47 names absent from release.
+- `python -m unittest discover -s tools -p 'test_*.py'`: **40 tests**, PASS.
+- `python -m py_compile tools/*.py`: PASS.
+- `git diff --check` and changed/new-file whitespace checks: PASS.
+- Mobile suite/build not rerun: no shared/mobile/dependency change.
+
+Build/test environment: existing JDK 17.0.21+9, existing SDK, existing
+ANDROID_USER_HOME debug signing identity. No dependency/environment update.
+Full and focused logs: /tmp/d5b-final-validation.log and
+/tmp/d5b-focused-final.log. Test metrics are in the JUnit system-out record.
+
+## L. Emulator acceptance matrix
+
+All results below are **PASS — VERIFIED ON EMULATOR**, limited to synthetic
+production-renderer fixtures on WristPrompt_Watch7:
+
+| Fixture/check | Actually exercised |
+| --- | --- |
+| ONE_TURN_COMPLETED | Compact user, flat answer, Latest reaches end/hides, Ask reachable. |
+| MULTI_TURN_CHAT | Stable distinct exchange rows, Latest and rotary. |
+| LONG_ASSISTANT_OUTPUT | Dense long reading, native rotary, Latest. |
+| STREAMING_LONG | Scroll upward while text arrives; no forced return; Latest and Stop coexist; Stop retains excluded partial. |
+| STOPPED_PARTIAL | Compact stopped/exclusion metadata and recovery; Latest/Ask. |
+| DENSE_LONG_ANSWER | Near-limit 200-paragraph lazy reading and repeated New Chat cycles. |
+| STREAMING_FINE_GRAINED | Coalesced counter updates, Stop, Home/resume, retained Activity recreation; one generation throughout. |
+| LONG_UNBROKEN_TEXT | Long URL/token fallback scrolls without crash or network action. |
+| UNICODE_LONG_RESPONSE | Mixed language/RTL, combining marks and emoji; scroll and Latest. |
+| 2× font stress | Dense, unbroken, Unicode and streaming fixtures; Latest arrow and separate Stop/Ask target. |
+| Retained long-reading recreation | Same visible long-answer text before/after actual Activity recreation; Models/Back retains one generation/completion/discovery. |
+
+All **47/47** catalog entries also launched successfully on the final installed
+APK (matching readiness/PID/RESUMED). This is separate from the interaction matrix
+and does not establish visual correctness for every row. No physical PASS claim.
+Final log: /tmp/d5b-final-catalog.log.
+
+## M. Accessibility / rotary / max-font result
+
+Native rotary input exercised actual transcript movement, alongside touch taps.
+Normal and 2.0 font scales are exercised without shrinking type. Large-font
+Latest is an arrow with the accessible label Latest; Stop keeps its own target.
+User messages expose Your message plus original accessible text. Content remains
+scrollable; no nested vertical list. Emulator font restored to 1.0 afterward.
+Actual long-reading recreation and Models/Back evidence: /tmp/d5b-reading-final.json.
+No actual TalkBack session, OEM maximum-font or physical accessibility pass is
+claimed. Existing native keyboard confirmation debt remains outside this phase.
+
+## N. Battery / memory review
+
+No idle timer, polling, service, foreground service, WorkManager, wake lock,
+per-frame animation, connectivity observer, automatic refresh or forced scrolling
+was added. Scheduling happens only after arriving stream data, stops when inactive
+or terminal, and holds one pending Job. Closed range projection cache and current
+stream slices are bounded. Reading positions retain primitives only. Unit reset
+and hidden reset checks release old cache; emulator reset sampling is bounded
+supporting evidence, not a universal leak/battery guarantee.
+
+## O. Security / architecture invariants
+
+OAuth, credential format/storage, signing, Data Layer routing, account/model
+validation, explicit billing mode and replay semantics are unchanged. No credential
+fallback. Existing SSE/session ownership, serialization, stale epoch/lease guards,
+actual OkHttp Call cancellation and terminal completion rules remain authoritative.
+Only completed exchanges are replayed. No persistence, Room/database, TTS, speech
+stack, other provider, web/tools/MCP, images, HTML or network feature. Debug fixture
+and metric reporting remain release-isolated; no real request or physical action.
+
+## P. Known debt
+
+- D5-A memory characterization remains provisional; this separate matched debug
+  run does not retroactively establish its earlier PSS change as causal.
+- Streaming jank is noisy and slightly higher in the matched debug samples;
+  release-mode frame/GC/allocation characterization remains deferred to D5-F.
+- No direct emulator first-photon/terminal-to-frame latency or allocation
+  attribution was collected. Scheduler immediacy is virtual-test evidence.
+- A pathological single huge grapheme exceeds the normal segment budget to
+  preserve text. Extremely long paragraphs may wrap at internal segment cuts;
+  no extra gap/text is inserted.
+- Physical UX acceptance remains **PENDING END-OF-DAY PHYSICAL TEST — D5-G**.
+- Actual TalkBack, physical max-font, native keyboard confirmation and existing
+  Day 4 auth/refresh/BYOK/Keystore/release debt are not closed by D5-B.
+
+## Q. Deferred to D5-C
+
+Native Markdown; headings; emphasis; lists; code blocks; tables; links; malformed
+Markdown handling. Also no D5-D model/account/settings redesign, D5-E broad error
+copy redesign, D5-F consolidated characterization, D5-G physical tests or D6
+persistent conversations was begun.
+
+## S. Suggested commit message
+
+`feat(wear): add dense plain-text chat and coalesced streaming presentation`
+
+No commit or push performed.

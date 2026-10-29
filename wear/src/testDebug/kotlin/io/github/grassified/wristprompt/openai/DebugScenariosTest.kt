@@ -14,7 +14,7 @@ class DebugScenariosTest {
     @After fun cleanup() { fixtures.forEach { it.vm.viewModelScope.cancel() }; Dispatchers.resetMain() }
     private fun fixture(s: DebugScenario) = DebugScenarios(s).also { fixtures += it }
     @Test fun namesAreUniqueAndRoundTrip() {
-        assertEquals(43, DebugScenario.entries.size)
+        assertEquals(47, DebugScenario.entries.size)
         DebugScenario.entries.forEach { assertSame(it, DebugScenario.parse(it.name)) }
     }
     @Test fun unknownFailsClosed() { listOf(null, "", "streaming_long", "../SIGNED_OUT").forEach { assertNull(DebugScenario.parse(it)) } }

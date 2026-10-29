@@ -42,7 +42,7 @@ class HarnessTest(unittest.TestCase):
 
     def test_ack_source_fields_equal_safe_allowlist(self):
         source = (runner.SOURCE.parent / 'DebugScenarioActivity.kt').read_text()
-        report = source.split('private fun report()', 1)[1].split('override fun onDestroy', 1)[0]
+        report = source.split('private fun report(', 1)[1].split('override fun onDestroy', 1)[0]
         keys = set(re.findall(r' ([A-Za-z]+)=', report))
         self.assertEqual(adb.ACK_FIELDS, keys)
         self.assertFalse(keys & {'token', 'credentials', 'apiKey', 'accountId', 'prompt', 'response', 'Authorization'})
