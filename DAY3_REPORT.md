@@ -13,6 +13,48 @@ production/UI/provider/transport/session/router code, integrated tests, debug
 fixtures/Activity, and all three scenario/diagnostic tools. Earlier phase sections
 in DAY3_STATUS.md and dated Day 2/investigation records remain historical evidence.
 
+## POST-D3 PHYSICAL SANITY ACCEPTANCE — 2026-10-29
+
+Owner-reported targeted sanity pass on a physical Galaxy Watch 7 and physical
+Android phone, using current Day 3 debug builds, the existing compatible signing
+identity, real ChatGPT-plan authentication and real OpenAI network inference.
+These are supplied physical results, not device tests executed by this
+documentation update. Full RC physical acceptance is not claimed.
+
+| Check | Result |
+| --- | --- |
+| 1. APK update/install on both devices | PASS — PHYSICAL |
+| 2. Real Wear Data Layer / Continue with ChatGPT authentication handoff | PASS — PHYSICAL |
+| 3. Real account-specific model discovery and normal restoration/relaunch | PASS — PHYSICAL |
+| 4. Arbitrary multi-turn chat | PASS — PHYSICAL |
+| 5. Incremental streaming response | PASS — PHYSICAL |
+| 6. Stop/cancellation behavior | PASS — PHYSICAL |
+| 7. Cancelled-exchange exclusion from a subsequent request's actual server-side context | NOT PHYSICALLY EXERCISED — COVERED BY AUTOMATED/EMULATOR ACCEPTANCE |
+| 8. New Chat behavior | PASS — PHYSICAL |
+| 9. Model-change conversation-context boundary | NOT PHYSICALLY EXERCISED — COVERED BY AUTOMATED/EMULATOR ACCEPTANCE |
+| 10. Offline/error recovery | PASS — PHYSICAL |
+
+Owner observations confirm real messages/responses, long-response rendering and
+scrolling, partial output shown as unfinished/excluded after Stop, return to
+Compose, and a subsequent request working normally. Offline/network recovery
+worked after connectivity returned without unintended sign-out or credential
+loss. Owner-reported real-watch screenshots support usable round-screen chat /
+streaming presentation; no independent screenshot inspection is claimed here.
+Visible exclusion labeling and successful follow-up do not establish check 7.
+
+**DEFERRED — FINAL RC:** checks 7 and 9 still need physical exercise; final
+sign-out/reauthorization and remote-revocation outcome, rotary, larger fonts,
+process death, background/screen-off and other lifecycle/network/storage/signing
+checks remain open. Successful funded BYOK inference remains unverified; no
+purchase is required. Current debug sanity results do not establish release-build
+or full RC acceptance.
+
+Normal restoration in this pass does not resolve the historical Terra -> Sol
+physical anomaly: it remains unreproduced/unresolved. The transient reauthorization
+anomaly also remains unresolved. The CapabilityClient limitation remains isolated
+to the current emulator/GMS environment; real handoff success does not repair or
+reclassify that lab. Day 3 remains PASS WITH KNOWN DEBT. Day 4 is not started.
+
 ## B. D3-A through D3-F outcomes
 
 | Phase | Final disposition |
@@ -227,19 +269,21 @@ This is a targeted source/output review, not a claim of exhaustive security proo
 
 ## I. Deferred final physical RC checklist
 
-Batch these at final RC; no routine Day 3 physical session requested/performed:
+The post-D3 sanity section above records physical PASS for debug installation,
+real authentication handoff, model discovery/normal relaunch, arbitrary multi-turn
+chat, streaming/Stop, New Chat and offline recovery. Do not treat these paths as
+entirely physically unverified. Full RC acceptance remains open:
 
-- [ ] Real watch/phone remote capability discovery and Continue with ChatGPT handoff.
-- [ ] Browser OAuth completion and protected credential handoff to watch.
-- [ ] Real account-specific model discovery/restoration and plan inference.
-- [ ] Real arbitrary multi-turn streaming, Stop against OpenAI, next prompt and
-      interrupted-stream recovery; explicit account/model/billing boundary checks.
+- [ ] Checks 7 and 9: actual subsequent server-side context after cancellation,
+      and model-change conversation-context boundary (automated/emulator covered).
 - [ ] Final sign-out/reauthorization and honest remote-revocation outcome.
-- [ ] Rotary, larger fonts, round-screen action reachability and hardware behavior.
-- [ ] RC lifecycle/network/storage/signing checks already required by the roadmap;
-      destructive credential/key tests require separate exact authorization.
-- [ ] Funded BYOK success only if a funded credential becomes available voluntarily;
-      otherwise keep the external constraint explicit, never claim a pass.
+- [ ] Rotary, larger fonts, remaining screen/action and hardware-specific checks.
+- [ ] Untested account/billing boundary checks and interrupted-stream recovery.
+- [ ] Process death, background/screen-off and remaining RC lifecycle/network/
+      storage/signing checks; destructive credential/key tests require separate
+      exact authorization. Current debug sanity is not release-build acceptance.
+- [ ] Successful funded BYOK inference remains unverified unless a funded
+      credential becomes available voluntarily; no purchase required.
 
 ## J–L. Documentation, roadmap and Git
 

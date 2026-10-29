@@ -171,10 +171,19 @@ phase-local history: DAY3_STATUS.md.
 - [x] D3-E current auth/model/billing/error transitions and safe recovery guidance.
 - [x] D3-F debug-only harness, 23 emulator scenarios, launcher and release isolation.
 - [x] D3-G complete both-app automated validation, emulator acceptance and reporting.
-- [ ] Final physical RC: real multi-turn plan/API chat where credentials permit,
-  rotary/larger-font hardware operation, account/model switches, real-network Stop
-  and interrupted-stream recovery. Successful funded BYOK remains externally
-  constrained; no purchase is required for Day 3.
+- [x] Post-D3 sanity — PASS — PHYSICAL (owner report): current debug APK updates
+  on Galaxy Watch 7 / Android phone, real ChatGPT-plan handoff, account-specific
+  models and normal relaunch/restoration, arbitrary multi-turn chat, streaming,
+  Stop/next request, New Chat, offline recovery and usable long-response scrolling.
+  This does not resolve the historical Terra -> Sol or reauthorization anomalies.
+- [ ] Checks 7 and 9 — NOT PHYSICALLY EXERCISED — COVERED BY AUTOMATED/EMULATOR
+  ACCEPTANCE: cancelled-exchange exclusion from actual subsequent server context,
+  and model-change conversation-context boundary.
+- [ ] DEFERRED — FINAL RC: final sign-out/reauth/revocation outcome, rotary/larger
+  fonts, process death, background/screen-off, untested account/billing boundaries,
+  interrupted-stream recovery, remaining lifecycle/network and
+  release-build checks. Successful funded BYOK remains unverified/constrained;
+  no purchase is required. See DAY3_REPORT.md for physical evidence boundaries.
 
 The original physical Day 3 release gate remains **DEFERRED FINAL PHYSICAL RC**,
 not checked off by development acceptance. Routine UI/state acceptance uses the

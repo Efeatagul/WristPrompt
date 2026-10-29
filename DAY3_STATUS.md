@@ -5,14 +5,57 @@ consolidated automated/emulator acceptance are complete. Current exact results,
 all 23 scenario dispositions, security review, known debt and Day 4 handoff are in
 [DAY3_REPORT.md](DAY3_REPORT.md). Wear 272 / mobile 70 / Python 8 tests pass;
 both debug/release builds, lint and release isolation pass. Physical RC remains
-open; no physical PASS or funded BYOK success is claimed. D3-G Data Layer smoke
-was environment-blocked because both required AVDs were not available.
+open; post-D3 targeted physical PASS is recorded below, while funded BYOK success
+is unverified. D3-G Data Layer smoke was environment-blocked because both
+required AVDs were not available.
 
 The phase sections below preserve dated implementation/handoff evidence. Their
 “unstarted”, “pending” and prior counts describe that phase's handoff, not today's
 final status. The earlier end-of-day hardware checklist is now batched into final
 physical RC under the current acceptance instruction; it is not a new Day 3 gate.
 No production change, commit/push or Day 4 work in D3-G.
+
+## POST-D3 PHYSICAL SANITY ACCEPTANCE — 2026-10-29
+
+Owner-reported targeted sanity pass on a physical Galaxy Watch 7 and physical
+Android phone, using current Day 3 debug builds, the existing compatible signing
+identity, real ChatGPT-plan authentication and real OpenAI network inference.
+These are supplied physical results, not device tests executed by this
+documentation update. Full RC physical acceptance is not claimed.
+
+| Check | Result |
+| --- | --- |
+| 1. APK update/install on both devices | PASS — PHYSICAL |
+| 2. Real Wear Data Layer / Continue with ChatGPT authentication handoff | PASS — PHYSICAL |
+| 3. Real account-specific model discovery and normal restoration/relaunch | PASS — PHYSICAL |
+| 4. Arbitrary multi-turn chat | PASS — PHYSICAL |
+| 5. Incremental streaming response | PASS — PHYSICAL |
+| 6. Stop/cancellation behavior | PASS — PHYSICAL |
+| 7. Cancelled-exchange exclusion from a subsequent request's actual server-side context | NOT PHYSICALLY EXERCISED — COVERED BY AUTOMATED/EMULATOR ACCEPTANCE |
+| 8. New Chat behavior | PASS — PHYSICAL |
+| 9. Model-change conversation-context boundary | NOT PHYSICALLY EXERCISED — COVERED BY AUTOMATED/EMULATOR ACCEPTANCE |
+| 10. Offline/error recovery | PASS — PHYSICAL |
+
+Owner observations confirm real messages/responses, long-response rendering and
+scrolling, partial output shown as unfinished/excluded after Stop, return to
+Compose, and a subsequent request working normally. Offline/network recovery
+worked after connectivity returned without unintended sign-out or credential
+loss. Owner-reported real-watch screenshots support usable round-screen chat /
+streaming presentation; no independent screenshot inspection is claimed here.
+Visible exclusion labeling and successful follow-up do not establish check 7.
+
+**DEFERRED — FINAL RC:** checks 7 and 9 still need physical exercise; final
+sign-out/reauthorization and remote-revocation outcome, rotary, larger fonts,
+process death, background/screen-off and other lifecycle/network/storage/signing
+checks remain open. Successful funded BYOK inference remains unverified; no
+purchase is required. Current debug sanity results do not establish release-build
+or full RC acceptance.
+
+Normal restoration in this pass does not resolve the historical Terra -> Sol
+physical anomaly: it remains unreproduced/unresolved. The transient reauthorization
+anomaly also remains unresolved. The CapabilityClient limitation remains isolated
+to the current emulator/GMS environment; real handoff success does not repair or
+reclassify that lab. Day 3 remains PASS WITH KNOWN DEBT. Day 4 is not started.
 
 ## Phase A scope and evidence
 
