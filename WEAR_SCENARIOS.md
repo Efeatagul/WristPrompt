@@ -107,8 +107,8 @@ the scenario host never accesses them. The only scenario disk write is its fixed
 non-secret acknowledgement. Production capabilities/listeners/routing are untouched.
 Release assembly produces an unsigned APK for inspection, not a signed release.
 
-Current evidence/counts and the per-scenario emulator acceptance matrix are in
-DAY3_STATUS.md, Phase F. No physical verification, real OAuth, OpenAI request or
+Final consolidated evidence/counts and the per-scenario acceptance matrix are in
+DAY3_REPORT.md; phase-local history remains in DAY3_STATUS.md, Phase F. No physical verification, real OAuth, OpenAI request or
 funded BYOK success is established. Touch scrolling was checked at default emulator
 font/display settings; rotary, larger fonts and real-network behavior remain separate.
 

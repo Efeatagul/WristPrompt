@@ -1,11 +1,18 @@
 # Day 3 status — 2026-10-29
 
-Phase A is implemented. Phase B is complete as investigation/test hardening;
-its historical physical anomaly remains unresolved. Phase C text chat/context is
-implemented below. Phase D streaming/Stop ownership is hardened below. Day 2
-remains PASS WITH KNOWN DEBT. Phase E state/error hardening is implemented below; this is not a completed Day 3
-physical/release gate. Phase F debug scenarios and emulator automation are
-implemented below; D3-G remains unstarted.
+**D3-G final result: PASS WITH KNOWN DEBT.** D3-A through D3-F development and
+consolidated automated/emulator acceptance are complete. Current exact results,
+all 23 scenario dispositions, security review, known debt and Day 4 handoff are in
+[DAY3_REPORT.md](DAY3_REPORT.md). Wear 272 / mobile 70 / Python 8 tests pass;
+both debug/release builds, lint and release isolation pass. Physical RC remains
+open; no physical PASS or funded BYOK success is claimed. D3-G Data Layer smoke
+was environment-blocked because both required AVDs were not available.
+
+The phase sections below preserve dated implementation/handoff evidence. Their
+“unstarted”, “pending” and prior counts describe that phase's handoff, not today's
+final status. The earlier end-of-day hardware checklist is now batched into final
+physical RC under the current acceptance instruction; it is not a new Day 3 gate.
+No production change, commit/push or Day 4 work in D3-G.
 
 ## Phase A scope and evidence
 
@@ -32,9 +39,9 @@ mobile/shared implementation, authentication, refresh, sign-out, credential stor
 model persistence or inference protocol changes. No physical/emulator execution,
 install, live request, credential operation, commit or push.
 
-## One consolidated end-of-day physical check
+## Historical end-of-day checklist — deferred to final physical RC
 
-- [ ] PENDING END-OF-DAY PHYSICAL TEST — On Galaxy Watch 7, check circular-screen
+- [ ] DEFERRED FINAL PHYSICAL RC — On Galaxy Watch 7, check circular-screen
   readability (including larger font), touch/rotary scrolling and Back across
   proof/settings/models/output/details; confirm account, active plan/API billing
   and selected model are understandable, model selection and settings actions

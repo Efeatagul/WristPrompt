@@ -16,11 +16,13 @@ this stage; synthetic successful-BYOK coverage remains mandatory. No purchase or
 real API key required. Day 2 does not fail for this constraint, and physical paid
 API success is not claimed.
 
-Day 3 Phase A (readability only) is authorized and implemented; automated evidence
-and the pending consolidated physical check live in DAY3_STATUS.md. Later phases
-remain unstarted: model restoration -> native text/in-memory chat -> streaming/Stop
--> safe account/mode/context transitions -> combined validation. Reauth anomaly
-triage remains known debt; Day 5 must disposition it before release freeze.
+Day 3 development and consolidated automated/emulator acceptance: **PASS WITH
+KNOWN DEBT**, D3-A through D3-G complete for that scope. See DAY3_REPORT.md for
+272 Wear / 70 mobile / 8 Python tests, both debug/release builds and lint,
+release isolation, and all 23 emulator scenarios. Physical RC gate remains open;
+funded BYOK and capability-dependent emulator auth constraints are not app failures.
+Historical restoration and reauthorization anomalies remain unresolved. Day 4 has
+not started; reauthorization debt still requires Day 5 disposition before freeze.
 
 Day numbers are execution stages, not a claim that work has started. A failed
 release gate blocks progression; retain evidence without credentials. Scope and
@@ -152,21 +154,34 @@ revocation outcome and exact refresh telemetry are not claimed as physical facts
 
 ## Day 3 — watch chat
 
-- [ ] Phase A circular-screen settings/proof shell: automated validation recorded
-  in DAY3_STATUS.md; physical readability/rotary/critical-action acceptance pending.
-  No chat, model-restoration, OAuth, refresh, sign-out, storage or billing changes.
+Development acceptance: **PASS WITH KNOWN DEBT**. Evidence: DAY3_REPORT.md;
+phase-local history: DAY3_STATUS.md.
 
-- [ ] Low-priority D2-1 debt: fix explicit model restoration (GPT-6.1 Terra →
-  GPT-6.1 Sol after restart while Terra remains listed). Physical result PARTIAL;
-  non-blocking for authentication persistence. No fix in the D2-1 status update.
+- [x] D3-A readable round-screen shell, billing header and reachable fixed actions:
+  VERIFIED AUTOMATICALLY / VERIFIED ON EMULATOR at default font settings.
+- [x] D3-B restoration investigation/test hardening: 15 integration tests pass;
+  exact model identity, reconstruction/reorder/fallback and mode/account isolation.
+- [ ] Historical Terra -> Sol physical anomaly: unreproduced and unresolved;
+  no speculative fix or physical resolution claimed.
+- [x] D3-C arbitrary text chat, bounded in-memory completed-only explicit replay,
+  native input, New Chat and account/model/billing context boundaries.
+- [x] D3-D generation/cleanup serialization, actual transport Stop, partial
+  exclusion and stale/duplicate-event rejection: VERIFIED AUTOMATICALLY;
+  synthetic rendered streaming/Stop VERIFIED ON EMULATOR.
+- [x] D3-E current auth/model/billing/error transitions and safe recovery guidance.
+- [x] D3-F debug-only harness, 23 emulator scenarios, launcher and release isolation.
+- [x] D3-G complete both-app automated validation, emulator acceptance and reporting.
+- [ ] Final physical RC: real multi-turn plan/API chat where credentials permit,
+  rotary/larger-font hardware operation, account/model switches, real-network Stop
+  and interrupted-stream recovery. Successful funded BYOK remains externally
+  constrained; no purchase is required for Day 3.
 
-- [ ] Round-screen chat, text entry, account/model pickers, local context,
-  visible billing path, first-use confirmation, and usage-management action.
-- [ ] Stop cancels transport; partial/error/completed states stay accurate.
-- [ ] Rotation/profile change/disposal cannot append stale output.
-
-Gate: real multi-turn chats on both paths, rotary/touch operation, model/account
-switches, cancellation, and interrupted-stream recovery on physical watch.
+The original physical Day 3 release gate remains **DEFERRED FINAL PHYSICAL RC**,
+not checked off by development acceptance. Routine UI/state acceptance uses the
+emulator; final hardware/real-network checklist is in DAY3_REPORT.md. Capability-
+dependent production auth is NOT VERIFIABLE ON CURRENT EMULATOR LAB. D3-G's paired
+Data Layer smoke was BLOCKED — ENVIRONMENT (required pair unavailable); earlier
+capability isolation evidence remains unchanged. No production fallback.
 
 ## Day 4 — optional voice and device edge cases
 
