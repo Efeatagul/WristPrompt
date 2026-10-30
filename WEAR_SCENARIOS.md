@@ -1,6 +1,8 @@
 # Wear debug scenario acceptance — canonical guide
 
-D4-F, 2026-10-29. This guide owns the current catalog and commands. Historical
+Current D5-C catalog: **69 scenarios**, including 22 additive Markdown fixtures.
+The D5-B inventory below has 47 entries; the D5-C inventory appends 22.
+This guide owns the current catalog and commands. Historical
 phase evidence and limitations remain in [DAY4_STATUS.md](DAY4_STATUS.md);
 [DAY3_REPORT.md](DAY3_REPORT.md) records prior presentation acceptance.
 
@@ -62,7 +64,7 @@ frame; they do not establish visual correctness or settled compositor state.
 ## Harness architecture and evidence contract
 
 - `wear_scenarios.py`: primary launcher; `--list`, single scenario, 11-case bounded
-  `--smoke`, explicit 47-case non-destructive `--all`, category filtering, screenshots.
+  `--smoke`, explicit 69-case non-destructive `--all`, category filtering, screenshots.
   Full and smoke runs verify launch, accepted scenario, fresh readiness, RESUMED
   Activity and matching live PID; no OCR, golden images or visual acceptance claim.
   Watch-only scenarios additionally assert bridge lookups/requests are both zero.
@@ -124,9 +126,9 @@ debug keep-screen-on/turn-screen-on; emulator dozing is not hardware screen-off
 continuation evidence. Composer recreation discards pending external input.
 Generic launch/full acceptance does not execute these lifecycle command sequences.
 
-## Complete scenario inventory
+## D5-B baseline inventory (47 retained scenarios)
 
-All 47 names below are manually launchable, useful, and mutate only synthetic
+All 47 baseline names below remain manually launchable, useful, and mutate only synthetic
 in-memory application state (plus the fixed non-secret acknowledgement file).
 Those three properties apply to **every row**. All remain public; none removed or
 renamed. “Special” identifies additional acceptance operations beyond generic
@@ -214,7 +216,7 @@ reconstruction and refresh/sign-out atomicity remain integration-test coverage.
 ## Release isolation, labels and limitations
 
 The checker requires Activity/classes, acknowledgement filename and command action
-in debug manifest/DEX and absent from release; all 47 public names must be absent
+in debug manifest/DEX and absent from release; all 69 public names must be absent
 from release DEX. It rejects production runtime scenario/debug-condition references
 and harness dependencies on real credentials/repositories/storage/network clients.
 Synthetic fixture sources cannot import Android/file storage; source and binary
@@ -263,3 +265,54 @@ This is no idle timer and adds no production reporting/storage.
 DAY5_STATUS.md owns D5-B exact test counts, actual emulator interactions,
 performance samples and limitations. These fixtures establish neither real
 OpenAI latency/usage nor physical watch behavior. Physical UX remains D5-G.
+
+## D5-C native Markdown — 2026-10-30
+
+All 47 baseline identifiers and the 11-case smoke set are preserved. The following
+22 credential-free/network-free fixtures bring the catalog to **69**. Category
+`markdown` selects only these additions. They use the production conversation,
+coalescer, retained Markdown worker and native renderer. ACK readiness still does
+not prove rich conversion or visual acceptance; DAY5_C_REPORT.md records the
+separate actual interaction/visual checks. No new ACK fields or content logging.
+
+| Name | Purpose |
+| --- | --- |
+| MARKDOWN_BASIC | Compact headings, bold/italic/code, quote, divider, ordered and unordered lists, Unicode/RTL. |
+| MARKDOWN_LONG | Long structured answer with headings and native inline spans. |
+| MARKDOWN_CODE | Monospace fence, indentation, original newlines and ordinary surrounding text. |
+| MARKDOWN_CODE_LONG_LINE | Horizontal touch scroll inside normal vertical transcript. |
+| MARKDOWN_OPEN_FENCE | Terminal unclosed fence and retained literal code tail. |
+| MARKDOWN_TABLE | First-column headings with ordered label/value records; unrelated to model picker. |
+| MARKDOWN_TABLE_MALFORMED | Missing header/cells and excess cells; exact plain fallback preserves excess. |
+| MARKDOWN_TABLE_OVER_LIMIT | 110 rows force complete segmented plain-source fallback. |
+| MARKDOWN_LINK | Underlined labels; explicit internal destination/host inspection. |
+| MARKDOWN_BLOCKED_LINK | Inert script/intent/file/data destinations. |
+| MARKDOWN_RAW_HTML | Script/image/anchor/style markup remains literal text. |
+| MARKDOWN_IMAGE | Alt text only; no image loading or destination action. |
+| MARKDOWN_DEEP_NESTING | Parser depth limits and bounded visual list/quote depth. |
+| MARKDOWN_DELIMITER_STRESS | Repeated malformed delimiters; bounded parsing/fallback. |
+| STREAMING_MARKDOWN | Eight-character chunks at 100 ms; current answer plain until terminal rich reconciliation. |
+| STREAMING_MARKDOWN_OPEN_SYNTAX | Open emphasis/fence, then suspended until explicit Stop. |
+| INTERRUPTED_MARKDOWN | Retained partial Markdown, real production FAILED/INTERRUPTED and exclusion. |
+| STOPPED_MARKDOWN | Actual production Stop; partial retained and excluded. |
+| TERMINAL_MARKDOWN_REPLACEMENT | Terminal authoritative replacement differs from delta preview and wins. |
+| MARKDOWN_LIST_LONG | 200 ordered list items with inline styles and wrapping. |
+| MARKDOWN_MALFORMED | Alternative named malformed-input workload; shares deliberate delimiter-stress data. |
+| MARKDOWN_LONG_URL | Oversized destination triggers exact segmented plain fallback. |
+
+All Markdown fixtures accept REPORT, STOP, RECREATE and explicit NEXT_REQUEST via
+the existing launch-bound debug receiver. NEXT_REQUEST still requires explicit
+user/harness action and does not bypass the production busy guard. New Chat is
+available through the production Menu. No external browser action exists.
+
+The settled prefix consists of previously completed answers; an active answer
+uses D5-B's plain Unicode-safe segments. There is no streaming full-document parse
+or blank-line settlement heuristic. Terminal reconciliation runs on Default with
+one active conversion and one replaceable queued snapshot. Pause/identity checks
+reject stale results. Parser budgets, cache accounting, rich fallback and exact
+dependency/license details are recorded in DECISIONS.md.
+
+D5-C acceptance performs **no physical tests**. Physical readability/accessibility
+and performance remain D5-G; release profiling remains D5-F. `LATEST_AVAILABLE`
+was not a pre-existing scenario identifier: explicit Latest is exercised using
+long/streaming fixtures and the unchanged D5-B control, without inventing an alias.

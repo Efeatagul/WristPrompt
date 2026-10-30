@@ -31,7 +31,7 @@ import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.TextButton
 import io.github.grassified.wristprompt.openai.*
 
-/** Plain-text projection is observed only in this transcript subtree. */
+/** Disposable native text projection is observed only in this transcript subtree. */
 @Composable
 internal fun ChatScreen(
     proof: InferenceViewModel, state: ProofState, ui: ShellPresentation,
@@ -48,6 +48,14 @@ internal fun ChatScreen(
         }
     }
     val presentation by owner.state.collectAsStateWithLifecycle()
+    var inspected by remember { mutableStateOf<List<MarkdownLink>?>(null) }
+    // A reset invalidates displayed destinations along with the conversation.
+    LaunchedEffect(presentation.rows.isEmpty()) { if (presentation.rows.isEmpty()) inspected = null }
+    if (inspected != null) {
+        androidx.activity.compose.BackHandler { inspected = null }
+        LinkInspection(inspected.orEmpty()) { inspected = null }
+        return
+    }
     val largeFont = LocalDensity.current.fontScale > 1.2f
     val keys = buildList {
         if (largeFont) addAll(listOf("chat-title", "chat-menu", "chat-model", "chat-billing"))
@@ -84,7 +92,7 @@ internal fun ChatScreen(
         }
         if (presentation.rows.isEmpty()) {
             item(key = "chat-empty", contentType = "status") { ShellText("Ask anything") }
-        } else chatItems(presentation)
+        } else chatItems(presentation) { inspected = it }
         supplementalGuidance?.let { text ->
             item(key = "chat-guidance", contentType = "recovery") { ShellText(text) }
         }

@@ -21,7 +21,13 @@ internal enum class DebugScenario {
     MODEL_DISCOVERY_OFFLINE, MODEL_DISCOVERY_RECOVERED, STOP_NETWORK_RACE,
     PHONE_ABSENT, WATCH_ONLY_AUTHENTICATED, WATCH_ONLY_CHAT, WATCH_ONLY_REFRESHED,
     REAUTH_REQUIRED_PHONE_ABSENT, API_KEY_WATCH_ONLY,
-    DENSE_LONG_ANSWER, STREAMING_FINE_GRAINED, LONG_UNBROKEN_TEXT, UNICODE_LONG_RESPONSE;
+    DENSE_LONG_ANSWER, STREAMING_FINE_GRAINED, LONG_UNBROKEN_TEXT, UNICODE_LONG_RESPONSE,
+    MARKDOWN_BASIC, MARKDOWN_LONG, MARKDOWN_CODE, MARKDOWN_CODE_LONG_LINE,
+    MARKDOWN_OPEN_FENCE, MARKDOWN_TABLE, MARKDOWN_TABLE_MALFORMED, MARKDOWN_TABLE_OVER_LIMIT,
+    MARKDOWN_LINK, MARKDOWN_BLOCKED_LINK, MARKDOWN_RAW_HTML, MARKDOWN_IMAGE,
+    MARKDOWN_DEEP_NESTING, MARKDOWN_DELIMITER_STRESS, STREAMING_MARKDOWN, STREAMING_MARKDOWN_OPEN_SYNTAX,
+    INTERRUPTED_MARKDOWN, STOPPED_MARKDOWN, TERMINAL_MARKDOWN_REPLACEMENT, MARKDOWN_LIST_LONG,
+    MARKDOWN_MALFORMED, MARKDOWN_LONG_URL;
     companion object { fun parse(name: String?): DebugScenario? = entries.singleOrNull { it.name == name } }
 }
 
@@ -64,7 +70,8 @@ internal class DebugScenarios(val scenario: DebugScenario) {
     var completions = 0; private set
     val lifecycleScenario get() = scenario in setOf(DebugScenario.ACTIVE_STREAM_RECREATION,
         DebugScenario.BACKGROUNDED_STREAM, DebugScenario.SCREEN_OFF_STYLE_RESUME)
-    val presentationScenario get() = scenario in setOf(DebugScenario.STREAMING_LONG, DebugScenario.STREAMING_FINE_GRAINED,
+    val markdownScenario get() = markdownFixture(scenario) != null
+    val presentationScenario get() = markdownScenario || scenario in setOf(DebugScenario.STREAMING_LONG, DebugScenario.STREAMING_FINE_GRAINED,
         DebugScenario.DENSE_LONG_ANSWER, DebugScenario.LONG_UNBROKEN_TEXT, DebugScenario.UNICODE_LONG_RESPONSE)
     val processScenario get() = scenario.name.startsWith("PROCESS_RESTART_")
     val networkScenario get() = scenario in setOf(DebugScenario.NETWORK_LOST_BEFORE_SEND,
@@ -134,6 +141,19 @@ internal class DebugScenarios(val scenario: DebugScenario) {
                 for (c in text) { onEvent(ResponseEvent.Delta(c.toString())); delay(1) }
                 completions++; onEvent(ResponseEvent.Completed(text)); return
             }
+            val markdown = markdownFixture(scenario)
+            if (markdown != null) {
+                val streamingMarkdown = scenario in setOf(DebugScenario.STREAMING_MARKDOWN, DebugScenario.STREAMING_MARKDOWN_OPEN_SYNTAX)
+                if (streamingMarkdown) {
+                    for (chunk in markdown.chunked(8)) { onEvent(ResponseEvent.Delta(chunk)); delay(100) }
+                } else onEvent(ResponseEvent.Delta(markdown))
+                if (scenario == DebugScenario.STOPPED_MARKDOWN) awaitCancellation()
+                if (scenario == DebugScenario.INTERRUPTED_MARKDOWN) throw ApiFailure(ApiProblem.INTERRUPTED)
+                if (scenario == DebugScenario.STREAMING_MARKDOWN_OPEN_SYNTAX) awaitCancellation()
+                completions++
+                onEvent(ResponseEvent.Completed(if (scenario == DebugScenario.TERMINAL_MARKDOWN_REPLACEMENT) "# Authoritative replacement\n\n**Final** text wins." else markdown))
+                return
+            }
             val special = when (scenario) {
                 DebugScenario.DENSE_LONG_ANSWER -> (1..200).joinToString("\n\n") { "Paragraph $it. " + "Plain text for dense reading on the watch. ".repeat(6) }
                 DebugScenario.LONG_UNBROKEN_TEXT -> "https://example.invalid/" + "aB9_".repeat(15000)
@@ -182,6 +202,16 @@ internal class DebugScenarios(val scenario: DebugScenario) {
         if (networkScenario) {
             vm.draft("Synthetic network failure request"); vm.send()
             vm.chat.first { if (scenario == DebugScenario.STOP_NETWORK_RACE) it.stage == ChatStage.RECEIVING else it.stage == ChatStage.FAILED }
+            return
+        }
+        if (markdownScenario) {
+            vm.draft("Synthetic Markdown request"); vm.send()
+            vm.chat.first { chat -> when (scenario) {
+                DebugScenario.STREAMING_MARKDOWN, DebugScenario.STREAMING_MARKDOWN_OPEN_SYNTAX, DebugScenario.STOPPED_MARKDOWN -> chat.stage == ChatStage.RECEIVING
+                DebugScenario.INTERRUPTED_MARKDOWN -> chat.stage == ChatStage.FAILED
+                else -> chat.stage == ChatStage.COMPLETED
+            } }
+            if (scenario == DebugScenario.STOPPED_MARKDOWN) vm.stop()
             return
         }
         when (scenario) {

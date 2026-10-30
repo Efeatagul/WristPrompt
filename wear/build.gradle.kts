@@ -34,6 +34,8 @@ android {
 }
 
 dependencies {
+    implementation(libs.commonmark)
+    implementation(libs.commonmark.tables)
     implementation(libs.okhttp)
     implementation(libs.activity.compose)
     implementation(libs.compose.ui)

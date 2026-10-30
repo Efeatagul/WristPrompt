@@ -8,6 +8,7 @@ internal enum class TranscriptType { USER, ASSISTANT, TAIL, STATUS, RECOVERY }
 internal data class TranscriptRow(
     val key: String, val type: TranscriptType, private val source: String, val exchangeStart: Boolean = false,
     val boundaryNewline: Boolean = false, private val start: Int = 0, private val end: Int = source.length,
+    val markdown: MarkdownBlock? = null,
 ) {
     val text: String get() = if (start == 0 && end == source.length) source else source.substring(start, end)
     val textLength get() = end - start

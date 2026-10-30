@@ -1172,3 +1172,64 @@ material runtime bottleneck. Consolidated release profiling remains D5-F.
 Official native scrolling semantics checked against the pinned local API and
 [Android's TransformingLazyColumnState reference](https://developer.android.com/reference/kotlin/androidx/wear/compose/foundation/lazy/TransformingLazyColumnState).
 DAY5_STATUS.md owns exact test/emulator/performance evidence and physical debt.
+
+## 2026-10-30 — D5-C disposable native Markdown
+
+Use only official `org.commonmark:commonmark:0.31.0` and
+`org.commonmark:commonmark-ext-gfm-tables:0.31.0` in Wear. Both exact Maven Central
+artifacts resolve; core has no runtime dependencies and tables depends on core.
+The exact tag's [README](https://github.com/commonmark/commonmark-java/blob/commonmark-parent-0.31.0/README.md)
+states Java 11+, Android API 19+ on a best-effort basis; this app uses JDK 17 and
+minSdk 30. Both JARs have Java 11 class version 55. Artifact sizes are 220,558 and
+24,482 bytes (245,040 combined). Both use BSD-2-Clause; preserve the upstream
+notice in THIRD_PARTY_NOTICES.md and accompany binary distribution at D7/RC.
+Repository LICENSE remains unchanged. Build evidence is in DAY5_C_REPORT.md.
+
+Canonical ChatState/ChatConversation, replay, transport, authentication and billing
+remain authoritative and unchanged. One retained, visibility-gated presentation
+worker converts parser AST into small native immutable display blocks and releases
+AST references. No HTML intermediate, WebView, image decoder, URL launcher, DNS,
+preview fetch or privileged intent is involved. Native spans are built off Main.
+The existing 100 ms coalescer still immediately publishes first text, Stop and all
+terminal/reset boundaries as plain text, independently of rich rendering latency.
+
+Settlement is intentionally conservative: completed exchanges are the settled
+prefix; the current answer stays in D5-B's bounded Unicode-safe plain reading
+segments until terminal reconciliation. A blank line alone never establishes a
+Markdown boundary. No current-answer full parse occurs during streaming. This
+forgoes incremental rich formatting within an active answer rather than guessing
+about lists, fences, tables, reference links and delimiters. On any terminal state,
+parse authoritative final/replacement/retained partial text once as needed.
+A conflated channel permits one active conversion and one newest pending snapshot;
+publication requires the exact current canonical ChatState identity and visible
+ownership. Pause/reset/owner clear reject stale publications. CPU parsing is bounded
+but not forcibly interruptible; stale active work may finish without publishing.
+
+Budgets: 16 open block parsers, 16 inline nesting, application conversion depth 32,
+512 rich blocks, 2,048 UTF-16 units per styled/code segment (Unicode-safe boundary),
+65,536 UTF-16 source units per answer, 262,144 accounted cache bytes, three visible
+list levels, eight links per inline block and 2,048 units per destination. The
+cache accounting includes source, display text, link destinations and fixed object
+allowances; it is a budget estimate, not a measured heap allocator limit. Oversized
+or failed rich projection falls back to complete, segmented plain source, never
+canonical truncation or inference failure. Evicted history is not reparsed during
+streaming; the existing plain projection supplies uncached history.
+
+GFM tables become records: first column heading, remaining cells header/value in
+source order, blank headers `Column N`, absent cells `(empty)`. Limits are eight
+columns, 100 body rows, 16,384 table-source UTF-16 units and 808 parser table cells.
+Excess cells (which GFM would drop), oversized tables or conversion failures use
+exact plain-source fallback, preserving all data. No desktop grid is constructed.
+
+Fenced code uses bounded monospace segments on neutral surfaces, horizontal touch
+scroll only, no vertical child scroller. Source spans restore original CR/LF
+separators and avoid synthesized trailing newlines in unclosed fences. Lists and
+quotes flatten visually; headings cap at 19sp/17sp/16sp without suppressing font
+scaling. Links are underlined with explicit local inspection of label, destination
+and a URI-derived host. Only valid HTTP(S) with a host and no userinfo receives a
+potential-web classification; all schemes remain non-executable in D5-C. Raw HTML
+is literal; images show alt text without retaining/fetching their destinations.
+
+No restrictive plain-text-only model instruction was found in production sources;
+no request instructions or inference code were changed. Model-picker rows are
+untouched and gain no Markdown demo metadata. D5-D/E/F/G and D6 stay separate.

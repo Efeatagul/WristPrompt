@@ -29,12 +29,13 @@ internal fun chatInputIntent(): Intent = Intent("android.support.wearable.input.
             }).build()))
     .putExtra("android.support.wearable.input.extra.CONFIRM_LABEL", "Done")
 
-internal fun TransformingLazyColumnScope.chatItems(presentation: ChatPresentation) {
-    for (row in presentation.rows) item(key = row.key, contentType = row.type) { TranscriptText(row) }
+internal fun TransformingLazyColumnScope.chatItems(presentation: ChatPresentation, inspect: (List<MarkdownLink>) -> Unit) {
+    for (row in presentation.rows) item(key = row.key, contentType = row.markdown?.kind ?: row.type) { TranscriptText(row, inspect) }
 }
 
 @androidx.compose.runtime.Composable
-private fun TranscriptText(row: TranscriptRow) {
+private fun TranscriptText(row: TranscriptRow, inspect: (List<MarkdownLink>) -> Unit) {
+    row.markdown?.let { MarkdownText(it, inspect); return }
     val user = row.type == TranscriptType.USER
     // A lazy row boundary supplies the final newline's line break. Other whitespace is literal.
     val visible = transcriptDisplayText(row)

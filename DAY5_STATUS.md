@@ -1,8 +1,8 @@
 # Day 5 status — 2026-10-30
 
-Current phase: **D5-B — PASS WITH KNOWN DEBT**, with automated and emulator
-evidence recorded below. D5-C/D/E/F/G and D6 remain unstarted; physical UX is
-deferred to D5-G. The D5-A section is the historical phase-A handoff, including
+Current phase: **D5-C — PASS WITH KNOWN DEBT**, with automated and emulator
+evidence in [DAY5_C_REPORT.md](DAY5_C_REPORT.md) and the phase-C summary below.
+D5-D/E/F/G and D6 remain unstarted; physical UX is deferred to D5-G. The D5-A section is the historical phase-A handoff, including
 its then-current scope statements and measurements.
 
 # Day 5 Phase A — chat-first shell — 2026-10-30
@@ -646,3 +646,71 @@ persistent conversations was begun.
 `feat(wear): add dense plain-text chat and coalesced streaming presentation`
 
 No commit or push performed.
+
+# Day 5 Phase C — native Markdown — 2026-10-30
+
+**PASS WITH KNOWN DEBT — VERIFIED AUTOMATICALLY / VERIFIED ON EMULATOR.**
+The full A–T handoff, file list, security boundaries and performance limitations
+are in [DAY5_C_REPORT.md](DAY5_C_REPORT.md). No physical testing, commit or push.
+D5-D/E/F/G and D6 remain unstarted.
+
+- Official `org.commonmark:commonmark` and `commonmark-ext-gfm-tables`, both
+  **0.31.0 / BSD-2-Clause**; compatible exact artifacts resolved. Java 11 class
+  version / JDK 17 / app minSdk 30; local debug/release and emulator execution pass.
+  Combined JAR size 245,040 bytes. Third-party notice recorded for distribution.
+- Display-only native block/span projection on one Default worker; no AST in
+  conversation/history. Existing 100 ms coalescing and immediate terminal/Stop
+  plain publication remain. Current answer stays plain until terminal; completed
+  answers are the cached rich settled prefix. No per-token Markdown parse.
+- Compact headings/styles/lists/quotes/dividers, code with horizontal touch scroll,
+  stacked table records, explicit local link inspection, literal HTML and textual
+  image alt fallback. No external launch, image fetch, HTML pipeline or new network.
+- Bounded nesting, blocks, styled/code segments, source, tables, links and cache;
+  malformed/oversized/failed rich projection preserves all exact canonical source
+  through segmented plain fallback. Oversized/excess-cell tables never lose rows.
+  New Chat/account/model/reset/pause reject obsolete worker publication.
+- **436 Wear tests / 49 suites**, zero failures/errors/skips; includes 42 new
+  Markdown tests, 14 coalescer and 22 plain presentation tests. A named relevant
+  subset extracted from the full results is 192 tests / 14 suites. Debug/release
+  builds pass; lint has zero errors and six existing warnings. Release source/
+  manifest/DEX isolation passes. Python **40 tests**, syntax **13 files**, pass.
+  Full validation matrix ran once after stabilization; only narrow suites ran
+  during implementation. Mobile/shared runtime/dependencies unchanged; mobile
+  suite not rerun and its prior 70-test result is historical.
+  Final `git diff --check` and all **23 changed/new text files** passed whitespace checks.
+- **69/69** final emulator launch/readiness checks; 47 public IDs preserved and
+  22 additive Markdown fixtures. Targeted visual/interaction acceptance includes
+  native formatting/table/HTML/image views, real local link inspection, actual
+  code horizontal drag and rotary navigation, terminal replacement, Stop/Latest,
+  and 2x font. Font restored to 1.0. Readiness is not 69 visual PASS claims.
+- Final D5-B regression metric: **65,000 deltas → 66 flushes**, 67 segmentations,
+  81,195 projected units. New 10,000-delta burst: zero growing-answer parses and
+  one terminal full parse; active parse maximum one, pending channel capacity one.
+  Eight matched host workloads parsed 22,087 units; combined parse/conversion
+  samples 0.657–19.694 ms. These are host timings, not watch/release latency.
+- Initial warm PSS >10% difference triggered matched fresh-process investigation:
+  fresh PSS differences were 1.4–6.7%; multi-turn jank worsened in one sample but
+  improved in the first. No consistent debug frame conclusion or release
+  performance PASS is claimed. Full values and limitations are in the report.
+- Sixteen production UI New Chat cycles confirmed messages=0/busy=false each time.
+  Java heap sampled 13,124–13,240 KiB; first→last 13,124→13,224. PSS sampled
+  81,836–82,604 KiB. No sustained sampled heap growth after warmup; not a leak proof.
+- APK size: debug **36,042,218 → 36,231,477 bytes** (+189,259 / 0.53%);
+  unsigned release **27,678,711 → 27,886,342 bytes** (+207,631 / 0.75%). Release
+  configuration does not enable R8 minification; no R8 optimization claim.
+
+Known debt: conservative terminal-only rich formatting within the active answer;
+older evicted answers may fall back to plain; stale bounded CPU parses finish
+without publication; release profiling/accessibility consolidation stays D5-F;
+physical Markdown UX stays D5-G; final model/account/settings polish stays D5-D.
+Model rows gain no Markdown demo metadata. D5-E general copy is unchanged.
+Third-party binary-notice delivery remains D7/RC work.
+
+Suggested commit: `feat(wear): add bounded native Markdown chat presentation`.
+
+Handoff continuation: retained XML reconfirmed 436 passing tests / 49 suites;
+whitespace checks still pass all 23 changed/new files. Earlier temporary captures
+were no longer available and WristPrompt_Watch7 was disconnected. The final extra
+2x long-list end screenshot was not visually reviewed; that narrow stress check
+remains pending D5-F/G. Earlier recorded emulator checks remain historical evidence.
+The full validation matrix was not repeated.

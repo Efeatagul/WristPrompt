@@ -54,18 +54,21 @@ internal class PresentationCoalescer(
 }
 
 /** Retained across navigation/recreation, active only while Chat is visibly STARTED. */
-internal class ChatPresentationOwner(private val canonical: StateFlow<ChatState>, metrics: PresentationMetrics? = null) : ViewModel() {
+internal class ChatPresentationOwner(private val canonical: StateFlow<ChatState>, metrics: PresentationMetrics? = null, dispatcher: CoroutineDispatcher = Dispatchers.Default) : ViewModel() {
     private val mutable = MutableStateFlow(ChatPresentation())
     val state = mutable.asStateFlow()
-    val coalescer = PresentationCoalescer(viewModelScope, { canonical.value }, metrics) { mutable.value = it }
+    private val markdown = MarkdownWorker(viewModelScope, { canonical.value }, { mutable.value = it }, dispatcher)
+    val coalescer = PresentationCoalescer(viewModelScope, { canonical.value }, metrics) {
+        mutable.value = markdown.accept(canonical.value, it)
+    }
     private var visible = false
     init {
-        coalescer.resume()
         viewModelScope.launch {
             canonical.collect {
                 if (visible) coalescer.accept(it)
                 else if (it.messages.isEmpty()) {
                     coalescer.discard()
+                    markdown.accept(it, ChatPresentation())
                     mutable.value = ChatPresentation()
                 }
             }
@@ -74,7 +77,10 @@ internal class ChatPresentationOwner(private val canonical: StateFlow<ChatState>
     fun visible(value: Boolean) {
         if (visible == value) return
         visible = value
-        if (value) coalescer.resume() else coalescer.pause()
+        if (value) {
+            coalescer.resume()
+            markdown.accept(canonical.value, mutable.value)
+        } else { coalescer.pause(); markdown.pause() }
     }
-    override fun onCleared() { coalescer.pause(); coalescer.projection.clear() }
+    override fun onCleared() { markdown.pause(); coalescer.pause(); coalescer.projection.clear() }
 }

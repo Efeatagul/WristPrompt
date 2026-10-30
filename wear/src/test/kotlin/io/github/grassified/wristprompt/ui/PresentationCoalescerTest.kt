@@ -86,7 +86,7 @@ class PresentationCoalescerTest {
         val store=ViewModelStore()
         try {
             val canonical=MutableStateFlow(stream("one\n".repeat(300)))
-            fun owner()=ViewModelProvider.create(store,viewModelFactory { initializer { ChatPresentationOwner(canonical) } })[ChatPresentationOwner::class]
+            fun owner()=ViewModelProvider.create(store,viewModelFactory { initializer { ChatPresentationOwner(canonical, dispatcher = StandardTestDispatcher(testScheduler)) } })[ChatPresentationOwner::class]
             val original=owner(); original.visible(true); runCurrent(); val first=original.state.value
             original.visible(false); canonical.value=canonical.value.copy(partial=canonical.value.partial+"new"); runCurrent()
             val retained=owner(); assertSame(original,retained); assertEquals(first,retained.state.value)
@@ -118,7 +118,7 @@ class PresentationCoalescerTest {
         val store = ViewModelStore()
         try {
             val canonical = MutableStateFlow(ChatState(listOf(user, ChatMessage(2, ChatRole.ASSISTANT, "x".repeat(60000))), stage = ChatStage.COMPLETED))
-            val owner = ViewModelProvider.create(store,viewModelFactory { initializer { ChatPresentationOwner(canonical) } })[ChatPresentationOwner::class]
+            val owner = ViewModelProvider.create(store,viewModelFactory { initializer { ChatPresentationOwner(canonical, dispatcher = StandardTestDispatcher(testScheduler)) } })[ChatPresentationOwner::class]
             owner.visible(true); runCurrent(); assertTrue(owner.coalescer.projection.cachedBytes > 0)
             owner.visible(false); canonical.value = ChatState(); runCurrent()
             assertEquals(0, owner.coalescer.projection.cachedBytes); assertTrue(owner.state.value.rows.isEmpty())
