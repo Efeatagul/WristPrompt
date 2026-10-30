@@ -7,6 +7,9 @@ internal enum class RecoveryAction(val label: String) {
     ASK("Ask"), ACCOUNT("Account & Connection"), MODELS("Reload models"),
     USAGE("Manage usage"), DIAGNOSTICS("Diagnostics"), NEW_CHAT("New Chat"),
 }
+// The fixed large-font control can share its band with Latest; keep its destination recognizable.
+internal fun RecoveryAction.primaryLabel(largeFont: Boolean): String =
+    if (largeFont && this == RecoveryAction.ACCOUNT) "Account" else label
 internal data class ErrorPresentation(val title: String, val explanation: String? = null,
     val action: RecoveryAction? = RecoveryAction.ASK) {
     val text: String get() = listOfNotNull(title, explanation).joinToString("\n")

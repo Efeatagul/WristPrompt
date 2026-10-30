@@ -1,7 +1,7 @@
 # Wear debug scenario acceptance — canonical guide
 
-Current D5-E catalog: **75 scenarios**: D5-C’s 69, D5-D’s two model fixtures,
-and D5-E’s four missing failure/limit fixtures.
+Current D5-F catalog: **77 scenarios**: D5-E’s 75 plus two isolated stress fixtures.
+D5-C added 22, D5-D added two model fixtures, and D5-E added four failure/limit fixtures.
 The D5-B inventory below has 47 entries; the D5-C inventory appends 22.
 This guide owns the current catalog and commands. Historical
 phase evidence and limitations remain in [DAY4_STATUS.md](DAY4_STATUS.md);
@@ -65,7 +65,7 @@ frame; they do not establish visual correctness or settled compositor state.
 ## Harness architecture and evidence contract
 
 - `wear_scenarios.py`: primary launcher; `--list`, single scenario, 11-case bounded
-  `--smoke`, explicit 69-case non-destructive `--all`, category filtering, screenshots.
+  `--smoke`, explicit 77-case non-destructive `--all`, category filtering, screenshots.
   Full and smoke runs verify launch, accepted scenario, fresh readiness, RESUMED
   Activity and matching live PID; no OCR, golden images or visual acceptance claim.
   Watch-only scenarios additionally assert bridge lookups/requests are both zero.
@@ -356,3 +356,16 @@ four plus the reused cases above; it does not run the entire catalog or close
 D5-F full acceptance. Phone-absence rendered-copy assertion now expects
 Sign in again to continue; behavior assertions are unchanged. Copy, visual/font,
 rotary/action evidence and limitations are recorded in DAY5_E_REPORT.md.
+
+## D5-F stress additions — 2026-10-30
+
+- `SINGLE_MODEL`: Models opens with exactly one authoritative synthetic name, selected,
+  and the existing explicit Reload models action. No new picker behavior.
+- `MARKDOWN_CODE_STRESS`: completed mixed prose, a 2,040-unit line and 2,000 code
+  lines (under the existing 65,536-unit output bound), followed by prose. Uses the
+  same bounded Markdown conversion and native horizontal-only code surfaces.
+
+All earlier identifiers/meanings are retained. These fixtures remain debug-only,
+with no credential/repository/network use. D5-F performance/accessibility evidence,
+readiness-versus-interaction limits and the physical D5-G checklist are in
+[DAY5_F_REPORT.md](DAY5_F_REPORT.md). No new ACK fields or lifecycle commands.

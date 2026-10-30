@@ -251,12 +251,13 @@ private fun PrimaryControl(
         style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
     // Latest shares the existing measured control band. Stop retains its own full tap target.
     val latest = surface == Surface.CHAT && navigation.latestVisible.value
+    val largeFont = LocalDensity.current.fontScale > 1.2f
     Row(Modifier.fillMaxWidth().padding(start = 36.dp, end = 36.dp, bottom = 16.dp),
         verticalAlignment = Alignment.CenterVertically) {
         if (latest) TextButton(onClick = navigation::latest,
-            modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+            modifier = (if (largeFont) Modifier.width(48.dp) else Modifier.weight(1f)).heightIn(min = 48.dp)
                 .semantics { contentDescription = "Latest" }) {
-            Text(if (LocalDensity.current.fontScale > 1.2f) "↓" else "Latest")
+            Text(if (largeFont) "↓" else "Latest")
         }
         Button(onClick = if (recovery != null && recovery != RecoveryAction.ASK) {
             { performRecovery(recovery, proof, navigation) }
@@ -265,7 +266,7 @@ private fun PrimaryControl(
             PrimaryAction.SEND -> interaction::send
             PrimaryAction.STOP -> interaction::stop
         }, enabled = canSend, modifier = Modifier.weight(1f).heightIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp), label = { Text(recovery?.label ?: action.label) })
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp), label = { Text(recovery?.primaryLabel(largeFont) ?: action.label) })
     }
 }
 

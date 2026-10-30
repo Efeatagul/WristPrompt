@@ -14,11 +14,11 @@ class DebugScenariosTest {
     @After fun cleanup() { fixtures.forEach { it.vm.viewModelScope.cancel() }; Dispatchers.resetMain() }
     private fun fixture(s: DebugScenario) = DebugScenarios(s).also { fixtures += it }
     @Test fun namesAreUniqueAndRoundTrip() {
-        assertEquals(75, DebugScenario.entries.size)
+        assertEquals(77, DebugScenario.entries.size)
         DebugScenario.entries.forEach { assertSame(it, DebugScenario.parse(it.name)) }
     }
     @Test fun largeAndLongCatalogsKeepExactNamesAndOrder(): Unit = runTest {
-        for ((scenario, count) in listOf(DebugScenario.MANY_MODELS to 40, DebugScenario.THOUSAND_MODELS to 1000,
+        for ((scenario, count) in listOf(DebugScenario.SINGLE_MODEL to 1, DebugScenario.MANY_MODELS to 40, DebugScenario.THOUSAND_MODELS to 1000,
             DebugScenario.LONG_MODEL_NAMES to 3)) {
             val f = fixture(scenario); launch { f.prepare() }; runCurrent()
             val state = f.vm.state.value
@@ -30,6 +30,15 @@ class DebugScenariosTest {
         }
     }
     @Test fun unknownFailsClosed() { listOf(null, "", "streaming_long", "../SIGNED_OUT").forEach { assertNull(DebugScenario.parse(it)) } }
+    @Test fun codeStressIsBoundedAndKeepsSurroundingProse(): Unit = runTest {
+        val f = fixture(DebugScenario.MARKDOWN_CODE_STRESS); launch { f.prepare() }; runCurrent()
+        val source = f.vm.chat.value.messages.last().text
+        assertEquals(ChatStage.COMPLETED, f.vm.chat.value.stage)
+        assertTrue(source.startsWith("Before the code."))
+        assertTrue(source.endsWith("After the code."))
+        assertTrue(source.length < ResponsesProtocol.MAX_TEXT_CHARS)
+        assertEquals(2000, Regex("  code line\\n").findAll(source).count())
+    }
     @Test fun everyScenarioPreparesWithoutNetworkOrStores(): Unit = runTest {
         DebugScenario.entries.forEach { scenario ->
             val f = fixture(scenario); val job = launch { f.prepare() }; runCurrent()

@@ -287,8 +287,8 @@ for inference/refresh after setup. Document intentional lifecycle limits.
 
 ## Day 5 — WristPrompt UX 2.0 + Markdown
 
-D5-0 read-only audit completed in chat. D5-A/B and explicitly authorized D5-C
-and D5-D are implemented; later phases remain unstarted.
+D5-0 read-only audit completed in chat. D5-A through D5-F are complete for their
+automated/emulator scope; D5-G physical UX and D6 remain unstarted.
 DAY5_STATUS.md owns current phase evidence; Day 4 remains PASS WITH KNOWN DEBT.
 
 - [x] D5-0: read-only UX/performance architecture audit and phase plan.
@@ -323,7 +323,12 @@ DAY5_STATUS.md owns current phase evidence; Day 4 remains PASS WITH KNOWN DEBT.
   debug/release/lint/isolation, 40 Python tests pass. 19 targeted Watch7 fixtures
   at normal/2x font, actual recovery taps and rotary/Stop/Latest evidence in
   DAY5_E_REPORT.md. No physical testing; D5-F/G remain separate.
-- [ ] D5-F: consolidated accessibility/performance/scenario acceptance. NOT STARTED.
+- [x] D5-F: consolidated accessibility/performance/scenario acceptance. PASS WITH
+  KNOWN DEBT — 459-test full run plus final 40/18-test focused components, builds,
+  lint/isolation/Python pass; 77/77 emulator readiness, normal/2x interactions,
+  30 rotary frame windows, 12 reset cycles and 4/4 process restarts. One narrow
+  large-font recovery fix. DAY5_F_REPORT.md / DAY5_F_METRICS.json distinguish
+  timing/memory evidence from spoken TalkBack and physical/release-device debt.
 - [ ] D5-G: targeted owner-authorized physical UX acceptance. PENDING.
 
 Gate: preserve inference/auth/account/billing/composer safety; verify automated

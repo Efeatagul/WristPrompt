@@ -5,6 +5,16 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ErrorPresentationTest {
+    @Test fun largeFontAccountRecoveryRemainsRecognizableWithoutChangingItsAction() {
+        for (problem in listOf(ApiProblem.REAUTHORIZE, ApiProblem.INVALID_API_KEY, ApiProblem.API_LIMIT)) {
+            val action = errorPresentation(problem).action!!
+            assertEquals(RecoveryAction.ACCOUNT, action)
+            assertEquals("Account", action.primaryLabel(true))
+            assertEquals("Account & Connection", action.primaryLabel(false))
+        }
+        for (action in RecoveryAction.entries.filter { it != RecoveryAction.ACCOUNT })
+            assertEquals(action.label, action.primaryLabel(true))
+    }
     private fun failure(problem: ApiProblem, partial: String = "") = ChatState(
         messages = listOf(ChatMessage(1, ChatRole.USER, "q", ChatMessageStatus.EXCLUDED)),
         stage = ChatStage.FAILED, problem = problem, partial = partial)

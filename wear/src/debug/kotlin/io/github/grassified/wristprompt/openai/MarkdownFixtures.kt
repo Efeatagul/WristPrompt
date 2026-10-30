@@ -24,6 +24,9 @@ internal fun markdownFixture(scenario: DebugScenario): String? = when (scenario)
     DebugScenario.MARKDOWN_LONG -> (1..120).joinToString("\n\n") { "## Section $it\n\nA **readable** answer with *compact* native formatting. ".repeat(2) }
     DebugScenario.MARKDOWN_CODE -> "Code example:\n\n```kotlin\nfun greet() {\n    println(\"Hello watch\")\n}\n```\n\nContinue reading normally."
     DebugScenario.MARKDOWN_CODE_LONG_LINE -> "```text\n" + "  long line ".repeat(120) + "\nshort line\n```\n\nAfter the code."
+    DebugScenario.MARKDOWN_CODE_STRESS -> "Before the code.\n\n```text\n" +
+        "  very long line ".repeat(120) + "\n" + "  code line\n".repeat(2000) +
+        "```\n\nAfter the code."
     DebugScenario.MARKDOWN_OPEN_FENCE, DebugScenario.STREAMING_MARKDOWN_OPEN_SYNTAX -> "# Partial\n\n**unfinished emphasis\n\n```kotlin\n  still typing\n" + "  code\n".repeat(30)
     DebugScenario.MARKDOWN_TABLE -> "| Model | Speed | Quality |\n|---|---|---|\n| Luna | Fast | Good |\n| Sol | Medium | Better |"
     DebugScenario.MARKDOWN_TABLE_MALFORMED -> "|Name| |\n|---|---|\n|First|\n|Second|extra|preserved extra cell|"

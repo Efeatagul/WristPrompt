@@ -1,28 +1,61 @@
 # Day 5 status — 2026-10-30
 
-Current phase: **D5-E — PASS WITH KNOWN DEBT**, with the complete A–T handoff and
-final error/recovery copy matrix in [DAY5_E_REPORT.md](DAY5_E_REPORT.md).
-D5-A through D5-D remain complete. D5-F/G and D6 remain unstarted.
+Current phase: **D5-F — PASS WITH KNOWN DEBT**. Full A–Y handoff and targeted
+D5-G checklist: [DAY5_F_REPORT.md](DAY5_F_REPORT.md). Durable measured samples:
+[DAY5_F_METRICS.json](DAY5_F_METRICS.json). D5-A–F are complete for automated/emulator
+scope; D5-G physical UX and D6 remain unstarted. No commit/push or physical testing.
 
-**VERIFIED AUTOMATICALLY:** full Wear 456 tests / 51 suites, zero failures/errors/
-skips; final permission-copy subset 17 tests, zero failures; debug/release builds,
-lint (zero errors/six existing warnings), 75-fixture release isolation, 40 Python
-tests and syntax for 13 Python files pass. Full-run and narrow correction cadence
-is documented in the report; no mobile/shared changes or mobile rerun.
+**VERIFIED AUTOMATICALLY:** complete Wear run 459 tests / 52 suites, zero failures/
+errors/skips; subsequent narrow label correction 40 tests / 4 suites and added
+debug fixtures 18 tests / 1 suite, all pass. Current 461-test inventory is covered
+across these runs; no full final 461-test rerun claimed. Debug/release builds,
+final debug lint (0 errors / 6 existing warnings), 77-fixture source/manifest/DEX
+release isolation, 40 Python tests and syntax for 13 files pass. Mobile/shared
+code unchanged; mobile not rerun. Final git diff --check and all **14 changed/new text files** pass whitespace checks.
 
-**VERIFIED ON EMULATOR:** 19 targeted fixtures at normal and 2x font (38 readiness
-checks), concise terminal/error/model/storage presentation, explicit recovery taps,
-rotary, Stop/Latest, and zero automatic inference/reload/fallback. Long 2x action
-labels wrap, including occasional word breaks. Font restored to 1.0. Synthetic
-fixtures do not establish actual OAuth, hardware storage, quota or radio behavior.
+**VERIFIED ON EMULATOR:** final catalog **77/77 PASS, 0 FAIL, 0 BLOCKED** for fresh
+readiness/PID/RESUMED (not 77 visual claims). Separate normal/2x captures, touch/
+rotary, Ask/review/explicit Send, Stop/Latest, models (1/3/40/1,000/long names),
+code including 2,000 lines, tables, links, secondary/recovery screens, Item 200
+list end, actual recreation/background and 4/4 am-kill process restart checks pass.
+Font/accessibility settings restored. Synthetic fixtures do not prove real auth,
+radio, encrypted hardware storage or physical UX. TalkBack binds/focuses an app
+button, but full spoken traversal is emulator-limited/unresolved; semantic/node
+inspection is separate from audible acceptance.
 
-No production protocol/auth/storage/billing/bridge/conversation owner change.
-No physical testing, commit or push. PENDING END-OF-DAY PHYSICAL TEST belongs to
-D5-G; non-destructive error/recovery readability/action checks join its checklist.
-D5-F retains profiling, heap/release comparison, consolidated accessibility and
-full scenario acceptance. MODEL PICKER POLICY remains authoritative name + selected
-state only, with no speculative metadata. Existing D5-D working-tree work preserved.
-Earlier phase sections below are historical handoffs.
+Performance: 65,000 synthetic deltas → 66 streaming flushes, one pending flush,
+zero active-answer parses and one Stop parse; 24 test reset cycles clear both
+cache budgets. Thirty real rotary windows show **0–3.76% debug-AVD jank**; the old
+tiny-window 84.6% did not reproduce. Settled 5 s idle: **0 frames / 0 additional
+publications**. Twelve emulator reset/navigation cycles show no monotonic matched
+Java retention; settled post-navigation idle **85–87 MiB PSS**, final cold-process
+idle **73–75 MiB**. Historical D5-A causality is unresolved, not “optimized away”.
+No hardware battery-life or release-runtime equivalence claim.
+
+Only production fix: reproduced 2x primary Account recovery truncation with Latest.
+Use short Account label and a 48 dp Latest arrow target at large font, preserving
+callbacks, routing and native scaling. Word breaks remain readable cosmetic debt.
+Two debug-only stress fixtures added; all earlier canonical meanings retained.
+MODEL PICKER POLICY remains authoritative name + selected state only.
+
+No auth/OAuth/storage/signing/bridge/billing/replay/owner change, persistent chat,
+background infrastructure or redesign. Release remains unsigned/unminified with
+dependency-merged baseline profiles; debug fixtures remain absent from release.
+
+## D5-G targeted checklist — PENDING END-OF-DAY PHYSICAL TEST
+
+- Galaxy Watch default/max-font Chat/model/billing and recovery-label readability.
+- Long prose/Markdown/list touch + rotary; streaming while reading, Stop/Latest,
+  terminal plain-to-rich transition.
+- Code horizontal touch + vertical rotary; table labels/values; local link details.
+- Models/Account/Settings/Diagnostics navigation and explicit recovery actions.
+- If practical, TalkBack selection/headings, Stop/Latest and terminal announcements
+  without streaming speech spam; dedicated terminal announcement is not established.
+- Ordinary subjective responsiveness, heat and obvious battery drain.
+
+Do not execute D5-G without its authorization. No destructive auth/storage tests,
+real-session revocation, app-data clearing/uninstall or usage exhaustion. Earlier
+phase sections below are historical handoffs.
 
 # Day 5 Phase A — chat-first shell — 2026-10-30
 

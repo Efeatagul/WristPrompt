@@ -1,0 +1,2155 @@
+{
+  "date": "2026-10-30",
+  "phase": "D5-F",
+  "result": "PASS WITH KNOWN DEBT",
+  "baselineCommit": "5add22d",
+  "device": {
+    "avd": "WristPrompt_Watch7",
+    "resolution": "454x454 native",
+    "fontScales": [
+      1.0,
+      2.0
+    ],
+    "physicalTesting": false
+  },
+  "baselineApkSha256": "719781e23daa64b3ce647298711dc448c925d2ab8721e3960f9aa4c216718782",
+  "units": "memory values KiB unless labeled otherwise; meminfo App Summary is resident accounting, not live allocated objects",
+  "baseline": [
+    {
+      "case": "EMPTY_CHAT",
+      "samples": [
+        {
+          "Java Heap": 16392,
+          "Native Heap": 9280,
+          "Code": 35304,
+          "Stack": 1156,
+          "Graphics": 0,
+          "Private Other": 5060,
+          "System": 13254,
+          "TOTAL PSS": 80446,
+          "managedHeapPss": 7251,
+          "managedHeapSize": 8981,
+          "managedHeapAlloc": 4491,
+          "managedHeapFree": 4490,
+          "nativeHeapPss": 9400,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 16758,
+          "nativeHeapFree": 1832,
+          "activities": 1
+        },
+        {
+          "Java Heap": 12664,
+          "Native Heap": 9344,
+          "Code": 35360,
+          "Stack": 1172,
+          "Graphics": 0,
+          "Private Other": 5436,
+          "System": 13268,
+          "TOTAL PSS": 77244,
+          "managedHeapPss": 3471,
+          "managedHeapSize": 8941,
+          "managedHeapAlloc": 4471,
+          "managedHeapFree": 4470,
+          "nativeHeapPss": 9440,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 16715,
+          "nativeHeapFree": 1888,
+          "activities": 1
+        },
+        {
+          "Java Heap": 12688,
+          "Native Heap": 9344,
+          "Code": 35296,
+          "Stack": 1172,
+          "Graphics": 0,
+          "Private Other": 5084,
+          "System": 13336,
+          "TOTAL PSS": 76920,
+          "managedHeapPss": 3495,
+          "managedHeapSize": 8941,
+          "managedHeapAlloc": 4471,
+          "managedHeapFree": 4470,
+          "nativeHeapPss": 9440,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 16709,
+          "nativeHeapFree": 1924,
+          "activities": 1
+        }
+      ],
+      "ack": {
+        "generations": "0",
+        "stage": "EMPTY",
+        "discoveries": "1",
+        "chars": "0",
+        "messages": "0",
+        "pid": "9953",
+        "busy": "false",
+        "presentationFlushes": "1",
+        "presentationSegments": "0",
+        "presentationChars": "0"
+      },
+      "frames": [
+        "Total frames rendered: 148",
+        "Janky frames: 2 (1.35%)",
+        "50th percentile: 22ms",
+        "90th percentile: 34ms",
+        "95th percentile: 36ms",
+        "99th percentile: 48ms"
+      ]
+    },
+    {
+      "case": "ONE_TURN_COMPLETED",
+      "samples": [
+        {
+          "Java Heap": 13840,
+          "Native Heap": 9660,
+          "Code": 35328,
+          "Stack": 1156,
+          "Graphics": 0,
+          "Private Other": 4924,
+          "System": 13771,
+          "TOTAL PSS": 78679,
+          "managedHeapPss": 4643,
+          "managedHeapSize": 9717,
+          "managedHeapAlloc": 4859,
+          "managedHeapFree": 4858,
+          "nativeHeapPss": 9756,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 17073,
+          "nativeHeapFree": 1990,
+          "activities": 2
+        },
+        {
+          "Java Heap": 13036,
+          "Native Heap": 9660,
+          "Code": 35288,
+          "Stack": 1156,
+          "Graphics": 0,
+          "Private Other": 5000,
+          "System": 13815,
+          "TOTAL PSS": 77955,
+          "managedHeapPss": 3839,
+          "managedHeapSize": 9205,
+          "managedHeapAlloc": 4603,
+          "managedHeapFree": 4602,
+          "nativeHeapPss": 9756,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 16993,
+          "nativeHeapFree": 2070,
+          "activities": 1
+        },
+        {
+          "Java Heap": 12796,
+          "Native Heap": 9636,
+          "Code": 35284,
+          "Stack": 1156,
+          "Graphics": 0,
+          "Private Other": 4996,
+          "System": 13837,
+          "TOTAL PSS": 77705,
+          "managedHeapPss": 3599,
+          "managedHeapSize": 9197,
+          "managedHeapAlloc": 4599,
+          "managedHeapFree": 4598,
+          "nativeHeapPss": 9732,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 16762,
+          "nativeHeapFree": 2300,
+          "activities": 1
+        }
+      ],
+      "ack": {
+        "generations": "1",
+        "stage": "COMPLETED",
+        "discoveries": "1",
+        "chars": "0",
+        "messages": "2",
+        "pid": "9953",
+        "busy": "false",
+        "presentationFlushes": "1",
+        "presentationSegments": "2",
+        "presentationChars": "226"
+      },
+      "frames": [
+        "Total frames rendered: 16",
+        "Janky frames: 0 (0.00%)",
+        "50th percentile: 16ms",
+        "90th percentile: 16ms",
+        "95th percentile: 16ms",
+        "99th percentile: 16ms"
+      ]
+    },
+    {
+      "case": "MULTI_TURN_CHAT",
+      "samples": [
+        {
+          "Java Heap": 13968,
+          "Native Heap": 9664,
+          "Code": 35284,
+          "Stack": 1156,
+          "Graphics": 0,
+          "Private Other": 4928,
+          "System": 13865,
+          "TOTAL PSS": 78865,
+          "managedHeapPss": 4771,
+          "managedHeapSize": 9757,
+          "managedHeapAlloc": 4879,
+          "managedHeapFree": 4878,
+          "nativeHeapPss": 9760,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 17077,
+          "nativeHeapFree": 2018,
+          "activities": 2
+        },
+        {
+          "Java Heap": 13056,
+          "Native Heap": 9664,
+          "Code": 35284,
+          "Stack": 1156,
+          "Graphics": 0,
+          "Private Other": 4924,
+          "System": 13865,
+          "TOTAL PSS": 77949,
+          "managedHeapPss": 3859,
+          "managedHeapSize": 9221,
+          "managedHeapAlloc": 4611,
+          "managedHeapFree": 4610,
+          "nativeHeapPss": 9760,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 16990,
+          "nativeHeapFree": 2106,
+          "activities": 1
+        },
+        {
+          "Java Heap": 12804,
+          "Native Heap": 9612,
+          "Code": 35284,
+          "Stack": 1156,
+          "Graphics": 0,
+          "Private Other": 4920,
+          "System": 13865,
+          "TOTAL PSS": 77641,
+          "managedHeapPss": 3607,
+          "managedHeapSize": 9213,
+          "managedHeapAlloc": 4607,
+          "managedHeapFree": 4606,
+          "nativeHeapPss": 9708,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 16763,
+          "nativeHeapFree": 2332,
+          "activities": 1
+        }
+      ],
+      "ack": {
+        "generations": "4",
+        "stage": "COMPLETED",
+        "discoveries": "1",
+        "chars": "0",
+        "messages": "8",
+        "pid": "9953",
+        "busy": "false",
+        "presentationFlushes": "1",
+        "presentationSegments": "8",
+        "presentationChars": "904"
+      },
+      "frames": [
+        "Total frames rendered: 17",
+        "Janky frames: 0 (0.00%)",
+        "50th percentile: 16ms",
+        "90th percentile: 16ms",
+        "95th percentile: 16ms",
+        "99th percentile: 16ms"
+      ]
+    },
+    {
+      "case": "DENSE_LONG_ANSWER",
+      "samples": [
+        {
+          "Java Heap": 14124,
+          "Native Heap": 9704,
+          "Code": 35280,
+          "Stack": 1156,
+          "Graphics": 0,
+          "Private Other": 4996,
+          "System": 13917,
+          "TOTAL PSS": 79177,
+          "managedHeapPss": 4927,
+          "managedHeapSize": 10221,
+          "managedHeapAlloc": 5111,
+          "managedHeapFree": 5110,
+          "nativeHeapPss": 9800,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 17054,
+          "nativeHeapFree": 2056,
+          "activities": 2
+        },
+        {
+          "Java Heap": 13288,
+          "Native Heap": 9708,
+          "Code": 35280,
+          "Stack": 1156,
+          "Graphics": 0,
+          "Private Other": 4944,
+          "System": 13917,
+          "TOTAL PSS": 78293,
+          "managedHeapPss": 4091,
+          "managedHeapSize": 9693,
+          "managedHeapAlloc": 4847,
+          "managedHeapFree": 4846,
+          "nativeHeapPss": 9804,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 16991,
+          "nativeHeapFree": 2119,
+          "activities": 1
+        },
+        {
+          "Java Heap": 13040,
+          "Native Heap": 9584,
+          "Code": 35280,
+          "Stack": 1156,
+          "Graphics": 0,
+          "Private Other": 4940,
+          "System": 13917,
+          "TOTAL PSS": 77917,
+          "managedHeapPss": 3843,
+          "managedHeapSize": 9685,
+          "managedHeapAlloc": 4843,
+          "managedHeapFree": 4842,
+          "nativeHeapPss": 9680,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 16771,
+          "nativeHeapFree": 2339,
+          "activities": 1
+        }
+      ],
+      "ack": {
+        "generations": "1",
+        "stage": "COMPLETED",
+        "discoveries": "1",
+        "chars": "0",
+        "messages": "2",
+        "pid": "9953",
+        "busy": "false",
+        "presentationFlushes": "1",
+        "presentationSegments": "2",
+        "presentationChars": "54910"
+      },
+      "frames": [
+        "Total frames rendered: 14",
+        "Janky frames: 0 (0.00%)",
+        "50th percentile: 16ms",
+        "90th percentile: 16ms",
+        "95th percentile: 16ms",
+        "99th percentile: 16ms"
+      ]
+    },
+    {
+      "case": "STREAMING_LONG",
+      "samples": [
+        {
+          "Java Heap": 14932,
+          "Native Heap": 9768,
+          "Code": 35396,
+          "Stack": 1156,
+          "Graphics": 0,
+          "Private Other": 5020,
+          "System": 14271,
+          "TOTAL PSS": 80543,
+          "managedHeapPss": 5727,
+          "managedHeapSize": 10277,
+          "managedHeapAlloc": 5139,
+          "managedHeapFree": 5138,
+          "nativeHeapPss": 9864,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 17137,
+          "nativeHeapFree": 2006,
+          "activities": 2
+        },
+        {
+          "Java Heap": 13432,
+          "Native Heap": 9768,
+          "Code": 35288,
+          "Stack": 1156,
+          "Graphics": 0,
+          "Private Other": 5020,
+          "System": 14379,
+          "TOTAL PSS": 79043,
+          "managedHeapPss": 4227,
+          "managedHeapSize": 9285,
+          "managedHeapAlloc": 4643,
+          "managedHeapFree": 4642,
+          "nativeHeapPss": 9864,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 17041,
+          "nativeHeapFree": 2102,
+          "activities": 1
+        },
+        {
+          "Java Heap": 12972,
+          "Native Heap": 9740,
+          "Code": 35288,
+          "Stack": 1156,
+          "Graphics": 0,
+          "Private Other": 5016,
+          "System": 14379,
+          "TOTAL PSS": 78551,
+          "managedHeapPss": 3767,
+          "managedHeapSize": 9277,
+          "managedHeapAlloc": 4639,
+          "managedHeapFree": 4638,
+          "nativeHeapPss": 9836,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 16814,
+          "nativeHeapFree": 2328,
+          "activities": 1
+        }
+      ],
+      "ack": {
+        "generations": "1",
+        "stage": "RECEIVING",
+        "discoveries": "1",
+        "chars": "1080",
+        "messages": "1",
+        "pid": "9953",
+        "busy": "true",
+        "presentationFlushes": "18",
+        "presentationSegments": "19",
+        "presentationChars": "5677"
+      },
+      "frames": [
+        "Total frames rendered: 50",
+        "Janky frames: 5 (10.00%)",
+        "50th percentile: 16ms",
+        "90th percentile: 16ms",
+        "95th percentile: 16ms",
+        "99th percentile: 32ms"
+      ]
+    },
+    {
+      "case": "STREAMING_FINE_GRAINED",
+      "samples": [
+        {
+          "Java Heap": 13296,
+          "Native Heap": 10088,
+          "Code": 35288,
+          "Stack": 1156,
+          "Graphics": 0,
+          "Private Other": 4864,
+          "System": 14967,
+          "TOTAL PSS": 79659,
+          "managedHeapPss": 4091,
+          "managedHeapSize": 9309,
+          "managedHeapAlloc": 4655,
+          "managedHeapFree": 4654,
+          "nativeHeapPss": 10184,
+          "nativeHeapSize": 23100,
+          "nativeHeapAlloc": 16847,
+          "nativeHeapFree": 2599,
+          "activities": 1
+        },
+        {
+          "Java Heap": 12864,
+          "Native Heap": 10088,
+          "Code": 35288,
+          "Stack": 1156,
+          "Graphics": 0,
+          "Private Other": 4808,
+          "System": 14967,
+          "TOTAL PSS": 79171,
+          "managedHeapPss": 3659,
+          "managedHeapSize": 9309,
+          "managedHeapAlloc": 4655,
+          "managedHeapFree": 4654,
+          "nativeHeapPss": 10184,
+          "nativeHeapSize": 23100,
+          "nativeHeapAlloc": 16843,
+          "nativeHeapFree": 2604,
+          "activities": 1
+        },
+        {
+          "Java Heap": 12864,
+          "Native Heap": 10088,
+          "Code": 35288,
+          "Stack": 1156,
+          "Graphics": 0,
+          "Private Other": 4808,
+          "System": 14967,
+          "TOTAL PSS": 79171,
+          "managedHeapPss": 3659,
+          "managedHeapSize": 9309,
+          "managedHeapAlloc": 4655,
+          "managedHeapFree": 4654,
+          "nativeHeapPss": 10184,
+          "nativeHeapSize": 23100,
+          "nativeHeapAlloc": 16843,
+          "nativeHeapFree": 2604,
+          "activities": 1
+        }
+      ],
+      "ack": {
+        "generations": "1",
+        "stage": "COMPLETED",
+        "discoveries": "1",
+        "chars": "0",
+        "messages": "2",
+        "pid": "9953",
+        "busy": "false",
+        "presentationFlushes": "172",
+        "presentationSegments": "173",
+        "presentationChars": "53897"
+      },
+      "frames": [
+        "Total frames rendered: 13",
+        "Janky frames: 11 (84.62%)",
+        "50th percentile: 16ms",
+        "90th percentile: 48ms",
+        "95th percentile: 48ms",
+        "99th percentile: 48ms"
+      ]
+    },
+    {
+      "case": "MARKDOWN_BASIC",
+      "samples": [
+        {
+          "Java Heap": 15180,
+          "Native Heap": 9272,
+          "Code": 35352,
+          "Stack": 1136,
+          "Graphics": 0,
+          "Private Other": 5340,
+          "System": 13003,
+          "TOTAL PSS": 79283,
+          "managedHeapPss": 6043,
+          "managedHeapSize": 9157,
+          "managedHeapAlloc": 4579,
+          "managedHeapFree": 4578,
+          "nativeHeapPss": 9393,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 16768,
+          "nativeHeapFree": 1948,
+          "activities": 1
+        },
+        {
+          "Java Heap": 12748,
+          "Native Heap": 9332,
+          "Code": 35348,
+          "Stack": 1152,
+          "Graphics": 0,
+          "Private Other": 5560,
+          "System": 13088,
+          "TOTAL PSS": 77228,
+          "managedHeapPss": 3559,
+          "managedHeapSize": 9109,
+          "managedHeapAlloc": 4555,
+          "managedHeapFree": 4554,
+          "nativeHeapPss": 9429,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 16730,
+          "nativeHeapFree": 1992,
+          "activities": 1
+        },
+        {
+          "Java Heap": 12724,
+          "Native Heap": 9332,
+          "Code": 35288,
+          "Stack": 1152,
+          "Graphics": 0,
+          "Private Other": 5556,
+          "System": 13148,
+          "TOTAL PSS": 77200,
+          "managedHeapPss": 3535,
+          "managedHeapSize": 9109,
+          "managedHeapAlloc": 4555,
+          "managedHeapFree": 4554,
+          "nativeHeapPss": 9429,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 16723,
+          "nativeHeapFree": 1999,
+          "activities": 1
+        }
+      ],
+      "ack": {
+        "generations": "1",
+        "stage": "COMPLETED",
+        "discoveries": "1",
+        "chars": "0",
+        "messages": "2",
+        "pid": "10687",
+        "busy": "false",
+        "presentationFlushes": "1",
+        "presentationSegments": "2",
+        "presentationChars": "274"
+      },
+      "frames": [
+        "Total frames rendered: 14",
+        "Janky frames: 0 (0.00%)",
+        "50th percentile: 16ms",
+        "90th percentile: 16ms",
+        "95th percentile: 16ms",
+        "99th percentile: 16ms"
+      ]
+    },
+    {
+      "case": "MARKDOWN_LONG",
+      "samples": [
+        {
+          "Java Heap": 13704,
+          "Native Heap": 9600,
+          "Code": 35360,
+          "Stack": 1160,
+          "Graphics": 0,
+          "Private Other": 4928,
+          "System": 13487,
+          "TOTAL PSS": 78239,
+          "managedHeapPss": 4511,
+          "managedHeapSize": 10205,
+          "managedHeapAlloc": 5103,
+          "managedHeapFree": 5102,
+          "nativeHeapPss": 9697,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 17015,
+          "nativeHeapFree": 2049,
+          "activities": 2
+        },
+        {
+          "Java Heap": 13276,
+          "Native Heap": 9604,
+          "Code": 35300,
+          "Stack": 1160,
+          "Graphics": 0,
+          "Private Other": 4956,
+          "System": 13575,
+          "TOTAL PSS": 77871,
+          "managedHeapPss": 4083,
+          "managedHeapSize": 9685,
+          "managedHeapAlloc": 4843,
+          "managedHeapFree": 4842,
+          "nativeHeapPss": 9701,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 16956,
+          "nativeHeapFree": 2108,
+          "activities": 1
+        },
+        {
+          "Java Heap": 13032,
+          "Native Heap": 9572,
+          "Code": 35296,
+          "Stack": 1160,
+          "Graphics": 0,
+          "Private Other": 4952,
+          "System": 13579,
+          "TOTAL PSS": 77591,
+          "managedHeapPss": 3839,
+          "managedHeapSize": 9677,
+          "managedHeapAlloc": 4839,
+          "managedHeapFree": 4838,
+          "nativeHeapPss": 9669,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 16736,
+          "nativeHeapFree": 2328,
+          "activities": 1
+        }
+      ],
+      "ack": {
+        "generations": "1",
+        "stage": "COMPLETED",
+        "discoveries": "1",
+        "chars": "0",
+        "messages": "2",
+        "pid": "10687",
+        "busy": "false",
+        "presentationFlushes": "1",
+        "presentationSegments": "2",
+        "presentationChars": "17328"
+      },
+      "frames": [
+        "Total frames rendered: 15",
+        "Janky frames: 0 (0.00%)",
+        "50th percentile: 16ms",
+        "90th percentile: 16ms",
+        "95th percentile: 16ms",
+        "99th percentile: 16ms"
+      ]
+    },
+    {
+      "case": "MARKDOWN_CODE",
+      "samples": [
+        {
+          "Java Heap": 14076,
+          "Native Heap": 9648,
+          "Code": 35296,
+          "Stack": 1176,
+          "Graphics": 0,
+          "Private Other": 4908,
+          "System": 13625,
+          "TOTAL PSS": 78729,
+          "managedHeapPss": 4883,
+          "managedHeapSize": 10205,
+          "managedHeapAlloc": 5103,
+          "managedHeapFree": 5102,
+          "nativeHeapPss": 9745,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 17081,
+          "nativeHeapFree": 2025,
+          "activities": 2
+        },
+        {
+          "Java Heap": 13276,
+          "Native Heap": 9648,
+          "Code": 35296,
+          "Stack": 1180,
+          "Graphics": 0,
+          "Private Other": 4904,
+          "System": 13625,
+          "TOTAL PSS": 77929,
+          "managedHeapPss": 4083,
+          "managedHeapSize": 9173,
+          "managedHeapAlloc": 4587,
+          "managedHeapFree": 4586,
+          "nativeHeapPss": 9745,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 16987,
+          "nativeHeapFree": 2120,
+          "activities": 1
+        },
+        {
+          "Java Heap": 12776,
+          "Native Heap": 9576,
+          "Code": 35296,
+          "Stack": 1180,
+          "Graphics": 0,
+          "Private Other": 4900,
+          "System": 13625,
+          "TOTAL PSS": 77353,
+          "managedHeapPss": 3583,
+          "managedHeapSize": 9165,
+          "managedHeapAlloc": 4583,
+          "managedHeapFree": 4582,
+          "nativeHeapPss": 9673,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 16760,
+          "nativeHeapFree": 2347,
+          "activities": 1
+        }
+      ],
+      "ack": {
+        "generations": "1",
+        "stage": "COMPLETED",
+        "discoveries": "1",
+        "chars": "0",
+        "messages": "2",
+        "pid": "10687",
+        "busy": "false",
+        "presentationFlushes": "1",
+        "presentationSegments": "2",
+        "presentationChars": "125"
+      },
+      "frames": [
+        "Total frames rendered: 14",
+        "Janky frames: 0 (0.00%)",
+        "50th percentile: 16ms",
+        "90th percentile: 16ms",
+        "95th percentile: 17ms",
+        "99th percentile: 17ms"
+      ]
+    },
+    {
+      "case": "MARKDOWN_TABLE",
+      "samples": [
+        {
+          "Java Heap": 13812,
+          "Native Heap": 9696,
+          "Code": 35276,
+          "Stack": 1180,
+          "Graphics": 0,
+          "Private Other": 4912,
+          "System": 13712,
+          "TOTAL PSS": 78588,
+          "managedHeapPss": 4619,
+          "managedHeapSize": 9717,
+          "managedHeapAlloc": 4859,
+          "managedHeapFree": 4858,
+          "nativeHeapPss": 9793,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 17088,
+          "nativeHeapFree": 2030,
+          "activities": 2
+        },
+        {
+          "Java Heap": 13032,
+          "Native Heap": 9696,
+          "Code": 35276,
+          "Stack": 1180,
+          "Graphics": 0,
+          "Private Other": 4908,
+          "System": 13712,
+          "TOTAL PSS": 77804,
+          "managedHeapPss": 3839,
+          "managedHeapSize": 9181,
+          "managedHeapAlloc": 4591,
+          "managedHeapFree": 4590,
+          "nativeHeapPss": 9793,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 16991,
+          "nativeHeapFree": 2127,
+          "activities": 1
+        },
+        {
+          "Java Heap": 12780,
+          "Native Heap": 9664,
+          "Code": 35276,
+          "Stack": 1180,
+          "Graphics": 0,
+          "Private Other": 4904,
+          "System": 13712,
+          "TOTAL PSS": 77516,
+          "managedHeapPss": 3587,
+          "managedHeapSize": 9173,
+          "managedHeapAlloc": 4587,
+          "managedHeapFree": 4586,
+          "nativeHeapPss": 9761,
+          "nativeHeapSize": 22844,
+          "nativeHeapAlloc": 16765,
+          "nativeHeapFree": 2353,
+          "activities": 1
+        }
+      ],
+      "ack": {
+        "generations": "1",
+        "stage": "COMPLETED",
+        "discoveries": "1",
+        "chars": "0",
+        "messages": "2",
+        "pid": "10687",
+        "busy": "false",
+        "presentationFlushes": "1",
+        "presentationSegments": "2",
+        "presentationChars": "116"
+      },
+      "frames": [
+        "Total frames rendered: 13",
+        "Janky frames: 0 (0.00%)",
+        "50th percentile: 16ms",
+        "90th percentile: 16ms",
+        "95th percentile: 16ms",
+        "99th percentile: 16ms"
+      ]
+    },
+    {
+      "case": "MANY_MODELS",
+      "samples": [
+        {
+          "Java Heap": 14112,
+          "Native Heap": 10036,
+          "Code": 35340,
+          "Stack": 1200,
+          "Graphics": 0,
+          "Private Other": 5072,
+          "System": 14028,
+          "TOTAL PSS": 79788,
+          "managedHeapPss": 4915,
+          "managedHeapSize": 9606,
+          "managedHeapAlloc": 4803,
+          "managedHeapFree": 4803,
+          "nativeHeapPss": 10133,
+          "nativeHeapSize": 23100,
+          "nativeHeapAlloc": 17390,
+          "nativeHeapFree": 1923,
+          "activities": 1
+        },
+        {
+          "Java Heap": 12996,
+          "Native Heap": 10004,
+          "Code": 35340,
+          "Stack": 1204,
+          "Graphics": 0,
+          "Private Other": 5020,
+          "System": 14028,
+          "TOTAL PSS": 78592,
+          "managedHeapPss": 3799,
+          "managedHeapSize": 9590,
+          "managedHeapAlloc": 4795,
+          "managedHeapFree": 4795,
+          "nativeHeapPss": 10101,
+          "nativeHeapSize": 23100,
+          "nativeHeapAlloc": 17138,
+          "nativeHeapFree": 2175,
+          "activities": 1
+        },
+        {
+          "Java Heap": 13008,
+          "Native Heap": 9928,
+          "Code": 35344,
+          "Stack": 1208,
+          "Graphics": 0,
+          "Private Other": 5016,
+          "System": 14028,
+          "TOTAL PSS": 78532,
+          "managedHeapPss": 3811,
+          "managedHeapSize": 9726,
+          "managedHeapAlloc": 4863,
+          "managedHeapFree": 4863,
+          "nativeHeapPss": 10025,
+          "nativeHeapSize": 23100,
+          "nativeHeapAlloc": 17148,
+          "nativeHeapFree": 2165,
+          "activities": 1
+        }
+      ],
+      "ack": {
+        "generations": "0",
+        "stage": "EMPTY",
+        "discoveries": "1",
+        "chars": "0",
+        "messages": "0",
+        "pid": "10687",
+        "busy": "false",
+        "presentationFlushes": "0",
+        "presentationSegments": "0",
+        "presentationChars": "0"
+      },
+      "frames": [
+        "Total frames rendered: 143",
+        "Janky frames: 8 (5.59%)",
+        "50th percentile: 29ms",
+        "90th percentile: 40ms",
+        "95th percentile: 48ms",
+        "99th percentile: 48ms"
+      ]
+    },
+    {
+      "case": "THOUSAND_MODELS",
+      "samples": [
+        {
+          "Java Heap": 14460,
+          "Native Heap": 10480,
+          "Code": 35356,
+          "Stack": 1204,
+          "Graphics": 0,
+          "Private Other": 4840,
+          "System": 14239,
+          "TOTAL PSS": 80579,
+          "managedHeapPss": 5263,
+          "managedHeapSize": 9798,
+          "managedHeapAlloc": 4899,
+          "managedHeapFree": 4899,
+          "nativeHeapPss": 10576,
+          "nativeHeapSize": 23612,
+          "nativeHeapAlloc": 17522,
+          "nativeHeapFree": 2121,
+          "activities": 1
+        },
+        {
+          "Java Heap": 13092,
+          "Native Heap": 10448,
+          "Code": 35356,
+          "Stack": 1204,
+          "Graphics": 0,
+          "Private Other": 4784,
+          "System": 14239,
+          "TOTAL PSS": 79123,
+          "managedHeapPss": 3895,
+          "managedHeapSize": 9782,
+          "managedHeapAlloc": 4891,
+          "managedHeapFree": 4891,
+          "nativeHeapPss": 10544,
+          "nativeHeapSize": 23612,
+          "nativeHeapAlloc": 17150,
+          "nativeHeapFree": 2493,
+          "activities": 1
+        },
+        {
+          "Java Heap": 13096,
+          "Native Heap": 10448,
+          "Code": 35356,
+          "Stack": 1208,
+          "Graphics": 0,
+          "Private Other": 4780,
+          "System": 14239,
+          "TOTAL PSS": 79127,
+          "managedHeapPss": 3899,
+          "managedHeapSize": 9782,
+          "managedHeapAlloc": 4891,
+          "managedHeapFree": 4891,
+          "nativeHeapPss": 10544,
+          "nativeHeapSize": 23612,
+          "nativeHeapAlloc": 17160,
+          "nativeHeapFree": 2484,
+          "activities": 1
+        }
+      ],
+      "ack": {
+        "generations": "0",
+        "stage": "EMPTY",
+        "discoveries": "1",
+        "chars": "0",
+        "messages": "0",
+        "pid": "10687",
+        "busy": "false",
+        "presentationFlushes": "0",
+        "presentationSegments": "0",
+        "presentationChars": "0"
+      },
+      "frames": [
+        "Total frames rendered: 128",
+        "Janky frames: 1 (0.78%)",
+        "50th percentile: 25ms",
+        "90th percentile: 31ms",
+        "95th percentile: 32ms",
+        "99th percentile: 32ms"
+      ]
+    },
+    {
+      "case": "ERROR_429",
+      "samples": [
+        {
+          "Java Heap": 14144,
+          "Native Heap": 10528,
+          "Code": 35340,
+          "Stack": 1184,
+          "Graphics": 0,
+          "Private Other": 4812,
+          "System": 14319,
+          "TOTAL PSS": 80327,
+          "managedHeapPss": 4947,
+          "managedHeapSize": 10198,
+          "managedHeapAlloc": 5099,
+          "managedHeapFree": 5099,
+          "nativeHeapPss": 10624,
+          "nativeHeapSize": 23612,
+          "nativeHeapAlloc": 17476,
+          "nativeHeapFree": 2247,
+          "activities": 2
+        },
+        {
+          "Java Heap": 13276,
+          "Native Heap": 10528,
+          "Code": 35340,
+          "Stack": 1184,
+          "Graphics": 0,
+          "Private Other": 4808,
+          "System": 14319,
+          "TOTAL PSS": 79455,
+          "managedHeapPss": 4079,
+          "managedHeapSize": 9382,
+          "managedHeapAlloc": 4691,
+          "managedHeapFree": 4691,
+          "nativeHeapPss": 10624,
+          "nativeHeapSize": 23612,
+          "nativeHeapAlloc": 17395,
+          "nativeHeapFree": 2327,
+          "activities": 1
+        },
+        {
+          "Java Heap": 12884,
+          "Native Heap": 10480,
+          "Code": 35340,
+          "Stack": 1184,
+          "Graphics": 0,
+          "Private Other": 4804,
+          "System": 14319,
+          "TOTAL PSS": 79011,
+          "managedHeapPss": 3687,
+          "managedHeapSize": 9366,
+          "managedHeapAlloc": 4683,
+          "managedHeapFree": 4683,
+          "nativeHeapPss": 10576,
+          "nativeHeapSize": 23612,
+          "nativeHeapAlloc": 17086,
+          "nativeHeapFree": 2637,
+          "activities": 1
+        }
+      ],
+      "ack": {
+        "generations": "1",
+        "stage": "FAILED",
+        "discoveries": "1",
+        "chars": "0",
+        "messages": "1",
+        "pid": "10687",
+        "busy": "false",
+        "presentationFlushes": "1",
+        "presentationSegments": "1",
+        "presentationChars": "25"
+      },
+      "frames": [
+        "Total frames rendered: 13",
+        "Janky frames: 0 (0.00%)",
+        "50th percentile: 5ms",
+        "90th percentile: 16ms",
+        "95th percentile: 16ms",
+        "99th percentile: 16ms"
+      ]
+    }
+  ],
+  "navigationResetCycles": [
+    {
+      "cycle": 1,
+      "case": "DENSE_LONG_ANSWER",
+      "sample": {
+        "Java Heap": 13624,
+        "Native Heap": 13308,
+        "Code": 35780,
+        "Stack": 1220,
+        "Graphics": 0,
+        "Private Other": 4932,
+        "System": 16028,
+        "TOTAL PSS": 84892,
+        "activities": 1,
+        "viewRoots": 1
+      },
+      "generations": "1"
+    },
+    {
+      "cycle": 2,
+      "case": "MARKDOWN_LONG",
+      "sample": {
+        "Java Heap": 18228,
+        "Native Heap": 13712,
+        "Code": 35764,
+        "Stack": 1244,
+        "Graphics": 0,
+        "Private Other": 4852,
+        "System": 16370,
+        "TOTAL PSS": 90170,
+        "activities": 1,
+        "viewRoots": 1
+      },
+      "generations": "1"
+    },
+    {
+      "cycle": 3,
+      "case": "MARKDOWN_OPEN_FENCE",
+      "sample": {
+        "Java Heap": 14600,
+        "Native Heap": 13740,
+        "Code": 35760,
+        "Stack": 1252,
+        "Graphics": 0,
+        "Private Other": 4880,
+        "System": 16453,
+        "TOTAL PSS": 86685,
+        "activities": 1,
+        "viewRoots": 1
+      },
+      "generations": "1"
+    },
+    {
+      "cycle": 4,
+      "case": "STREAMING_LONG",
+      "sample": {
+        "Java Heap": 15508,
+        "Native Heap": 13792,
+        "Code": 35800,
+        "Stack": 1252,
+        "Graphics": 0,
+        "Private Other": 4964,
+        "System": 17016,
+        "TOTAL PSS": 88332,
+        "activities": 1,
+        "viewRoots": 1
+      },
+      "generations": "1"
+    },
+    {
+      "cycle": 5,
+      "case": "DENSE_LONG_ANSWER",
+      "sample": {
+        "Java Heap": 18364,
+        "Native Heap": 13856,
+        "Code": 35768,
+        "Stack": 1256,
+        "Graphics": 0,
+        "Private Other": 4972,
+        "System": 17173,
+        "TOTAL PSS": 91389,
+        "activities": 2,
+        "viewRoots": 2
+      },
+      "generations": "1"
+    },
+    {
+      "cycle": 6,
+      "case": "MARKDOWN_LONG",
+      "sample": {
+        "Java Heap": 17680,
+        "Native Heap": 13868,
+        "Code": 35788,
+        "Stack": 1256,
+        "Graphics": 0,
+        "Private Other": 4968,
+        "System": 17305,
+        "TOTAL PSS": 90865,
+        "activities": 1,
+        "viewRoots": 1
+      },
+      "generations": "1"
+    },
+    {
+      "cycle": 7,
+      "case": "MARKDOWN_OPEN_FENCE",
+      "sample": {
+        "Java Heap": 14636,
+        "Native Heap": 13808,
+        "Code": 35788,
+        "Stack": 1260,
+        "Graphics": 0,
+        "Private Other": 4968,
+        "System": 17409,
+        "TOTAL PSS": 87869,
+        "activities": 1,
+        "viewRoots": 1
+      },
+      "generations": "1"
+    },
+    {
+      "cycle": 8,
+      "case": "STREAMING_LONG",
+      "sample": {
+        "Java Heap": 15532,
+        "Native Heap": 13844,
+        "Code": 35788,
+        "Stack": 1260,
+        "Graphics": 0,
+        "Private Other": 4968,
+        "System": 17476,
+        "TOTAL PSS": 88868,
+        "activities": 1,
+        "viewRoots": 1
+      },
+      "generations": "1"
+    },
+    {
+      "cycle": 9,
+      "case": "DENSE_LONG_ANSWER",
+      "sample": {
+        "Java Heap": 18532,
+        "Native Heap": 13964,
+        "Code": 35768,
+        "Stack": 1260,
+        "Graphics": 0,
+        "Private Other": 4976,
+        "System": 17592,
+        "TOTAL PSS": 92092,
+        "activities": 2,
+        "viewRoots": 2
+      },
+      "generations": "1"
+    },
+    {
+      "cycle": 10,
+      "case": "MARKDOWN_LONG",
+      "sample": {
+        "Java Heap": 17744,
+        "Native Heap": 13968,
+        "Code": 35792,
+        "Stack": 1260,
+        "Graphics": 0,
+        "Private Other": 4968,
+        "System": 17652,
+        "TOTAL PSS": 91384,
+        "activities": 1,
+        "viewRoots": 1
+      },
+      "generations": "1"
+    },
+    {
+      "cycle": 11,
+      "case": "MARKDOWN_OPEN_FENCE",
+      "sample": {
+        "Java Heap": 14588,
+        "Native Heap": 13876,
+        "Code": 35788,
+        "Stack": 1260,
+        "Graphics": 0,
+        "Private Other": 4972,
+        "System": 17732,
+        "TOTAL PSS": 88216,
+        "activities": 1,
+        "viewRoots": 1
+      },
+      "generations": "1"
+    },
+    {
+      "cycle": 12,
+      "case": "STREAMING_LONG",
+      "sample": {
+        "Java Heap": 15520,
+        "Native Heap": 13892,
+        "Code": 35768,
+        "Stack": 1260,
+        "Graphics": 0,
+        "Private Other": 4972,
+        "System": 17821,
+        "TOTAL PSS": 89233,
+        "activities": 1,
+        "viewRoots": 1
+      },
+      "generations": "1"
+    }
+  ],
+  "settledStates": {
+    "after-cycles-idle": [
+      {
+        "Java Heap": 14712,
+        "Native Heap": 14280,
+        "Code": 35952,
+        "Stack": 1248,
+        "Graphics": 0,
+        "Private Other": 4924,
+        "System": 17976,
+        "TOTAL PSS": 89092,
+        "activities": 2
+      },
+      {
+        "Java Heap": 13404,
+        "Native Heap": 14152,
+        "Code": 35916,
+        "Stack": 1248,
+        "Graphics": 0,
+        "Private Other": 4920,
+        "System": 18013,
+        "TOTAL PSS": 87653,
+        "activities": 1
+      },
+      {
+        "Java Heap": 13136,
+        "Native Heap": 13908,
+        "Code": 35916,
+        "Stack": 1248,
+        "Graphics": 0,
+        "Private Other": 4916,
+        "System": 18012,
+        "TOTAL PSS": 87136,
+        "activities": 1
+      }
+    ],
+    "models-return-chat": [
+      {
+        "Java Heap": 14536,
+        "Native Heap": 13996,
+        "Code": 35916,
+        "Stack": 1268,
+        "Graphics": 0,
+        "Private Other": 4924,
+        "System": 18017,
+        "TOTAL PSS": 88657,
+        "activities": 2
+      },
+      {
+        "Java Heap": 13488,
+        "Native Heap": 13996,
+        "Code": 35916,
+        "Stack": 1268,
+        "Graphics": 0,
+        "Private Other": 4920,
+        "System": 18016,
+        "TOTAL PSS": 87604,
+        "activities": 1
+      },
+      {
+        "Java Heap": 13260,
+        "Native Heap": 13996,
+        "Code": 35916,
+        "Stack": 1248,
+        "Graphics": 0,
+        "Private Other": 4916,
+        "System": 18016,
+        "TOTAL PSS": 87352,
+        "activities": 1
+      }
+    ]
+  },
+  "coldProcessIdle": [
+    {
+      "Java Heap": 14592,
+      "Native Heap": 9096,
+      "Code": 35428,
+      "Stack": 1128,
+      "Graphics": 0,
+      "Private Other": 4628,
+      "System": 11872,
+      "TOTAL PSS": 76744
+    },
+    {
+      "Java Heap": 12564,
+      "Native Heap": 9172,
+      "Code": 35348,
+      "Stack": 1112,
+      "Graphics": 0,
+      "Private Other": 4660,
+      "System": 12047,
+      "TOTAL PSS": 74903
+    },
+    {
+      "Java Heap": 12572,
+      "Native Heap": 9172,
+      "Code": 35272,
+      "Stack": 1112,
+      "Graphics": 0,
+      "Private Other": 4928,
+      "System": 12107,
+      "TOTAL PSS": 75163
+    }
+  ],
+  "frameWindows": [
+    {
+      "case": "DENSE_LONG_ANSWER",
+      "trial": 1,
+      "frames": [
+        "Total frames rendered: 136",
+        "Janky frames: 1 (0.74%)",
+        "50th percentile: 8ms",
+        "90th percentile: 16ms",
+        "95th percentile: 16ms",
+        "99th percentile: 17ms"
+      ]
+    },
+    {
+      "case": "DENSE_LONG_ANSWER",
+      "trial": 2,
+      "frames": [
+        "Total frames rendered: 141",
+        "Janky frames: 1 (0.71%)",
+        "50th percentile: 16ms",
+        "90th percentile: 16ms",
+        "95th percentile: 16ms",
+        "99th percentile: 16ms"
+      ]
+    },
+    {
+      "case": "DENSE_LONG_ANSWER",
+      "trial": 3,
+      "frames": [
+        "Total frames rendered: 140",
+        "Janky frames: 1 (0.71%)",
+        "50th percentile: 19ms",
+        "90th percentile: 25ms",
+        "95th percentile: 25ms",
+        "99th percentile: 26ms"
+      ]
+    },
+    {
+      "case": "MARKDOWN_LONG",
+      "trial": 1,
+      "frames": [
+        "Total frames rendered: 139",
+        "Janky frames: 2 (1.44%)",
+        "50th percentile: 22ms",
+        "90th percentile: 32ms",
+        "95th percentile: 32ms",
+        "99th percentile: 32ms"
+      ]
+    },
+    {
+      "case": "MARKDOWN_LONG",
+      "trial": 2,
+      "frames": [
+        "Total frames rendered: 133",
+        "Janky frames: 5 (3.76%)",
+        "50th percentile: 23ms",
+        "90th percentile: 32ms",
+        "95th percentile: 32ms",
+        "99th percentile: 48ms"
+      ]
+    },
+    {
+      "case": "MARKDOWN_LONG",
+      "trial": 3,
+      "frames": [
+        "Total frames rendered: 138",
+        "Janky frames: 2 (1.45%)",
+        "50th percentile: 20ms",
+        "90th percentile: 30ms",
+        "95th percentile: 32ms",
+        "99th percentile: 32ms"
+      ]
+    },
+    {
+      "case": "MARKDOWN_LIST_LONG",
+      "trial": 1,
+      "frames": [
+        "Total frames rendered: 135",
+        "Janky frames: 2 (1.48%)",
+        "50th percentile: 19ms",
+        "90th percentile: 23ms",
+        "95th percentile: 28ms",
+        "99th percentile: 29ms"
+      ]
+    },
+    {
+      "case": "MARKDOWN_LIST_LONG",
+      "trial": 2,
+      "frames": [
+        "Total frames rendered: 138",
+        "Janky frames: 1 (0.72%)",
+        "50th percentile: 19ms",
+        "90th percentile: 23ms",
+        "95th percentile: 27ms",
+        "99th percentile: 32ms"
+      ]
+    },
+    {
+      "case": "MARKDOWN_LIST_LONG",
+      "trial": 3,
+      "frames": [
+        "Total frames rendered: 132",
+        "Janky frames: 2 (1.52%)",
+        "50th percentile: 19ms",
+        "90th percentile: 24ms",
+        "95th percentile: 27ms",
+        "99th percentile: 32ms"
+      ]
+    },
+    {
+      "case": "MARKDOWN_TABLE",
+      "trial": 1,
+      "frames": [
+        "Total frames rendered: 137",
+        "Janky frames: 2 (1.46%)",
+        "50th percentile: 19ms",
+        "90th percentile: 21ms",
+        "95th percentile: 21ms",
+        "99th percentile: 27ms"
+      ]
+    },
+    {
+      "case": "MARKDOWN_TABLE",
+      "trial": 2,
+      "frames": [
+        "Total frames rendered: 138",
+        "Janky frames: 2 (1.45%)",
+        "50th percentile: 18ms",
+        "90th percentile: 21ms",
+        "95th percentile: 22ms",
+        "99th percentile: 28ms"
+      ]
+    },
+    {
+      "case": "MARKDOWN_TABLE",
+      "trial": 3,
+      "frames": [
+        "Total frames rendered: 142",
+        "Janky frames: 1 (0.70%)",
+        "50th percentile: 5ms",
+        "90th percentile: 16ms",
+        "95th percentile: 16ms",
+        "99th percentile: 16ms"
+      ]
+    },
+    {
+      "case": "MARKDOWN_TABLE_OVER_LIMIT",
+      "trial": 1,
+      "frames": [
+        "Total frames rendered: 142",
+        "Janky frames: 1 (0.70%)",
+        "50th percentile: 20ms",
+        "90th percentile: 22ms",
+        "95th percentile: 23ms",
+        "99th percentile: 25ms"
+      ]
+    },
+    {
+      "case": "MARKDOWN_TABLE_OVER_LIMIT",
+      "trial": 2,
+      "frames": [
+        "Total frames rendered: 134",
+        "Janky frames: 1 (0.75%)",
+        "50th percentile: 19ms",
+        "90th percentile: 22ms",
+        "95th percentile: 22ms",
+        "99th percentile: 25ms"
+      ]
+    },
+    {
+      "case": "MARKDOWN_TABLE_OVER_LIMIT",
+      "trial": 3,
+      "frames": [
+        "Total frames rendered: 134",
+        "Janky frames: 1 (0.75%)",
+        "50th percentile: 19ms",
+        "90th percentile: 21ms",
+        "95th percentile: 22ms",
+        "99th percentile: 24ms"
+      ]
+    },
+    {
+      "case": "MARKDOWN_CODE_LONG_LINE",
+      "trial": 1,
+      "frames": [
+        "Total frames rendered: 136",
+        "Janky frames: 1 (0.74%)",
+        "50th percentile: 18ms",
+        "90th percentile: 21ms",
+        "95th percentile: 21ms",
+        "99th percentile: 21ms"
+      ]
+    },
+    {
+      "case": "MARKDOWN_CODE_LONG_LINE",
+      "trial": 2,
+      "frames": [
+        "Total frames rendered: 142",
+        "Janky frames: 1 (0.70%)",
+        "50th percentile: 16ms",
+        "90th percentile: 16ms",
+        "95th percentile: 16ms",
+        "99th percentile: 17ms"
+      ]
+    },
+    {
+      "case": "MARKDOWN_CODE_LONG_LINE",
+      "trial": 3,
+      "frames": [
+        "Total frames rendered: 140",
+        "Janky frames: 1 (0.71%)",
+        "50th percentile: 5ms",
+        "90th percentile: 16ms",
+        "95th percentile: 16ms",
+        "99th percentile: 17ms"
+      ]
+    },
+    {
+      "case": "MARKDOWN_CODE_STRESS",
+      "trial": 1,
+      "frames": [
+        "Total frames rendered: 137",
+        "Janky frames: 2 (1.46%)",
+        "50th percentile: 21ms",
+        "90th percentile: 22ms",
+        "95th percentile: 22ms",
+        "99th percentile: 30ms"
+      ]
+    },
+    {
+      "case": "MARKDOWN_CODE_STRESS",
+      "trial": 2,
+      "frames": [
+        "Total frames rendered: 136",
+        "Janky frames: 2 (1.47%)",
+        "50th percentile: 21ms",
+        "90th percentile: 22ms",
+        "95th percentile: 22ms",
+        "99th percentile: 32ms"
+      ]
+    },
+    {
+      "case": "MARKDOWN_CODE_STRESS",
+      "trial": 3,
+      "frames": [
+        "Total frames rendered: 135",
+        "Janky frames: 2 (1.48%)",
+        "50th percentile: 21ms",
+        "90th percentile: 22ms",
+        "95th percentile: 22ms",
+        "99th percentile: 28ms"
+      ]
+    },
+    {
+      "case": "THOUSAND_MODELS",
+      "trial": 1,
+      "frames": [
+        "Total frames rendered: 140",
+        "Janky frames: 1 (0.71%)",
+        "50th percentile: 23ms",
+        "90th percentile: 32ms",
+        "95th percentile: 32ms",
+        "99th percentile: 32ms"
+      ]
+    },
+    {
+      "case": "THOUSAND_MODELS",
+      "trial": 2,
+      "frames": [
+        "Total frames rendered: 137",
+        "Janky frames: 2 (1.46%)",
+        "50th percentile: 22ms",
+        "90th percentile: 29ms",
+        "95th percentile: 31ms",
+        "99th percentile: 32ms"
+      ]
+    },
+    {
+      "case": "THOUSAND_MODELS",
+      "trial": 3,
+      "frames": [
+        "Total frames rendered: 138",
+        "Janky frames: 4 (2.90%)",
+        "50th percentile: 23ms",
+        "90th percentile: 32ms",
+        "95th percentile: 32ms",
+        "99th percentile: 48ms"
+      ]
+    },
+    {
+      "case": "STREAMING_FINE_GRAINED",
+      "trial": 1,
+      "frames": [
+        "Total frames rendered: 141",
+        "Janky frames: 1 (0.71%)",
+        "50th percentile: 21ms",
+        "90th percentile: 28ms",
+        "95th percentile: 28ms",
+        "99th percentile: 32ms"
+      ]
+    },
+    {
+      "case": "STREAMING_FINE_GRAINED",
+      "trial": 2,
+      "frames": [
+        "Total frames rendered: 137",
+        "Janky frames: 3 (2.19%)",
+        "50th percentile: 20ms",
+        "90th percentile: 27ms",
+        "95th percentile: 29ms",
+        "99th percentile: 32ms"
+      ]
+    },
+    {
+      "case": "STREAMING_FINE_GRAINED",
+      "trial": 3,
+      "frames": [
+        "Total frames rendered: 150",
+        "Janky frames: 0 (0.00%)",
+        "50th percentile: 19ms",
+        "90th percentile: 26ms",
+        "95th percentile: 28ms",
+        "99th percentile: 31ms"
+      ]
+    },
+    {
+      "case": "STREAMING_LONG",
+      "trial": 1,
+      "frames": [
+        "Total frames rendered: 140",
+        "Janky frames: 2 (1.43%)",
+        "50th percentile: 20ms",
+        "90th percentile: 23ms",
+        "95th percentile: 26ms",
+        "99th percentile: 32ms"
+      ]
+    },
+    {
+      "case": "STREAMING_LONG",
+      "trial": 2,
+      "frames": [
+        "Total frames rendered: 142",
+        "Janky frames: 1 (0.70%)",
+        "50th percentile: 16ms",
+        "90th percentile: 20ms",
+        "95th percentile: 21ms",
+        "99th percentile: 28ms"
+      ]
+    },
+    {
+      "case": "STREAMING_LONG",
+      "trial": 3,
+      "frames": [
+        "Total frames rendered: 141",
+        "Janky frames: 1 (0.71%)",
+        "50th percentile: 16ms",
+        "90th percentile: 17ms",
+        "95th percentile: 20ms",
+        "99th percentile: 22ms"
+      ]
+    }
+  ],
+  "settledIdle": {
+    "beforeFlushes": "1",
+    "afterFlushes": "1",
+    "frames": [
+      "Total frames rendered: 0",
+      "Janky frames: 0 (0.00%)"
+    ]
+  },
+  "initialIdleWindow": {
+    "frames": 21,
+    "flushesBefore": 1,
+    "flushesAfter": 1,
+    "note": "post-launch transient; excluded from steady idle conclusion"
+  },
+  "lifecycle": [
+    {
+      "case": "RECREATE MARKDOWN_LONG",
+      "states": [
+        {
+          "generations": "1",
+          "stage": "COMPLETED",
+          "discoveries": "1",
+          "chars": "0",
+          "messages": "2",
+          "owner": "a3d55691-1f0c-4dd2-9d6c-06589a19bdaf",
+          "creations": "1",
+          "collecting": "true",
+          "observedChars": "0",
+          "lifecycle": "RESUMED",
+          "pid": "15050",
+          "busy": "false",
+          "presentationFlushes": "1",
+          "presentationSegments": "2",
+          "presentationChars": "17328"
+        },
+        {
+          "generations": "1",
+          "stage": "COMPLETED",
+          "discoveries": "1",
+          "chars": "0",
+          "messages": "2",
+          "owner": "a3d55691-1f0c-4dd2-9d6c-06589a19bdaf",
+          "creations": "2",
+          "collecting": "true",
+          "observedChars": "0",
+          "lifecycle": "RESUMED",
+          "pid": "15050",
+          "busy": "false",
+          "presentationFlushes": "1",
+          "presentationSegments": "2",
+          "presentationChars": "17328"
+        }
+      ]
+    },
+    {
+      "case": "RECREATE DENSE_LONG_ANSWER",
+      "states": [
+        {
+          "generations": "1",
+          "stage": "COMPLETED",
+          "discoveries": "1",
+          "chars": "0",
+          "messages": "2",
+          "owner": "6cabc028-3c2b-40c4-b75f-5fb7042f3ca5",
+          "creations": "1",
+          "collecting": "true",
+          "observedChars": "0",
+          "lifecycle": "RESUMED",
+          "pid": "15050",
+          "busy": "false",
+          "presentationFlushes": "1",
+          "presentationSegments": "2",
+          "presentationChars": "54910"
+        },
+        {
+          "generations": "1",
+          "stage": "COMPLETED",
+          "discoveries": "1",
+          "chars": "0",
+          "messages": "2",
+          "owner": "6cabc028-3c2b-40c4-b75f-5fb7042f3ca5",
+          "creations": "2",
+          "collecting": "true",
+          "observedChars": "0",
+          "lifecycle": "RESUMED",
+          "pid": "15050",
+          "busy": "false",
+          "presentationFlushes": "1",
+          "presentationSegments": "2",
+          "presentationChars": "54910"
+        }
+      ]
+    },
+    {
+      "case": "RECREATE STREAMING_LONG",
+      "states": [
+        {
+          "generations": "1",
+          "stage": "RECEIVING",
+          "discoveries": "1",
+          "chars": "60",
+          "messages": "1",
+          "owner": "411dac28-2233-4f98-8f98-dd904c903c8c",
+          "creations": "1",
+          "collecting": "true",
+          "observedChars": "60",
+          "lifecycle": "RESUMED",
+          "pid": "15050",
+          "busy": "true",
+          "presentationFlushes": "1",
+          "presentationSegments": "2",
+          "presentationChars": "85"
+        },
+        {
+          "generations": "1",
+          "stage": "RECEIVING",
+          "discoveries": "1",
+          "chars": "240",
+          "messages": "1",
+          "owner": "411dac28-2233-4f98-8f98-dd904c903c8c",
+          "creations": "2",
+          "collecting": "true",
+          "observedChars": "240",
+          "lifecycle": "RESUMED",
+          "pid": "15050",
+          "busy": "true",
+          "presentationFlushes": "4",
+          "presentationSegments": "5",
+          "presentationChars": "625"
+        }
+      ]
+    },
+    {
+      "case": "BACKGROUND",
+      "states": [
+        {
+          "generations": "1",
+          "stage": "RECEIVING",
+          "discoveries": "1",
+          "chars": "38",
+          "messages": "1",
+          "owner": "cec6c102-6107-4a8a-96cb-1511bf18ff8c",
+          "creations": "1",
+          "collecting": "true",
+          "observedChars": "38",
+          "lifecycle": "STARTED",
+          "pid": "15050",
+          "busy": "true",
+          "presentationFlushes": "2",
+          "presentationSegments": "3",
+          "presentationChars": "82"
+        },
+        {
+          "generations": "1",
+          "stage": "RECEIVING",
+          "discoveries": "1",
+          "chars": "191",
+          "messages": "1",
+          "owner": "cec6c102-6107-4a8a-96cb-1511bf18ff8c",
+          "creations": "1",
+          "collecting": "false",
+          "observedChars": "38",
+          "lifecycle": "CREATED",
+          "pid": "15050",
+          "busy": "true",
+          "presentationFlushes": "2",
+          "presentationSegments": "3",
+          "presentationChars": "82"
+        },
+        {
+          "generations": "1",
+          "stage": "RECEIVING",
+          "discoveries": "1",
+          "chars": "191",
+          "messages": "1",
+          "owner": "cec6c102-6107-4a8a-96cb-1511bf18ff8c",
+          "creations": "1",
+          "collecting": "true",
+          "observedChars": "191",
+          "lifecycle": "RESUMED",
+          "pid": "15050",
+          "busy": "true",
+          "presentationFlushes": "3",
+          "presentationSegments": "4",
+          "presentationChars": "273"
+        }
+      ]
+    }
+  ],
+  "processRestart": [
+    {
+      "scenario": "PROCESS_RESTART_IDLE",
+      "result": "PASS — VERIFIED ON EMULATOR",
+      "method": "am-kill",
+      "previousPID": "21149",
+      "newPID": "27461",
+      "ownerChanged": true,
+      "before": {
+        "stage": "EMPTY",
+        "messages": "0",
+        "chars": "0",
+        "generations": "0",
+        "model": "debug-2"
+      },
+      "after": {
+        "stage": "EMPTY",
+        "messages": "0",
+        "chars": "0",
+        "generations": "0",
+        "busy": "false",
+        "model": "debug-1",
+        "billing": "CHATGPT_PLAN",
+        "surface": "CHAT"
+      }
+    },
+    {
+      "scenario": "PROCESS_RESTART_AFTER_COMPLETED",
+      "result": "PASS — VERIFIED ON EMULATOR",
+      "method": "am-kill",
+      "previousPID": "27461",
+      "newPID": "27554",
+      "ownerChanged": true,
+      "before": {
+        "stage": "COMPLETED",
+        "messages": "2",
+        "chars": "0",
+        "generations": "1",
+        "model": "debug-1"
+      },
+      "after": {
+        "stage": "EMPTY",
+        "messages": "0",
+        "chars": "0",
+        "generations": "0",
+        "busy": "false",
+        "model": "debug-1",
+        "billing": "CHATGPT_PLAN",
+        "surface": "CHAT"
+      }
+    },
+    {
+      "scenario": "PROCESS_RESTART_DURING_ACTIVE",
+      "result": "PASS — VERIFIED ON EMULATOR",
+      "method": "am-kill",
+      "previousPID": "27554",
+      "newPID": "27646",
+      "ownerChanged": true,
+      "before": {
+        "stage": "STARTING",
+        "messages": "1",
+        "chars": "0",
+        "generations": "1",
+        "model": "debug-1"
+      },
+      "after": {
+        "stage": "EMPTY",
+        "messages": "0",
+        "chars": "0",
+        "generations": "0",
+        "busy": "false",
+        "model": "debug-1",
+        "billing": "CHATGPT_PLAN",
+        "surface": "CHAT"
+      }
+    },
+    {
+      "scenario": "PROCESS_RESTART_AFTER_PARTIAL",
+      "result": "PASS — VERIFIED ON EMULATOR",
+      "method": "am-kill",
+      "previousPID": "27646",
+      "newPID": "27737",
+      "ownerChanged": true,
+      "before": {
+        "stage": "RECEIVING",
+        "messages": "1",
+        "chars": "25",
+        "generations": "1",
+        "model": "debug-1"
+      },
+      "after": {
+        "stage": "EMPTY",
+        "messages": "0",
+        "chars": "0",
+        "generations": "0",
+        "busy": "false",
+        "model": "debug-1",
+        "billing": "CHATGPT_PLAN",
+        "surface": "CHAT"
+      }
+    }
+  ],
+  "streamingJvm": {
+    "rawDeltas": 65000,
+    "virtualDurationMs": 6600,
+    "streamingFlushes": 66,
+    "plainProjectionCallsIncludingStopReset": 68,
+    "segmentations": 68,
+    "projectedUnits": 81684,
+    "activeAnswerParses": 0,
+    "terminalParses": 1,
+    "maxPendingFlushes": 1,
+    "maxActiveParses": 1,
+    "stopVirtualLatencyMs": 0,
+    "idleExtraPublications": 0,
+    "richResetCycles": 24,
+    "plainCacheAfterResetBytes": 0,
+    "richCacheAfterResetBytes": 0
+  },
+  "stringAccumulationJvm": {
+    "units": 65536,
+    "chunkToElapsedMs": {
+      "1": 591,
+      "64": 8,
+      "512": 1
+    },
+    "timingIsDiagnosticOnly": true,
+    "productionChanged": false
+  },
+  "apks": [
+    {
+      "variant": "debug",
+      "bytes": 36235813,
+      "sha256": "79eefc7f502b555fc25c5b3692b376f9f44e7822edda044272f42411aa3255ff",
+      "profiles": {}
+    },
+    {
+      "variant": "release",
+      "bytes": 27902726,
+      "sha256": "ac914f32ebccd4daa9fc08b7813ee7eebcbf307c085a43ecd54f6c0cd9415e82",
+      "profiles": {
+        "assets/dexopt/baseline.prof": 13926,
+        "assets/dexopt/baseline.profm": 664
+      }
+    }
+  ],
+  "validation": {
+    "fullRunBeforeLabelCorrection": {
+      "tests": 459,
+      "suites": 52,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "postCorrectionFocused": {
+      "tests": 40,
+      "suites": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "finalDebugFixtures": {
+      "tests": 18,
+      "suites": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "currentInventory": 461,
+    "currentSuites": 52,
+    "fullFinal461RerunClaimed": false,
+    "pythonTests": 40,
+    "pythonSyntaxFiles": 13,
+    "lintErrors": 0,
+    "lintExistingWarnings": 6,
+    "releaseIsolation": "PASS for final 77 fixtures",
+    "mobileRun": false,
+    "catalog": {
+      "total": 77,
+      "pass": 77,
+      "fail": 0,
+      "blocked": 0,
+      "scope": "fresh readiness, matching PID, RESUMED; not all-scenario visual acceptance"
+    },
+    "gitDiffCheck": "PASS",
+    "changedNewTextWhitespaceFiles": 14,
+    "emulatorRestoredSettings": {
+      "fontScale": "1.0",
+      "enabledAccessibilityServices": "null",
+      "accessibilityEnabled": "0",
+      "touchExplorationEnabled": "0"
+    }
+  },
+  "talkBack": {
+    "serviceBound": true,
+    "appButtonFocusObserved": true,
+    "completeSpokenTraversalVerified": false,
+    "gestureTraversalLimitation": "returned to Wear system UI; cause unresolved",
+    "settingsRestored": true,
+    "physicalVerified": false
+  },
+  "limitations": [
+    "No release/device runtime profile or energy measurement",
+    "No forced GC or heap capture",
+    "Historical D5-A causal delta unresolved",
+    "Timing depends on debug AVD/runtime/host",
+    "No dedicated terminal announcement; spoken behavior unverified",
+    "2x word breaks and three-line model ellipsis remain"
+  ]
+}
