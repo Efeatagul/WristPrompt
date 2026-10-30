@@ -6,31 +6,36 @@ import io.github.grassified.wristprompt.openai.InferenceViewModel
 
 internal fun TransformingLazyColumnScope.connectionItems(
     ui: ShellPresentation, accounts: WatchAccountState, key: ApiKeyState,
-    setup: KeySetupStatus, changing: Boolean, actions: ConnectionActions, proof: InferenceViewModel, onUsage: () -> Unit,
+    setup: KeySetupStatus, changing: Boolean, actions: ConnectionActions, proof: InferenceViewModel, onDiagnostics: () -> Unit, onUsage: () -> Unit,
 ) {
     item { ShellText("Account & Connection", heading = true) }
-    item { ShellText("Use for AI requests") }
+    item { ShellText(billingDisclosure(ui.billing)) }
+    if (ui.recovery?.action == RecoveryAction.DIAGNOSTICS) {
+        item { ShellText(ui.recovery.explanation.orEmpty()) }
+        action("Diagnostics") { onDiagnostics() }
+    }
+    item { ShellText("Billing route", heading = true) }
     for (mode in CredentialMode.entries) action(
         (if (key.loaded && !key.storageError && key.mode == mode) "✓ " else "") +
-            if (mode == CredentialMode.CHATGPT_PLAN) "ChatGPT plan" else "OpenAI API",
+            if (mode == CredentialMode.CHATGPT_PLAN) "ChatGPT plan" else "OpenAI API · API billing",
         enabled = key.loaded && !key.storageError && !changing,
         onClick = { proof.stop(); actions.mode(mode) },
     )
     item { ShellText("ChatGPT account", heading = true) }
     item { ShellText(when {
-        accounts.storageError -> "Protected storage unavailable"
+        accounts.storageError -> "Secure storage unavailable"
         accounts.signingOut -> "Signing out…"
         accounts.signedOut -> if (accounts.revocation == RevocationResult.CONFIRMED)
             "Signed out · revocation confirmed" else "Signed out · remote revocation unconfirmed"
         accounts.expired -> "Setup expired · retry from watch"
         accounts.failed -> "Phone authorization failed · retry from watch"
         accounts.authorizing -> "Finish sign-in on phone"
-        accounts.reauthorizationRequired -> "Authentication required"
+        accounts.reauthorizationRequired -> "Sign in again to continue"
         accounts.connected -> if (accounts.planEnabled) "Connected" else "Plan usage disabled"
         else -> "Not connected"
     }) }
     for (account in accounts.accounts) action(
-        (if (accounts.activeClientId == account.clientId) "✓ " else "") + account.label,
+        (if (accounts.activeClientId == account.clientId) "✓ " else "") + accountRowName(accounts, account),
         enabled = !accounts.signingOut, onClick = { actions.select(account.clientId) },
     )
     if (ui.showContinue) continueAction(ui.canContinue, actions.start)
@@ -42,10 +47,10 @@ internal fun TransformingLazyColumnScope.connectionItems(
     }
     item { ShellText("OpenAI API key", heading = true) }
     item { ShellText(if (key.configured) "Configured · separate API billing" else "Not configured · separate API billing") }
-    action(if (key.configured) "Change key" else "Set up API key",
+    action(if (key.configured) "Change API key" else "Set up API key",
         enabled = setup != KeySetupStatus.REQUESTING && !changing, onClick = actions.request)
     if (setup != KeySetupStatus.IDLE) item { ShellText(keySetupText(setup)) }
-    if (ui.showRemoveKey) action("Remove key", !changing) {
+    if (ui.showRemoveKey) action("Remove API key", !changing) {
         if (key.mode == CredentialMode.OPENAI_API_KEY) proof.stop()
         actions.remove()
     }
@@ -58,3 +63,7 @@ internal fun keySetupText(setup: KeySetupStatus): String = when (setup) {
     KeySetupStatus.UNAVAILABLE -> "Phone unavailable. No credential or billing change."
     KeySetupStatus.ERROR -> "API setup failed. No automatic billing fallback."
 }
+
+internal fun accountRowName(accounts: WatchAccountState, account: AccountLabel): String =
+    if (accounts.activeClientId == account.clientId && (accounts.reauthorizationRequired || accounts.storageError ||
+            accounts.signingOut || accounts.signedOut)) "Sign-in required" else account.label

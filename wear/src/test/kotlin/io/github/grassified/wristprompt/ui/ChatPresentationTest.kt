@@ -93,8 +93,9 @@ class ChatPresentationTest {
             val p = PlainTextProjection(PresentationMetrics()).project(streaming("partial").copy(stage = stage, problem = problem))
             assertEquals("partial", restored(answer(p)))
             val status = p.rows.single { it.type == TranscriptType.STATUS }.text
-            assertTrue(status.startsWith(label)); assertTrue(status.contains("Not used for future replies."))
-            assertTrue(p.rows.any { it.type == TranscriptType.RECOVERY })
+            assertTrue(status.startsWith(label)); assertTrue(status.contains(EXCLUDED_RESPONSE))
+            assertEquals(RecoveryAction.ASK, p.recovery)
+            assertTrue(p.rows.none { it.type == TranscriptType.RECOVERY })
         }
     }
     @Test fun resetReleasesCacheAndSettledTail() {

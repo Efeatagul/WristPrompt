@@ -10,7 +10,7 @@ import kotlinx.serialization.json.JsonObject
 
 internal enum class DebugScenario {
     SIGNED_OUT, CHATGPT_AUTHENTICATED, API_KEY_CONFIGURED, MODELS_LOADING, MODELS_LOADED,
-    MANY_MODELS, MODEL_UNAVAILABLE, EMPTY_CHAT, LONG_USER_PROMPT, ONE_TURN_COMPLETED,
+    MANY_MODELS, THOUSAND_MODELS, LONG_MODEL_NAMES, MODEL_UNAVAILABLE, EMPTY_CHAT, LONG_USER_PROMPT, ONE_TURN_COMPLETED,
     MULTI_TURN_CHAT, LONG_ASSISTANT_OUTPUT, STREAMING_SHORT, STREAMING_LONG, STOPPED_PARTIAL,
     ERROR_401_REAUTH, ERROR_401_API_KEY, ERROR_429, ERROR_503, ERROR_OFFLINE, LONG_ERROR_MESSAGE,
     RECREATED_COMPLETED_STATE, RECREATED_CANCELLED_STATE,
@@ -27,28 +27,29 @@ internal enum class DebugScenario {
     MARKDOWN_LINK, MARKDOWN_BLOCKED_LINK, MARKDOWN_RAW_HTML, MARKDOWN_IMAGE,
     MARKDOWN_DEEP_NESTING, MARKDOWN_DELIMITER_STRESS, STREAMING_MARKDOWN, STREAMING_MARKDOWN_OPEN_SYNTAX,
     INTERRUPTED_MARKDOWN, STOPPED_MARKDOWN, TERMINAL_MARKDOWN_REPLACEMENT, MARKDOWN_LIST_LONG,
-    MARKDOWN_MALFORMED, MARKDOWN_LONG_URL;
+    MARKDOWN_MALFORMED, MARKDOWN_LONG_URL, ERROR_API_LIMIT, INCOMPLETE_PARTIAL,
+    CONVERSATION_LIMIT, SECURE_STORAGE_FAILURE;
     companion object { fun parse(name: String?): DebugScenario? = entries.singleOrNull { it.name == name } }
 }
 
 /** No Context, repository, preference store, HTTP client or serializable credential record. */
 internal class DebugScenarios(val scenario: DebugScenario) {
-    val mode = if (scenario in setOf(DebugScenario.API_KEY_CONFIGURED, DebugScenario.ERROR_401_API_KEY, DebugScenario.API_KEY_WATCH_ONLY))
+    val mode = if (scenario in setOf(DebugScenario.API_KEY_CONFIGURED, DebugScenario.ERROR_401_API_KEY, DebugScenario.API_KEY_WATCH_ONLY, DebugScenario.ERROR_API_LIMIT))
         CredentialMode.OPENAI_API_KEY else CredentialMode.CHATGPT_PLAN
     private val reauth = scenario == DebugScenario.REAUTH_REQUIRED_PHONE_ABSENT
-    val accounts = WatchAccountState(reauthorizationRequired = reauth, connected = scenario != DebugScenario.SIGNED_OUT, planEnabled = true,
+    val accounts = WatchAccountState(storageError = scenario == DebugScenario.SECURE_STORAGE_FAILURE, reauthorizationRequired = reauth, connected = scenario != DebugScenario.SIGNED_OUT, planEnabled = true,
         accounts = if (scenario == DebugScenario.SIGNED_OUT) emptyList() else listOf(AccountLabel("debug", "Synthetic account")),
         activeClientId = "debug".takeUnless { scenario == DebugScenario.SIGNED_OUT })
-    val key = ApiKeyState(loaded = true, mode = mode, configured = mode == CredentialMode.OPENAI_API_KEY)
+    val key = ApiKeyState(storageError = scenario == DebugScenario.SECURE_STORAGE_FAILURE, loaded = true, mode = mode, configured = mode == CredentialMode.OPENAI_API_KEY)
     val surface = when (scenario) {
-        DebugScenario.MANY_MODELS, DebugScenario.MODELS_LOADED, DebugScenario.MODEL_UNAVAILABLE,
+        DebugScenario.MANY_MODELS, DebugScenario.THOUSAND_MODELS, DebugScenario.LONG_MODEL_NAMES, DebugScenario.MODELS_LOADED, DebugScenario.MODEL_UNAVAILABLE,
         DebugScenario.MODEL_DISCOVERY_OFFLINE, DebugScenario.MODEL_DISCOVERY_RECOVERED -> Surface.MODELS
         DebugScenario.LONG_USER_PROMPT, DebugScenario.COMPOSER_RECREATION -> Surface.COMPOSER
         DebugScenario.SIGNED_OUT, DebugScenario.REAUTH_REQUIRED_PHONE_ABSENT -> Surface.CONNECTION
         else -> Surface.CHAT
     }
-    private val access = MutableStateFlow(InferenceAccessState(client = "debug", usable = scenario != DebugScenario.SIGNED_OUT && !reauth, mode = mode,
-        problem = if (reauth) ApiProblem.REAUTHORIZE else null))
+    private val access = MutableStateFlow(InferenceAccessState(client = "debug", usable = scenario !in setOf(DebugScenario.SIGNED_OUT, DebugScenario.SECURE_STORAGE_FAILURE) && !reauth, mode = mode,
+        problem = if (scenario == DebugScenario.SECURE_STORAGE_FAILURE) ApiProblem.STORAGE else if (reauth) ApiProblem.REAUTHORIZE else null))
     // Transient lease required by InferenceSession; empty bearer cannot be an API key/token.
     // It is passed only to this synthetic provider, never to a persistence or HTTP boundary.
     private val lease = CredentialLease("debug", 0, "", Long.MAX_VALUE, mode)
@@ -108,12 +109,22 @@ internal class DebugScenarios(val scenario: DebugScenario) {
                 throw ApiFailure(ApiProblem.NETWORK)
             if (loading) awaitCancellation()
             if (unavailable) { unavailable = false; throw ApiFailure(ApiProblem.NO_MODELS) }
-            return (1..if (scenario == DebugScenario.MANY_MODELS) 40 else 3).map { AiModel("debug-$it", "Synthetic model $it") }
+            val count = when (scenario) {
+                DebugScenario.MANY_MODELS -> 40
+                DebugScenario.THOUSAND_MODELS -> 1000
+                else -> 3
+            }
+            return (1..count).map { AiModel("debug-$it", if (scenario == DebugScenario.LONG_MODEL_NAMES)
+                "Synthetic authoritative model name with a long service supplied label $it" else "Synthetic model $it") }
         }
         override suspend fun stream(credential: CredentialLease, model: String, onEvent: suspend (ResponseEvent) -> Unit): Unit = error("Chat only")
         override suspend fun stream(credential: CredentialLease, model: String, input: List<JsonObject>, onEvent: suspend (ResponseEvent) -> Unit) {
             generations++; inputs += input
             failure()?.let { throw it }
+            if (scenario == DebugScenario.INCOMPLETE_PARTIAL) {
+                onEvent(ResponseEvent.Delta("**Synthetic partial** response."))
+                throw ApiFailure(ApiProblem.INCOMPLETE)
+            }
             if (networkScenario && !online) {
                 if (scenario == DebugScenario.STOP_NETWORK_RACE) {
                     onEvent(ResponseEvent.Delta("Synthetic interrupted partial")); networkLoss.await()
@@ -187,11 +198,13 @@ internal class DebugScenarios(val scenario: DebugScenario) {
         DebugScenario.ERROR_401_API_KEY -> ApiErrors.forMode(ApiErrors.parse(401, "{}"), mode)
         DebugScenario.ERROR_429 -> ApiErrors.parse(429, "{}")
         DebugScenario.ERROR_503, DebugScenario.LONG_ERROR_MESSAGE -> ApiErrors.parse(503, "{}")
+        DebugScenario.ERROR_API_LIMIT -> ApiFailure(ApiProblem.API_LIMIT)
         DebugScenario.ERROR_OFFLINE -> ApiFailure(ApiProblem.NETWORK)
         else -> null
     }
     suspend fun prepare() {
         if (scenario == DebugScenario.SIGNED_OUT) return
+        if (scenario == DebugScenario.SECURE_STORAGE_FAILURE) { vm.state.first { it.problem == ApiProblem.STORAGE }; return }
         if (reauth) { vm.state.first { it.problem == ApiProblem.REAUTHORIZE }; return }
         if (scenario == DebugScenario.MODELS_LOADING) { vm.state.first { it.stage == ProofStage.LOADING }; return }
         if (scenario == DebugScenario.MODEL_UNAVAILABLE) { vm.state.first { it.problem == ApiProblem.NO_MODELS }; vm.draft("Blocked until models reload"); return }
@@ -199,6 +212,15 @@ internal class DebugScenarios(val scenario: DebugScenario) {
             vm.state.first { it.stage == ProofStage.FAILED && it.problem == ApiProblem.NETWORK }; return
         }
         vm.state.first { it.stage == ProofStage.READY }
+        if (scenario == DebugScenario.CONVERSATION_LIMIT) {
+            repeat(ChatConversation.MAX_ATTEMPTS) {
+                vm.draft("Synthetic bounded question"); vm.send(); vm.chat.first { it.stage == ChatStage.COMPLETED }
+            }
+            return
+        }
+        if (scenario == DebugScenario.INCOMPLETE_PARTIAL) {
+            vm.draft("Synthetic incomplete request"); vm.send(); vm.chat.first { it.stage == ChatStage.FAILED }; return
+        }
         if (networkScenario) {
             vm.draft("Synthetic network failure request"); vm.send()
             vm.chat.first { if (scenario == DebugScenario.STOP_NETWORK_RACE) it.stage == ChatStage.RECEIVING else it.stage == ChatStage.FAILED }

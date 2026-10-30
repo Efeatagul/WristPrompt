@@ -56,11 +56,13 @@ internal fun ChatScreen(
         LinkInspection(inspected.orEmpty()) { inspected = null }
         return
     }
+    val setup = ui.recovery ?: if (state.selectedSlug == null) modelCatalogPresentation(state) else null
+    val showSetup = setup != null && presentation.stage !in setOf(ChatStage.FAILED, ChatStage.CANCELLED)
     val largeFont = LocalDensity.current.fontScale > 1.2f
     val keys = buildList {
         if (largeFont) addAll(listOf("chat-title", "chat-menu", "chat-model", "chat-billing"))
         else add("chat-header")
-        if (!ui.proofAvailable || state.selectedSlug == null) addAll(listOf("chat-unavailable", "chat-setup"))
+        if (showSetup) add("chat-unavailable")
         if (presentation.rows.isEmpty()) add("chat-empty") else addAll(presentation.rows.map { it.key })
     }
     val scroll = rememberChatScroll(navigation, keys)
@@ -83,12 +85,8 @@ internal fun ChatScreen(
         } else item(key = "chat-header", contentType = "header") {
             ChatHeader(ui, navigation)
         }
-        if (!ui.proofAvailable || state.selectedSlug == null) {
-            item(key = "chat-unavailable", contentType = "status") { ShellText(ui.status) }
-            item(key = "chat-setup", contentType = "action") {
-                Button(onClick = { navigation.open(if (ui.proofAvailable) Surface.MODELS else Surface.CONNECTION) },
-                    label = { Text(if (ui.proofAvailable) "Choose model" else "Account & Connection") })
-            }
+        if (showSetup) {
+            item(key = "chat-unavailable", contentType = "status") { ShellText(setup.text) }
         }
         if (presentation.rows.isEmpty()) {
             item(key = "chat-empty", contentType = "status") { ShellText("Ask anything") }
@@ -152,7 +150,10 @@ internal fun ComposerScreen(
         else paragraphs(chat.draft)
         if (chat.draft.length > ChatConversation.MAX_PROMPT_CHARS)
             item { ShellText("Message too long. Limit: ${ChatConversation.MAX_PROMPT_CHARS} characters. Replace the draft with a shorter message.") }
-        if (chat.limitReached) item { ShellText("Conversation limit reached. Start New Chat.") }
+        if (chat.limitReached) {
+            item { ShellText("Start a new chat to continue") }
+            action("New Chat") { proof.newChat(); navigation.open(Surface.CHAT) }
+        }
         action("Back to chat") { navigation.open(Surface.CHAT) }
         action("Discard draft") { proof.draft(""); navigation.open(Surface.CHAT) }
     }

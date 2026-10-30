@@ -1233,3 +1233,37 @@ is literal; images show alt text without retaining/fetching their destinations.
 No restrictive plain-text-only model instruction was found in production sources;
 no request instructions or inference code were changed. Model-picker rows are
 untouched and gain no Markdown demo metadata. D5-D/E/F/G and D6 stay separate.
+
+## D27 — name-only picker and secondary screens (2026-10-30)
+
+MODEL PICKER POLICY: Only authoritative model name + selected state.
+No speculative metadata. Preserve service order and slug identity; indexed lazy
+rows use slug keys, native selected semantics, visible checkmark and three-line
+wrapping. Unselected rows are neutral; selected rows use muted teal. API catalogs
+continue displaying raw IDs without inferred capabilities or rankings.
+
+Account & Connection places explicit billing route before the separate ChatGPT
+and API controls. Settings contains installed version, memory-only conversation
+behavior and Diagnostics; engineering/proof details remain secondary. This is
+presentation only: no protocol, routing, credential, persistence or navigation
+owner change. Evidence and limitations: DAY5_D_REPORT.md.
+
+## D28 — pure error/recovery presentation (2026-10-30)
+
+ErrorPresentation.kt owns exhaustive ApiProblem title/explanation/action metadata,
+plus terminal-chat and model-catalog display projections. These are pure UI
+functions; no endpoint, error taxonomy, transport/session, credential, bridge or
+billing decision moves into them. RecoveryAction names existing explicit commands.
+Chat's fixed action uses the current security/setup gate before chat recovery;
+Ask still opens composition/review and never resends. Manage usage retains the
+existing usage guidance in Diagnostics without an automatic phone request. Catalog errors offer manual reload only when
+current access permits it. A bare plan 401 remains permission failure, not proof
+of a terminal grant; it must not trigger OAuth.
+
+Completed chat has no status row. Stopped/interrupted/incomplete retain partial
+text and an explicit future-context exclusion note. Before-output failures have
+no empty assistant row. Markdown failure remains exact-source display fallback,
+not inference failure; terminal metadata remains outside rich blocks. Diagnostics
+retain existing allowlisted protocol category/HTTP detail; normal errors contain
+only static product copy. No timer, polling, observer, retry or new persistence.
+Evidence and complete copy matrix: DAY5_E_REPORT.md. D5-F/G and D6 remain separate.

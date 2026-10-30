@@ -288,7 +288,7 @@ for inference/refresh after setup. Document intentional lifecycle limits.
 ## Day 5 — WristPrompt UX 2.0 + Markdown
 
 D5-0 read-only audit completed in chat. D5-A/B and explicitly authorized D5-C
-are implemented; later phases remain unstarted.
+and D5-D are implemented; later phases remain unstarted.
 DAY5_STATUS.md owns current phase evidence; Day 4 remains PASS WITH KNOWN DEBT.
 
 - [x] D5-0: read-only UX/performance architecture audit and phase plan.
@@ -311,10 +311,18 @@ DAY5_STATUS.md owns current phase evidence; Day 4 remains PASS WITH KNOWN DEBT.
   horizontal code/rotary, Stop/Latest and 2x font acceptance recorded in
   DAY5_C_REPORT.md. Frame/PSS measurements remain bounded debug evidence;
   release profiling stays D5-F and physical Markdown UX stays D5-G.
-- [ ] D5-D: model/account/settings presentation. Model rows show ONLY discovered
+- [x] D5-D: model/account/settings presentation. Model rows show ONLY discovered
   display name (raw ID when that is all the service supplies) and selected state.
-  No speed/quality/reasoning/capability/description/ranking metadata. NOT STARTED.
-- [ ] D5-E: error/loading/recovery copy polish. NOT STARTED.
+  No speed/quality/reasoning/capability/description/ranking metadata.
+  PASS WITH KNOWN DEBT — 441 Wear tests / 50 suites; builds/lint/isolation and
+  40 Python tests pass. Focused Watch7 rotary/2x/1,000-model and secondary-route
+  evidence in DAY5_D_REPORT.md; heap/accessibility consolidation stays D5-F,
+  physical acceptance stays D5-G.
+- [x] D5-E: pure error/loading/recovery presentation and explicit existing actions.
+  PASS WITH KNOWN DEBT — 456 Wear tests / 51 suites; final copy subset 17 tests;
+  debug/release/lint/isolation, 40 Python tests pass. 19 targeted Watch7 fixtures
+  at normal/2x font, actual recovery taps and rotary/Stop/Latest evidence in
+  DAY5_E_REPORT.md. No physical testing; D5-F/G remain separate.
 - [ ] D5-F: consolidated accessibility/performance/scenario acceptance. NOT STARTED.
 - [ ] D5-G: targeted owner-authorized physical UX acceptance. PENDING.
 

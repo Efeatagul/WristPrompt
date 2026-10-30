@@ -1,7 +1,8 @@
 package io.github.grassified.wristprompt.openai
 
 import io.github.grassified.wristprompt.auth.CredentialMode
-import io.github.grassified.wristprompt.ui.chatRecovery
+import io.github.grassified.wristprompt.ui.errorPresentation
+import io.github.grassified.wristprompt.ui.RecoveryAction
 import java.io.IOException
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
@@ -45,14 +46,14 @@ class ErrorTransitionTest {
         }
     }
     @Test fun recoveryGuidanceUsesExistingActionsWithoutBillingFallback() {
-        assertTrue(chatRecovery(ApiProblem.INVALID_API_KEY).contains("configure your API key"))
-        assertFalse(chatRecovery(ApiProblem.INVALID_API_KEY).contains("sign-in"))
-        assertTrue(chatRecovery(ApiProblem.PERMISSION).contains("account and plan permission"))
-        assertTrue(chatRecovery(ApiProblem.REAUTHORIZE).contains("finish sign-in"))
-        assertTrue(chatRecovery(ApiProblem.NO_MODELS).contains("Reload models"))
-        assertTrue(chatRecovery(ApiProblem.USAGE_LIMIT).contains("Manage usage"))
-        assertTrue(chatRecovery(ApiProblem.API_LIMIT).contains("API usage"))
-        for (problem in listOf(null, ApiProblem.NETWORK, ApiProblem.TEMPORARY, ApiProblem.PROTOCOL))
-            assertTrue(chatRecovery(problem).contains("Compose a new message"))
+        assertEquals(RecoveryAction.ACCOUNT, errorPresentation(ApiProblem.INVALID_API_KEY).action)
+        assertFalse(errorPresentation(ApiProblem.INVALID_API_KEY).text.contains("sign-in"))
+        assertEquals(RecoveryAction.ACCOUNT, errorPresentation(ApiProblem.PERMISSION).action)
+        assertEquals(RecoveryAction.ACCOUNT, errorPresentation(ApiProblem.REAUTHORIZE).action)
+        assertEquals(RecoveryAction.MODELS, errorPresentation(ApiProblem.NO_MODELS).action)
+        assertEquals(RecoveryAction.USAGE, errorPresentation(ApiProblem.USAGE_LIMIT).action)
+        assertEquals(RecoveryAction.ACCOUNT, errorPresentation(ApiProblem.API_LIMIT).action)
+        for (problem in listOf(ApiProblem.NETWORK, ApiProblem.TEMPORARY, ApiProblem.PROTOCOL))
+            assertEquals(RecoveryAction.ASK, errorPresentation(problem).action)
     }
 }

@@ -14,7 +14,8 @@ internal data class TranscriptRow(
     val textLength get() = end - start
     override fun toString() = "TranscriptRow(redacted)"
 }
-internal data class ChatPresentation(val rows: List<TranscriptRow> = emptyList(), val stage: ChatStage = ChatStage.EMPTY) {
+internal data class ChatPresentation(val rows: List<TranscriptRow> = emptyList(), val stage: ChatStage = ChatStage.EMPTY,
+    val recovery: RecoveryAction? = null) {
     override fun toString() = "ChatPresentation(redacted)"
 }
 
@@ -88,13 +89,13 @@ internal class PlainTextProjection(private val metrics: PresentationMetrics? = n
                 addAll(settled)
                 parts.lastOrNull()?.let { add(it.copy(type = if (chat.busy) TranscriptType.TAIL else TranscriptType.ASSISTANT)) }
             }
-            terminalText(chat)?.let { add(TranscriptRow("status-$currentAttempt", TranscriptType.STATUS, it)) }
-            if (chat.stage == ChatStage.FAILED || chat.stage == ChatStage.CANCELLED)
-                add(TranscriptRow("recovery-$currentAttempt", TranscriptType.RECOVERY, chatRecovery(chat.problem)))
-            if (chat.limitReached) add(TranscriptRow("limit", TranscriptType.STATUS, "Conversation limit reached. Start New Chat to continue."))
+            (terminalText(chat) ?: chatError(chat)?.text)?.let { add(TranscriptRow("status-$currentAttempt", TranscriptType.STATUS, it)) }
+
+            if (chat.limitReached && chat.stage in setOf(ChatStage.FAILED, ChatStage.CANCELLED))
+                add(TranscriptRow("limit", TranscriptType.STATUS, "Start a new chat to continue"))
         }
         if (!chat.busy && chat.partial.isEmpty()) clearTail()
-        return ChatPresentation(rows, chat.stage)
+        return ChatPresentation(rows, chat.stage, if (chat.limitReached) RecoveryAction.NEW_CHAT else chatError(chat)?.action)
     }
 
     private fun prefixMatches(text: String): Boolean {
@@ -156,12 +157,7 @@ internal fun safeEnd(text: String, start: Int, limit: Int): Int {
 internal fun terminalText(chat: ChatState): String? = when (chat.stage) {
     ChatStage.STARTING -> "Sending…"
     ChatStage.RECEIVING -> "Responding…"
-    ChatStage.CANCELLED -> "Response stopped\nNot used for future replies."
-    ChatStage.FAILED -> when (chat.problem) {
-        ApiProblem.INTERRUPTED -> "Response interrupted"
-        ApiProblem.INCOMPLETE -> "Response incomplete"
-        else -> chat.problem?.let(::problemSummary) ?: "Request failed"
-    } + "\nNot used for future replies."
+    ChatStage.CANCELLED, ChatStage.FAILED -> chatError(chat)?.text
     else -> null
 }
 

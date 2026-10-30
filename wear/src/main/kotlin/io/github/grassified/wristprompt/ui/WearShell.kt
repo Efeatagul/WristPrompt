@@ -62,6 +62,8 @@ internal fun WearShellContent(
     actions: ConnectionActions, initialSurface: Surface = Surface.CHAT,
     supplementalGuidance: String? = null, presentationMetrics: PresentationMetrics? = null,
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val appVersion = remember(context) { context.packageManager.getPackageInfo(context.packageName, 0).versionName }
     val state by proof.state.collectAsStateWithLifecycle()
     // Only the low-frequency busy boundary belongs to the shell. Transcript text is read in ChatScreen.
     val busySource = remember(proof) { proof.chat.map { it.busy }.distinctUntilChanged() to proof.chat.value.busy }
@@ -118,7 +120,7 @@ internal fun WearShellContent(
                         interruptedInput, inputUnavailable, write)
                     else -> ShellList(Modifier.fillMaxSize(), rememberShellScroll(navigation, surface)) {
                         action("Back", onClick = back)
-                        if (surface == Surface.MODELS || surface == Surface.CONNECTION) item { ShellText(ui.status) }
+
                         when (surface) {
                             Surface.MENU -> {
                                 item { ShellText("Menu", heading = true) }
@@ -128,8 +130,9 @@ internal fun WearShellContent(
                             }
                             Surface.SETTINGS -> {
                                 item { ShellText("Settings & About", heading = true) }
-                                item { ShellText("WristPrompt · 0.1.0") }
-                                item { ShellText("Conversation stays in memory for this session. It is cleared when the app process ends.") }
+                                item { ShellText("About WristPrompt", heading = true) }
+                                item { ShellText("WristPrompt · ${appVersion}") }
+                                paragraphs("Conversation stays in memory for this session. New Chat, changing model or ending the app process clears it.")
                                 action("Diagnostics") { navigation.open(Surface.DETAILS) }
                             }
                             Surface.PROOF -> {
@@ -165,20 +168,23 @@ internal fun WearShellContent(
                             }
                             Surface.MODELS -> {
                                 item { ShellText("Choose model", heading = true) }
-                                item { ShellText("Selected: ${ui.model}", compact = true) }
-                                if (state.mode == key.mode) for (model in state.models) action(
-                                    (if (model.slug == state.selectedSlug) "✓ " else "") + model.displayName,
-                                    enabled = !state.busy && !chatBusy, onClick = { proof.select(model.slug) })
-                                action("Reload models", !state.busy && !chatBusy, proof::loadModels)
-                                if (state.models.isEmpty()) item { ShellText("No models available. Reload to retry.") }
+                                val catalog = ui.recovery ?: modelCatalogPresentation(state)
+                                catalog?.let { item { ShellText(it.text) } }
+                                if (state.mode == key.mode) modelItems(state.models, state.selectedSlug,
+                                    enabled = ui.proofAvailable && !state.busy && !chatBusy, onSelect = proof::select)
+                                val recovery = catalog?.action ?: RecoveryAction.MODELS
+                                recoveryAction(recovery, proof, navigation, !state.busy && !chatBusy &&
+                                    (recovery != RecoveryAction.MODELS || ui.proofAvailable))
+
                             }
-                            Surface.CONNECTION -> connectionItems(ui, accounts, key, setup, changing, actions, proof) {
+                            Surface.CONNECTION -> connectionItems(ui, accounts, key, setup, changing, actions, proof, { navigation.open(Surface.DETAILS) }) {
                                 proof.manageUsage(); navigation.open(Surface.DETAILS)
                             }
                             Surface.DETAILS -> {
                                 item { ShellText("Diagnostics", heading = true) }
                                 action("Inference proof", !chatBusy) { navigation.open(Surface.PROOF) }
                                 ui.account?.let { paragraphs(it) }
+                                paragraphs(billingDisclosure(ui.billing))
                                 paragraphs("Model: ${ui.model}")
                                 item { ShellText(ui.status) }
                                 if (key.storageError || accounts.storageError) paragraphs(messages.getValue(R.string.setup_storage_error))
@@ -230,6 +236,11 @@ private fun PrimaryControl(
     ui: ShellPresentation, proof: InferenceViewModel, interaction: ShellInteraction, navigation: ShellNavigationViewModel,
 ) {
     val action = primaryAction(surface, state.busy || chatBusy, welcome) ?: return
+    val recoverySource = remember(proof) { proof.chat.map { if (it.limitReached) RecoveryAction.NEW_CHAT else chatError(it)?.action }.distinctUntilChanged() to chatError(proof.chat.value)?.action }
+    val chatRecovery by recoverySource.first.collectAsStateWithLifecycle(initialValue = recoverySource.second)
+    val recovery = if (surface == Surface.CHAT && action == PrimaryAction.ASK)
+        ui.recovery?.action ?: chatRecovery ?: if (state.selectedSlug == null) modelCatalogPresentation(state)?.action else null
+        else null
     val canSend = if (action == PrimaryAction.SEND) {
         val sendSource = remember(proof) { proof.chat.map { it.canSend }.distinctUntilChanged() to proof.chat.value.canSend }
         val ready by sendSource.first.collectAsStateWithLifecycle(initialValue = sendSource.second)
@@ -247,12 +258,14 @@ private fun PrimaryControl(
                 .semantics { contentDescription = "Latest" }) {
             Text(if (LocalDensity.current.fontScale > 1.2f) "↓" else "Latest")
         }
-        Button(onClick = when (action) {
+        Button(onClick = if (recovery != null && recovery != RecoveryAction.ASK) {
+            { performRecovery(recovery, proof, navigation) }
+        } else when (action) {
             PrimaryAction.ASK -> interaction::ask
             PrimaryAction.SEND -> interaction::send
             PrimaryAction.STOP -> interaction::stop
         }, enabled = canSend, modifier = Modifier.weight(1f).heightIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp), label = { Text(action.label) })
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp), label = { Text(recovery?.label ?: action.label) })
     }
 }
 
@@ -322,3 +335,19 @@ internal fun readableChunks(text: String): List<String> = buildList {
     }
 }
 
+
+// Explicit existing commands only; no resend, automatic discovery, OAuth or credential changes.
+private fun performRecovery(action: RecoveryAction, proof: InferenceViewModel, navigation: ShellNavigationViewModel) {
+    when (action) {
+        RecoveryAction.ACCOUNT -> navigation.open(Surface.CONNECTION)
+        RecoveryAction.MODELS -> proof.loadModels()
+        RecoveryAction.USAGE -> { proof.manageUsage(); navigation.open(Surface.DETAILS) }
+        RecoveryAction.DIAGNOSTICS -> navigation.open(Surface.DETAILS)
+        RecoveryAction.NEW_CHAT -> { proof.newChat(); navigation.open(Surface.CHAT) }
+        RecoveryAction.ASK -> navigation.open(Surface.COMPOSER)
+    }
+}
+
+private fun androidx.wear.compose.foundation.lazy.TransformingLazyColumnScope.recoveryAction(
+    recovery: RecoveryAction, proof: InferenceViewModel, navigation: ShellNavigationViewModel, enabled: Boolean,
+) { action(recovery.label, enabled) { performRecovery(recovery, proof, navigation) } }

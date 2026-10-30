@@ -20,6 +20,7 @@ internal data class ShellPresentation(
     val showSignOut: Boolean,
     val showManageUsage: Boolean,
     val showRemoveKey: Boolean,
+    val recovery: ErrorPresentation? = null,
 )
 
 internal fun shellPresentation(
@@ -33,27 +34,27 @@ internal fun shellPresentation(
         else key.configured
     val showContinue = !accounts.connected || accounts.reauthorizationRequired
     val status = when {
-        key.storageError -> "Protected storage unavailable"
+        key.storageError -> "Secure storage unavailable"
         !key.loaded -> "Loading connection…"
         changing -> "Updating connection…"
-        plan && accounts.storageError -> "Protected storage unavailable"
+        plan && accounts.storageError -> "Secure storage unavailable"
         plan && accounts.signingOut -> "Signing out…"
         plan && accounts.signedOut -> if (accounts.revocation == RevocationResult.CONFIRMED)
             "Signed out · revocation confirmed" else "Signed out · remote revocation unconfirmed"
         plan && accounts.expired -> "Setup expired · retry from watch"
         plan && accounts.authorizing -> "Finish sign-in on phone"
         plan && accounts.failed -> "Phone authorization failed · retry from watch"
-        plan && accounts.reauthorizationRequired -> "Authentication required"
+        plan && accounts.reauthorizationRequired -> "Sign in again to continue"
         plan && !accounts.connected -> when (bridge) {
             WatchAuthState.LOOKING_FOR_PHONE -> "Finding phone…"
             WatchAuthState.REQUEST_SENT -> "Open WristPrompt on phone"
             WatchAuthState.COMPANION_UNAVAILABLE -> "Phone unavailable"
             WatchAuthState.MULTIPLE_PHONES -> "Multiple phones · connect one"
             WatchAuthState.ERROR -> "Setup not confirmed · retry from watch"
-            WatchAuthState.IDLE -> "Authentication required"
+            WatchAuthState.IDLE -> "Sign in to continue"
         }
         plan && !accounts.planEnabled -> "ChatGPT plan usage disabled"
-        !plan && !key.configured -> "API key not configured · no fallback"
+        !plan && !key.configured -> "Set up an API key to continue"
         proof.mode != key.mode -> "Loading connection…"
         else -> proofSummary(proof)
     }
@@ -72,6 +73,16 @@ internal fun shellPresentation(
         showSignOut = accounts.activeClientId != null && !accounts.signedOut,
         showManageUsage = accounts.connected && !accounts.signedOut,
         showRemoveKey = key.configured,
+        recovery = when {
+            key.storageError || (plan && accounts.storageError) -> errorPresentation(ApiProblem.STORAGE)
+            !key.loaded || changing || proof.mode != key.mode || (plan && (accounts.signingOut || accounts.authorizing)) ->
+                ErrorPresentation(status, action = null)
+            plan && accounts.reauthorizationRequired && !accounts.signedOut -> errorPresentation(ApiProblem.REAUTHORIZE)
+            plan && (!accounts.connected || accounts.signedOut) -> ErrorPresentation("Sign in to continue", action = RecoveryAction.ACCOUNT)
+            plan && !accounts.planEnabled -> errorPresentation(ApiProblem.PLAN_DISABLED)
+            !plan && !key.configured -> errorPresentation(ApiProblem.API_KEY_MISSING)
+            else -> null
+        },
     )
 }
 
@@ -85,26 +96,4 @@ internal fun proofSummary(proof: ProofState): String = when (proof.stage) {
         ?: if (proof.stage == ProofStage.READY) "Ready for proof" else "Load models to begin"
 }
 
-internal fun problemSummary(problem: ApiProblem): String = when (problem) {
-    ApiProblem.API_KEY_MISSING -> "API key not configured"
-    ApiProblem.INVALID_API_KEY -> "API key rejected · no fallback"
-    ApiProblem.API_LIMIT -> "API rate or credit limit"
-    ApiProblem.REAUTHORIZE -> "Authentication required"
-    ApiProblem.PLAN_DISABLED -> "ChatGPT plan usage disabled"
-    ApiProblem.REAUTHORIZING -> "Finish sign-in on phone"
-    ApiProblem.USAGE_LIMIT -> "ChatGPT usage limit"
-    ApiProblem.USAGE_UNAVAILABLE -> "Usage unavailable"
-    ApiProblem.NOT_ELIGIBLE -> "Plan not eligible"
-    ApiProblem.PERMISSION -> "Permission not accepted"
-    ApiProblem.TEMPORARY -> "Temporarily unavailable"
-    ApiProblem.REFRESH_NOT_READY -> "Refresh not ready"
-    ApiProblem.CONFIGURATION -> "Configuration needs attention"
-    ApiProblem.INVALID_REQUEST -> "Request or model rejected"
-    ApiProblem.NETWORK -> "Network error"
-    ApiProblem.NO_MODELS -> "No models available"
-    ApiProblem.INTERRUPTED -> "Stream interrupted · output is partial"
-    ApiProblem.INCOMPLETE -> "Response incomplete · output is partial"
-    ApiProblem.PROTOCOL -> "Response could not be processed"
-    ApiProblem.STORAGE -> "Protected storage unavailable"
-    ApiProblem.STALE_ACCOUNT -> "Connection changed · reload models"
-}
+internal fun problemSummary(problem: ApiProblem): String = errorPresentation(problem).title

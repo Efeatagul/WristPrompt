@@ -69,7 +69,7 @@ def main():
         device('shell', 'uiautomator', 'dump', '/sdcard/d4d-window.xml')
         xml = device('shell', 'cat', '/sdcard/d4d-window.xml')
         texts = {n.get('text', '') for n in ET.fromstring(xml).iter('node')}
-        expected_text = ('Authentication required' if scenario == 'REAUTH_REQUIRED_PHONE_ABSENT' else
+        expected_text = ('Sign in again to continue' if scenario == 'REAUTH_REQUIRED_PHONE_ABSENT' else
                          'OpenAI API · API billing' if scenario == 'API_KEY_WATCH_ONLY' else 'Using ChatGPT plan')
         if expected_text not in texts:
             raise RuntimeError('Expected rendered state missing: ' + expected_text)

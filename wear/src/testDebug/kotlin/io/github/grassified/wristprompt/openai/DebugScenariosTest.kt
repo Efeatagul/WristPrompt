@@ -14,8 +14,20 @@ class DebugScenariosTest {
     @After fun cleanup() { fixtures.forEach { it.vm.viewModelScope.cancel() }; Dispatchers.resetMain() }
     private fun fixture(s: DebugScenario) = DebugScenarios(s).also { fixtures += it }
     @Test fun namesAreUniqueAndRoundTrip() {
-        assertEquals(69, DebugScenario.entries.size)
+        assertEquals(75, DebugScenario.entries.size)
         DebugScenario.entries.forEach { assertSame(it, DebugScenario.parse(it.name)) }
+    }
+    @Test fun largeAndLongCatalogsKeepExactNamesAndOrder(): Unit = runTest {
+        for ((scenario, count) in listOf(DebugScenario.MANY_MODELS to 40, DebugScenario.THOUSAND_MODELS to 1000,
+            DebugScenario.LONG_MODEL_NAMES to 3)) {
+            val f = fixture(scenario); launch { f.prepare() }; runCurrent()
+            val state = f.vm.state.value
+            assertEquals(count, state.models.size)
+            assertEquals((1..count).map { "debug-$it" }, state.models.map { it.slug })
+            assertEquals("debug-1", state.selectedSlug)
+            assertEquals(1, f.discoveries)
+            if (scenario == DebugScenario.LONG_MODEL_NAMES) assertTrue(state.models.all { it.displayName.length > 60 })
+        }
     }
     @Test fun unknownFailsClosed() { listOf(null, "", "streaming_long", "../SIGNED_OUT").forEach { assertNull(DebugScenario.parse(it)) } }
     @Test fun everyScenarioPreparesWithoutNetworkOrStores(): Unit = runTest {
@@ -150,7 +162,7 @@ class DebugScenariosTest {
         assertEquals(0, f.generations); assertEquals(0, f.discoveries)
         assertEquals(CredentialMode.CHATGPT_PLAN, f.mode)
         val shell = io.github.grassified.wristprompt.ui.shellPresentation(f.accounts, f.key, f.vm.state.value, f.authState, false)
-        assertEquals("Authentication required", shell.status); assertTrue(shell.showContinue); assertFalse(shell.proofAvailable)
+        assertEquals("Sign in again to continue", shell.status); assertTrue(shell.showContinue); assertFalse(shell.proofAvailable)
         assertEquals(0, f.bridgeLookups); assertEquals(0, f.bridgeRequests)
     }
     @Test fun debugCompanionSpyActuallyFailsAndCountsLookup(): Unit = runTest {

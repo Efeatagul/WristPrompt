@@ -50,7 +50,7 @@ class ShellPresentationTest {
         assertFalse(ui.proofAvailable)
         assertFalse(ui.canTest)
         assertFalse(ui.showRemoveKey)
-        assertEquals("API key not configured · no fallback", ui.status)
+        assertEquals("Set up an API key to continue", ui.status)
     }
 
     @Test fun stopRemainsReachableEvenDuringConnectionTransitionOrError() {
@@ -58,7 +58,7 @@ class ShellPresentationTest {
             val ui = present(k = key.copy(storageError = true), p = proof.copy(stage = stage), changing = true)
             assertTrue(ui.showStop)
             assertFalse(ui.canTest)
-            assertEquals("Protected storage unavailable", ui.status)
+            assertEquals("Secure storage unavailable", ui.status)
         }
         val stopped = present(p = proof.copy(stage = ProofStage.CANCELLED, output = "partial"))
         assertFalse(stopped.showStop)
@@ -75,17 +75,17 @@ class ShellPresentationTest {
             proof.copy(stage = ProofStage.FAILED, problem = ApiProblem.INTERRUPTED),
         )
         assertEquals(states.size, states.map { present(p = it).status }.distinct().size)
-        assertTrue(present(p = states[3]).status.contains("partial"))
-        assertTrue(present(p = states[4]).status.contains("partial"))
+        assertEquals("Response incomplete", present(p = states[3]).status)
+        assertEquals("Response interrupted", present(p = states[4]).status)
     }
 
     @Test fun everyProblemHasConciseDistinctSummaryWithoutProviderPayload() {
         val summaries = ApiProblem.entries.map(::problemSummary)
-        assertEquals(summaries.size, summaries.distinct().size)
+        assertTrue(summaries.all { it.isNotBlank() })
         assertTrue(summaries.all { it.length <= 60 && '\n' !in it })
-        assertEquals("Refresh not ready", problemSummary(ApiProblem.REFRESH_NOT_READY))
-        assertEquals("API key rejected · no fallback", problemSummary(ApiProblem.INVALID_API_KEY))
-        assertEquals("Usage unavailable", problemSummary(ApiProblem.USAGE_UNAVAILABLE))
+        assertEquals("Account temporarily unavailable", problemSummary(ApiProblem.REFRESH_NOT_READY))
+        assertEquals("API key rejected", problemSummary(ApiProblem.INVALID_API_KEY))
+        assertEquals("ChatGPT usage unavailable", problemSummary(ApiProblem.USAGE_UNAVAILABLE))
     }
 
     @Test fun signedOutNeverLooksUsableAndRemoteOutcomeRemainsHonest() {

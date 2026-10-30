@@ -137,7 +137,7 @@ class PhoneIndependenceTest : ReconstructionFixture() {
                 assertEquals(1, phone.lookups.get()); assertEquals(0, phone.requests.get())
                 assertArrayEquals(before, oauth.snapshot()); assertEquals(1, refreshes)
                 val shell = shellPresentation(r.p.state.value, r.k.state.value, r.vm.state.value, auth.state.value, false)
-                assertEquals("Authentication required", shell.status); assertTrue(shell.showContinue); assertFalse(shell.proofAvailable)
+                assertEquals("Sign in again to continue", shell.status); assertTrue(shell.showContinue); assertFalse(shell.proofAvailable)
                 try { r.router.current(); fail("Invalid grant reused") } catch (f: ApiFailure) { assertEquals(ApiProblem.REAUTHORIZE, f.problem) }
                 assertEquals(1, refreshes)
             } finally { withContext(main) { auth.viewModelScope.cancel() } }

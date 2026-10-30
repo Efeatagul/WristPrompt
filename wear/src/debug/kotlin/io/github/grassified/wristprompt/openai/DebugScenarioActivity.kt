@@ -170,8 +170,7 @@ class DebugScenarioActivity : ComponentActivity() {
                     Box(Modifier.weight(1f)) {
                         WearShellContent(f.accounts, f.authState, f.key, KeySetupStatus.IDLE, false, f.vm,
                             ConnectionActions({}, {}, {}, {}, {}, {}, {}), f.surface,
-                            if (scenario == DebugScenario.LONG_ERROR_MESSAGE)
-                                (getString(problemText(ApiProblem.TEMPORARY)) + " " + chatRecovery(ApiProblem.TEMPORARY) + " ").repeat(15) else null, metrics)
+                            null, metrics)
                     }
                 }
             }

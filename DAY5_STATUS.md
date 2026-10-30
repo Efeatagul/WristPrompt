@@ -1,9 +1,28 @@
 # Day 5 status — 2026-10-30
 
-Current phase: **D5-C — PASS WITH KNOWN DEBT**, with automated and emulator
-evidence in [DAY5_C_REPORT.md](DAY5_C_REPORT.md) and the phase-C summary below.
-D5-D/E/F/G and D6 remain unstarted; physical UX is deferred to D5-G. The D5-A section is the historical phase-A handoff, including
-its then-current scope statements and measurements.
+Current phase: **D5-E — PASS WITH KNOWN DEBT**, with the complete A–T handoff and
+final error/recovery copy matrix in [DAY5_E_REPORT.md](DAY5_E_REPORT.md).
+D5-A through D5-D remain complete. D5-F/G and D6 remain unstarted.
+
+**VERIFIED AUTOMATICALLY:** full Wear 456 tests / 51 suites, zero failures/errors/
+skips; final permission-copy subset 17 tests, zero failures; debug/release builds,
+lint (zero errors/six existing warnings), 75-fixture release isolation, 40 Python
+tests and syntax for 13 Python files pass. Full-run and narrow correction cadence
+is documented in the report; no mobile/shared changes or mobile rerun.
+
+**VERIFIED ON EMULATOR:** 19 targeted fixtures at normal and 2x font (38 readiness
+checks), concise terminal/error/model/storage presentation, explicit recovery taps,
+rotary, Stop/Latest, and zero automatic inference/reload/fallback. Long 2x action
+labels wrap, including occasional word breaks. Font restored to 1.0. Synthetic
+fixtures do not establish actual OAuth, hardware storage, quota or radio behavior.
+
+No production protocol/auth/storage/billing/bridge/conversation owner change.
+No physical testing, commit or push. PENDING END-OF-DAY PHYSICAL TEST belongs to
+D5-G; non-destructive error/recovery readability/action checks join its checklist.
+D5-F retains profiling, heap/release comparison, consolidated accessibility and
+full scenario acceptance. MODEL PICKER POLICY remains authoritative name + selected
+state only, with no speculative metadata. Existing D5-D working-tree work preserved.
+Earlier phase sections below are historical handoffs.
 
 # Day 5 Phase A — chat-first shell — 2026-10-30
 

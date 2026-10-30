@@ -56,17 +56,3 @@ private fun TranscriptText(row: TranscriptRow, inspect: (List<MarkdownLink>) -> 
             fontSize = if (user) 15.sp else 16.sp, lineHeight = 20.sp),
     )
 }
-
-// Guidance uses existing navigation/actions; never automatically retries or changes billing.
-internal fun chatRecovery(problem: ApiProblem?): String = when (problem) {
-    ApiProblem.REAUTHORIZE, ApiProblem.REAUTHORIZING -> "Open Connection / settings to finish sign-in."
-    ApiProblem.API_KEY_MISSING, ApiProblem.INVALID_API_KEY -> "Open Connection / settings to configure your API key. No fallback."
-    ApiProblem.PERMISSION, ApiProblem.PLAN_DISABLED -> "Check the selected account and plan permission in Connection / settings."
-    ApiProblem.NO_MODELS, ApiProblem.STALE_ACCOUNT -> "Choose model, then Reload models before sending again."
-    ApiProblem.USAGE_LIMIT, ApiProblem.USAGE_UNAVAILABLE, ApiProblem.NOT_ELIGIBLE -> "Open Connection / settings for Manage usage."
-    ApiProblem.API_LIMIT -> "Check API usage and credits before trying again."
-    ApiProblem.STORAGE -> "Protected storage is unavailable. Check Connection / settings before continuing."
-    ApiProblem.NETWORK -> "Check the watch’s internet connection. Compose a new message to retry."
-    ApiProblem.CONFIGURATION, ApiProblem.INVALID_REQUEST -> "Check connection and model settings before trying again."
-    else -> "Compose a new message to try again when ready."
-}

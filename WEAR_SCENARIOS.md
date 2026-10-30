@@ -1,6 +1,7 @@
 # Wear debug scenario acceptance — canonical guide
 
-Current D5-C catalog: **69 scenarios**, including 22 additive Markdown fixtures.
+Current D5-E catalog: **75 scenarios**: D5-C’s 69, D5-D’s two model fixtures,
+and D5-E’s four missing failure/limit fixtures.
 The D5-B inventory below has 47 entries; the D5-C inventory appends 22.
 This guide owns the current catalog and commands. Historical
 phase evidence and limitations remain in [DAY4_STATUS.md](DAY4_STATUS.md);
@@ -316,3 +317,42 @@ D5-C acceptance performs **no physical tests**. Physical readability/accessibili
 and performance remain D5-G; release profiling remains D5-F. `LATEST_AVAILABLE`
 was not a pre-existing scenario identifier: explicit Latest is exercised using
 long/streaming fixtures and the unchanged D5-B control, without inventing an alias.
+
+## D5-D picker boundaries
+
+Two additional offline debug-only fixtures (71 total):
+
+| Scenario | Category | Behavior |
+| --- | --- | --- |
+| THOUSAND_MODELS | model | 1,000 synthetic discovered names in service order; first selected; production lazy picker. |
+| LONG_MODEL_NAMES | model | Three long synthetic authoritative names; production three-line wrapping and selected semantics. |
+
+MODEL PICKER POLICY: Only authoritative model name + selected state.
+No speculative metadata. MANY_MODELS remains 40 rows; MODELS_LOADED remains three.
+No actual model metadata, credentials, HTTP or protected persistence is involved.
+D5-D evidence/limitations are in DAY5_D_REPORT.md; no physical acceptance implied.
+
+## D5-E error/loading/recovery fixtures — 2026-10-30
+
+Existing IDs are preserved. Reuse ERROR_OFFLINE, ERROR_503, ERROR_401_REAUTH
+(bare plan 401 = permission, not terminal reauth), ERROR_401_API_KEY, ERROR_429,
+MODEL_UNAVAILABLE, MODEL_DISCOVERY_OFFLINE, STOPPED_PARTIAL,
+NETWORK_LOST_DURING_STREAM, SIGNED_OUT, REAUTH_REQUIRED_PHONE_ABSENT,
+INTERRUPTED_MARKDOWN, STOPPED_MARKDOWN, ONE_TURN_COMPLETED and MODELS_LOADING.
+LONG_ERROR_MESSAGE now uses the same concise production failure as ERROR_503;
+its former debug-only repeated engineering warning was removed intentionally.
+
+Four additive debug-only IDs fill presentation gaps:
+
+| Fixture | Deterministic state |
+| --- | --- |
+| ERROR_API_LIMIT | Explicit API-key mode, API_LIMIT, no ChatGPT billing/fallback. |
+| INCOMPLETE_PARTIAL | Delta then INCOMPLETE, partial retained and excluded. |
+| CONVERSATION_LIMIT | Twelve completed synthetic turns through the real owner; New Chat required. |
+| SECURE_STORAGE_FAILURE | Synthetic unusable access plus storage-error presentation; zero store access, discovery or generation. |
+
+Every-fixture JVM preparation covers all 75. The D5-E emulator run targets these
+four plus the reused cases above; it does not run the entire catalog or close
+D5-F full acceptance. Phone-absence rendered-copy assertion now expects
+Sign in again to continue; behavior assertions are unchanged. Copy, visual/font,
+rotary/action evidence and limitations are recorded in DAY5_E_REPORT.md.
