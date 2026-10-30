@@ -144,7 +144,7 @@ authorized host execution passed without cache migration or signing changes.
 
 **VERIFIED ON EMULATOR.** Previously executed D4-G commands below ran sequentially;
 none was rerun during D4-H or final documentation closure. Each runner dynamically
-selected **WristPrompt_Watch7 (emulator-5554)**, verified watch characteristics and
+selected **WristPrompt_Watch7 (WATCH_SERIAL)**, verified watch characteristics and
 excluded physical serials. No physical device was selected or modified.
 
 | Command | Result |

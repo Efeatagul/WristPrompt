@@ -42,6 +42,18 @@ No auth/OAuth/storage/signing/bridge/billing/replay/owner change, persistent cha
 background infrastructure or redesign. Release remains unsigned/unminified with
 dependency-merged baseline profiles; debug fixtures remain absent from release.
 
+## Repository handoff preparation — 2026-10-30
+
+Documentation/license/ignore-only pre-publication pass; no production or build
+behavior change. D5-F remains PASS WITH KNOWN DEBT; D5-G is PHYSICAL ACCEPTANCE
+PENDING; D6 is NOT STARTED. No physical test or new D5 matrix was run.
+[Publication audit](docs/PUBLICATION_AUDIT.md) records passing source-publication
+gates after the owner-authorized, exact-artifact Google linking exception. Base
+license stays GPL-3.0-only; third-party licenses remain intact. Owner-authorized
+local-path history sanitation preserves all 28 engineering commits; original/new
+IDs are mapped in docs/HISTORY_REWRITE.md. This is a source development snapshot,
+not Day 5 physical closure or a stable release.
+
 ## D5-G targeted checklist — PENDING END-OF-DAY PHYSICAL TEST
 
 - Galaxy Watch default/max-font Chat/model/billing and recovery-label readability.

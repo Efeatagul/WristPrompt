@@ -239,7 +239,7 @@ resolved dependencies did not change, so mobile tests were not rerun. Its prior
 
 ## L. Emulator acceptance matrix
 
-Only the verified **WristPrompt_Watch7 / emulator-5554** was used. The attached
+Only the verified **WristPrompt_Watch7 / WATCH_SERIAL** was used. The attached
 physical phone was ignored. Generic catalog success means fresh readiness,
 matching live PID and RESUMED host; it does not mean every screen was visually
 reviewed. Final catalog: **69/69 PASS — VERIFIED ON EMULATOR** for readiness/liveness,

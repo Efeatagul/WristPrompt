@@ -3,7 +3,8 @@
 Your key. Your model. Your watch.
 
 Kotlin Wear OS AI client; repository `WristPrompt`; application ID
-`io.github.grassified.wristprompt`; license target Apache-2.0. Primary physical
+`io.github.grassified.wristprompt`; license GPL-3.0-only with the narrow linking exception in
+[LICENSE_EXCEPTION.md](LICENSE_EXCEPTION.md). Primary physical
 test device: Samsung Galaxy Watch 7 with a paired Android phone.
 
 ## Product and scope

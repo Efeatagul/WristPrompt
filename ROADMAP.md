@@ -329,7 +329,7 @@ DAY5_STATUS.md owns current phase evidence; Day 4 remains PASS WITH KNOWN DEBT.
   30 rotary frame windows, 12 reset cycles and 4/4 process restarts. One narrow
   large-font recovery fix. DAY5_F_REPORT.md / DAY5_F_METRICS.json distinguish
   timing/memory evidence from spoken TalkBack and physical/release-device debt.
-- [ ] D5-G: targeted owner-authorized physical UX acceptance. PENDING.
+- [ ] D5-G: targeted owner-authorized physical UX acceptance. PHYSICAL ACCEPTANCE PENDING.
 
 Gate: preserve inference/auth/account/billing/composer safety; verify automated
 and emulator results separately from physical evidence. D5 is not release freeze.
@@ -352,7 +352,7 @@ schema has been selected, and persistence is not implemented.
 - [ ] Focused protocol/security regressions, both-app lint/build and release smoke.
 - [ ] Manifests, exported components, diagnostics, backups, crypto, signing,
   dependency provenance/licenses, R8/shrinking/profile review.
-- [ ] README, Apache-2.0 LICENSE, privacy policy, store assets/setup instructions,
+- [ ] Review GPL-3.0-only LICENSE/public handoff, privacy policy, store assets/setup instructions,
   known limits and accurate Play Data safety declarations.
 - [ ] Current Play/Wear requirements and delivery signing relationship.
 - [ ] Physical release acceptance, remaining known-debt disposition and release notes.

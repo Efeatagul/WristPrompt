@@ -1267,3 +1267,56 @@ not inference failure; terminal metadata remains outside rich blocks. Diagnostic
 retain existing allowlisted protocol category/HTTP detail; normal errors contain
 only static product copy. No timer, polling, observer, retry or new persistence.
 Evidence and complete copy matrix: DAY5_E_REPORT.md. D5-F/G and D6 remain separate.
+
+
+## 2026-10-30 — GPLv3 and public development handoff
+
+Owner selected GNU GPL version 3 ONLY (SPDX GPL-3.0-only), replacing the previous
+Apache-2.0 project-license target. No root LICENSE had been tracked; canonical GNU
+GPLv3 text is now supplied without custom restrictions. Third-party dependency and
+Gradle wrapper licenses remain intact. Commercial use is permitted under GPLv3.
+
+This pass changes documentation/license/ignore files only. No production, build,
+authentication, storage, billing, signing or protocol behavior changed. D5-F stays
+PASS WITH KNOWN DEBT; D5-G stays PHYSICAL ACCEPTANCE PENDING; D6 is NOT STARTED.
+
+Initial publication review was BLOCKED — LICENSE COMPATIBILITY REVIEW REQUIRED
+(resolved by the owner-authorized exception below): locally resolved
+Google Play Services Wearable 20.0.1 POM declares the Android SDK License. An
+applicable GPLv3-compatible grant/exception/boundary has not been established.
+Owner-authorized sanitation replaced machine-specific home paths in 18 historical
+Markdown blobs across all 28 main commits; author/date/message and source/build
+content are unchanged. See docs/HISTORY_REWRITE.md for evidence ID mapping and
+docs/PUBLICATION_AUDIT.md for scope. No new handoff commit, push, visibility change,
+tag or release was made. Target repository was
+verified private and empty. Full D5 validation is intentionally not rerun for prose.
+
+
+## 2026-10-30 — narrowly scoped Google Play services additional permission
+
+Owner explicitly authorized GPL-3.0-only plus the conventional GPLv3 section 7
+linking-exception approach. LICENSE is unchanged canonical GPLv3. New
+LICENSE_EXCEPTION.md covers only Google's unmodified play-services-wearable 20.0.1,
+play-services-base 18.5.0, play-services-basement 18.9.0 and play-services-tasks
+18.2.0, for the existing Wearable Data Layer/Tasks integration. No blanket
+proprietary permission, third-party relicensing, proprietary WristPrompt relicensing,
+source-obligation waiver for WristPrompt or fake SPDX exception identifier.
+
+Both apps' releaseRuntimeClasspath dependency reports were resolved offline, and
+existing debug/release dependency models agree on these four exact versions.
+All four POMs declare Android SDK License. The exception avoids relying on the
+System Libraries classification. GPL-3.0-only remains the base SPDX identifier;
+describe the project as GPL-3.0-only with the documented narrow linking exception.
+
+Ownership review: all 28 existing main commits have the owner's handle/noreply
+identity as author and committer; no co-author trailer, separately attributed
+WristPrompt source or copied third-party GPL material was identified. Ordinary
+dependencies and upstream wrapper remain separately licensed. The owner grants
+the permission only for their code. Future contributions are expected under the
+base license plus exception without a CLA or copyright assignment; no retroactive
+contributor consent is claimed. Later outside contributions require renewed review.
+
+Bounded compatibility result: PASS — GPLv3 WITH NARROW LINKING EXCEPTION.
+Third-party notices remain intact. Full D5 acceptance was not rerun for license/docs
+changes; no production/build/tool behavior or phase boundary changed. See
+THIRD_PARTY_NOTICES.md and docs/PUBLICATION_AUDIT.md for evidence and publication gates.

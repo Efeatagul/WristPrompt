@@ -196,7 +196,7 @@ Logs: /tmp/d5e-narrow.log, /tmp/d5e-final-validation.log,
 ## M. Emulator acceptance
 
 **VERIFIED ON EMULATOR — synthetic production-renderer fixtures only**, named
-WristPrompt_Watch7, dynamically selected emulator-5554. Existing signing/data
+WristPrompt_Watch7, dynamically selected WATCH_SERIAL. Existing signing/data
 preserved with install -r. No entire-catalog run or physical PASS claim.
 
 Nineteen targeted fixtures at both font scales: **38/38 launch/readiness checks**,

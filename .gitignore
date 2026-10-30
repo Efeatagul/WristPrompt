@@ -47,3 +47,14 @@ credentials*.json
 
 # Protected runtime records must never be exported into source control
 *.enc
+
+# Temporary/profiling/editor artifacts
+build/
+*.tmp
+*.trace
+*.profraw
+*.heap
+*.dump
+Thumbs.db
+*.swp
+*~

@@ -17,7 +17,7 @@ and AGENTS.md. The dated audit and Git inventory are in DAY2_BASELINE.md.
 Use the wrapper; no global Gradle/Kotlin installation is needed. Keep dependency
 pins unchanged unless separately reviewed. See DECISIONS.md for SDK rationale.
 
-## Verified persistent environment
+## Historical verified environment (paths generalized)
 
 The user migrated the baseline on 2026-10-28. Tests, builds, lint and certificate
 verification passed using these locations (all resolve within persistent home,
@@ -33,9 +33,9 @@ with no symlink into temporary storage):
 No required build/signing configuration depends on the former temporary tools.
 The agent shell does not inherit these exports automatically; set them explicitly
 as below. SDK selection is also recorded in ignored `local.properties`:
-`sdk.dir=$HOME/Android/Sdk`.
+`sdk.dir=...` (an expanded absolute SDK path; local.properties does not expand `$HOME`).
 
-## Preserve the working signing identity
+## Preserve existing owner installations
 
 Both modules resolve to the persistent private key:
 `$HOME/.local/share/wristprompt/android/debug.keystore` (mode 0600).
@@ -54,9 +54,12 @@ Data Layer compatibility. Do not uninstall authenticated apps to bypass a mismat
 ## Setup in a fresh shell
 
 On another machine install a full JDK 17 and the pinned SDK platform/build-tools
-using official downloads and published checksums. Copy the existing debug identity
-securely if retaining compatibility with the Day 1 installations. Never put it
-in Git. The SDK still reports an unaccepted platform-tools license; use Android
+using official downloads and published checksums. For a new developer, build both
+apps with a new local debug identity and use a
+separate test-device pair. Existing owner installations require the original
+compatible identity; coordinate any update separately without transferring keys
+through Git or chat. The historical SDK inspection reported an unaccepted
+platform-tools license; use Android
 Studio SDK Manager or official command-line tools to install/accept platform-tools
 when needed for ADB. This warning does not block the verified build/test/lint gate.
 No SDK packages or licenses were changed during verification.
@@ -86,8 +89,9 @@ the same JDK if using the IDE. Do not commit absolute paths or local properties.
 
 ## Verify the baseline in a new shell
 
-Before assembling, confirm the persistent key exists and inspect signing reports;
-do not permit an absent key to be silently generated.
+For updates to existing owner installations, confirm the expected key exists and
+inspect signing reports; do not silently replace it. A fresh developer may generate
+a normal local Android debug key for their own separate matched test pair.
 
 ```sh
 test -f "$ANDROID_USER_HOME/debug.keystore"

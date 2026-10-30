@@ -555,7 +555,7 @@ evidence. No dependency, signing identity, SDK/license or storage change.
 ### Debug-only emulator acceptance
 
 Used existing WristPrompt_Watch7, confirmed by AVD name and emulator/watch
-characteristics before install -r. Only emulator-5554 was targeted. Physical
+characteristics before install -r. Only WATCH_SERIAL was targeted. Physical
 devices were not selected. No uninstall/data wipe/re-pair/AVD recreation/capability
 probe. Earlier returned-clock captures followed preview renderer crashes and
 were discarded; they are not attributed to GMS or the capability limitation.
@@ -754,9 +754,9 @@ transport only, with no provider/service requests or raw authenticated logging.
 
 ### I. Emulator acceptance — current D3-E run
 
-Used only existing **WristPrompt_Watch7**, verified with emulator-5554's AVD name
+Used only existing **WristPrompt_Watch7**, verified with WATCH_SERIAL's AVD name
 and `emulator,nosdcard,watch` characteristics. Updated in place with `adb -s
-emulator-5554 install -r` using the existing debug signing identity. No uninstall,
+WATCH_SERIAL install -r` using the existing debug signing identity. No uninstall,
 data clear, re-pair, AVD recreation, physical target, CapabilityClient probe or
 real authentication request. ADB required approved host access because the
 sandbox could not connect to its local socket. Phone emulator not needed.
@@ -954,7 +954,7 @@ mobile suite/build/lint NOT RERUN and not claimed as current evidence.
 ### Emulator acceptance matrix
 
 Existing WristPrompt_Watch7 was dynamically verified as a watch and selected
-(current serial emulator-5554, not encoded in the launcher). A connected physical
+(current serial WATCH_SERIAL, not encoded in the launcher). A connected physical
 ADB device was ignored. Debug APK installed in place; no app data/credentials were
 cleared. All 23 scenarios passed fresh ACK + liveness smoke, including a repeat on
 the final rebuilt debug APK. Initial/scrolled synthetic screenshots for all 23

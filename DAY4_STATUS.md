@@ -259,7 +259,7 @@ message caches on recreation; partial text has no independent lifecycle cache.
 **PASS — VERIFIED ON EMULATOR** for each scenario below, with the stated screen-
 off evidence limit. Existing AVD WristPrompt_Watch7 was launched with
 `-no-snapshot-save`, dynamically verified as watch/emulator, and updated using
-`adb -s emulator-5554 install -r wear/build/outputs/apk/debug/wear-debug.apk`.
+`adb -s WATCH_SERIAL install -r wear/build/outputs/apk/debug/wear-debug.apk`.
 Only that verified emulator serial was targeted. A connected physical phone was
 ignored. No Android Studio, data clear, uninstall, pairing change, capability
 probe, real authentication or real network request was involved.
@@ -293,12 +293,12 @@ Emulator commands actually used include the existing launcher:
 
 ```sh
 python3 tools/wear_scenarios.py --scenario COMPOSER_RECREATION
-adb -s emulator-5554 shell input keyevent KEYCODE_HOME
-adb -s emulator-5554 shell input keyevent KEYCODE_SLEEP
-adb -s emulator-5554 shell input keyevent KEYCODE_WAKEUP
-adb -s emulator-5554 shell am start -W \
+adb -s WATCH_SERIAL shell input keyevent KEYCODE_HOME
+adb -s WATCH_SERIAL shell input keyevent KEYCODE_SLEEP
+adb -s WATCH_SERIAL shell input keyevent KEYCODE_WAKEUP
+adb -s WATCH_SERIAL shell am start -W \
   -n io.github.grassified.wristprompt/.openai.DebugScenarioActivity -f 0x20000
-adb -s emulator-5554 shell am broadcast \
+adb -s WATCH_SERIAL shell am broadcast \
   -a io.github.grassified.wristprompt.DEBUG_LIFECYCLE \
   -p io.github.grassified.wristprompt --es launch_id LAUNCH_ID --es command ADVANCE
 ```
@@ -1159,7 +1159,7 @@ rendering and acknowledgement synchronization, not transport race evidence.
 
 ## K. Emulator acceptance
 
-Dynamically verified **WristPrompt_Watch7 / emulator-5554**, matching watch
+Dynamically verified **WristPrompt_Watch7 / WATCH_SERIAL**, matching watch
 characteristics; same-signed install -r retained app data. Final fixture runs use
 a fresh emulator app process per row, preserving protected app data. No phone/physical device
 target, pairing action, capability probe, radio toggle or real authentication.
@@ -1761,7 +1761,7 @@ cache migration or signing identity changes.
 ## Historical D4-G emulator evidence
 
 All acceptance runners executed sequentially against dynamically selected
-WristPrompt_Watch7 (emulator-5554); physical serials excluded by shared discovery.
+WristPrompt_Watch7 (WATCH_SERIAL); physical serials excluded by shared discovery.
 Smoke 11/11; full catalog 43/43; am-kill 4/4; force-stop 4/4; synthetic connectivity
 6/6; synthetic phone absence 6/6; final isolation checker PASS. Fresh live-PID/ACK
 readiness is not visual acceptance; synthetic connectivity is not real radio loss;
