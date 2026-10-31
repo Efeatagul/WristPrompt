@@ -208,6 +208,9 @@ This is a source audit and architecture proposal, not a completed D6 implementat
 No Android tests, emulator scenarios, lint or build ran for this documentation edit.
 No physical result is claimed. Owner physical acceptance remains pending.
 The connected contributor account has pull-only access upstream, so upstream merges
-require the maintainer. Browser fork creation currently needs the contributor's
-GitHub sign-in. Local Android tooling found SDK 36 and JDK 21; required SDK 37/JDK 17
-have not yet been provisioned. Preserve project pins rather than downgrading them.
+require the maintainer. The contributor fork and upstream PR #13 now exist.
+Java 17 was downloaded from Eclipse Temurin and SHA-256 verified. SDK 37 was
+downloaded from Google's official repository for setup; installation/use remains
+pending explicit acceptance of the package's current Android SDK license, which
+does not match the machine's existing accepted license hash. No license was
+silently accepted. Preserve project pins rather than downgrading them.
