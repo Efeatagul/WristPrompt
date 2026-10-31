@@ -210,7 +210,9 @@ No physical result is claimed. Owner physical acceptance remains pending.
 The connected contributor account has pull-only access upstream, so upstream merges
 require the maintainer. The contributor fork and upstream PR #13 now exist.
 Java 17 was downloaded from Eclipse Temurin and SHA-256 verified. SDK 37 was
-downloaded from Google's official repository for setup; installation/use remains
-pending explicit acceptance of the package's current Android SDK license, which
-does not match the machine's existing accepted license hash. No license was
-silently accepted. Preserve project pins rather than downgrading them.
+downloaded from Google's official repository and SHA-1 checked against its package
+metadata. Its current SDK license differed from the existing accepted hash; the
+contributor explicitly read and accepted the terms before workspace setup.
+`gradlew.bat --version` passed with Gradle 9.6.0 and Temurin 17.0.20.1.
+A focused baseline ChatConversationTest run is in progress, not yet a test PASS.
+Preserve project pins rather than downgrading them.
