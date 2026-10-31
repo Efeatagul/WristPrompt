@@ -37,7 +37,7 @@ personas, marketplaces, payments/subscriptions, custom backends, large architect
 frameworks, and unnecessary animations. No analytics, tracking, advertising, or
 remote crash reporting.
 
-## Authorized next scope — 2026-10-31 (not implemented)
+## Authorized next scope — 2026-10-31 (D6 implementation in progress)
 
 The memory-only and image-exclusion statements above describe the delivered D5
 baseline. Owner-authorized D6/D7 planning supersedes those scope exclusions only
@@ -48,7 +48,8 @@ remain mandatory. No hidden always-on prompt, automatic inference, model switch
 or billing fallback. Image generation/viewer is optional STRETCH, not a core gate.
 D6-A must decide storage/schema first, separate display from replay, anticipate
 Text/ImageAttachment, and avoid per-token writes/UI-object persistence. See
-[ROADMAP.md](ROADMAP.md) and [handoff](docs/CODEX_HANDOFF.md). D6/D7 are NOT STARTED.
+[ROADMAP.md](ROADMAP.md) and [handoff](docs/CODEX_HANDOFF.md). D6-B/C are implemented
+on contributor branches with consolidated acceptance pending; D7 is NOT STARTED.
 
 ## Runtime responsibilities
 

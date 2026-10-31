@@ -61,7 +61,7 @@ class HarnessTest(unittest.TestCase):
         with patch.dict('os.environ', {'ANDROID_HOME': '/tmp/test-sdk'}), \
              patch.object(adb.subprocess, 'check_output', return_value=' OK\n') as call:
             self.assertEqual('OK', adb.adb_call('devices'))
-        call.assert_called_once_with(['/tmp/test-sdk/platform-tools/adb', 'devices'], text=True,
+        call.assert_called_once_with([str(Path('/tmp/test-sdk') / 'platform-tools' / 'adb'), 'devices'], text=True,
                                     stderr=subprocess.STDOUT, timeout=30)
 
     def test_screenshot_uses_selected_watch_only(self):

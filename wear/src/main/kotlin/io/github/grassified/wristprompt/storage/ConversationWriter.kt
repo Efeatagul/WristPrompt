@@ -10,6 +10,7 @@ import kotlinx.coroutines.sync.withLock
 class ConversationWriter(private val store: ConversationStore, initial: ConversationEntry) {
     private val mutex = Mutex()
     var entry: ConversationEntry = initial; private set
+    suspend fun awaitIdle() { mutex.withLock { } }
     suspend fun write(snapshot: ConversationSnapshot) = withContext(NonCancellable) {
         mutex.withLock {
             // A late Stop snapshot cannot roll back an already committed completed exchange.

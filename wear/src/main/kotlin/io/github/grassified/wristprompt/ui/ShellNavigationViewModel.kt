@@ -3,7 +3,7 @@ package io.github.grassified.wristprompt.ui
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 
-internal enum class Surface { CHAT, COMPOSER, MENU, MODELS, CONNECTION, SETTINGS, DETAILS, PROOF, OUTPUT }
+internal enum class Surface { CHAT, COMPOSER, MENU, HISTORY, MODELS, CONNECTION, SETTINGS, DETAILS, PROOF, OUTPUT }
 
 /** Retained UI state only; no saved-state restoration into a fresh process. */
 internal class ShellNavigationViewModel(initialSurface: Surface = Surface.CHAT) : ViewModel() {

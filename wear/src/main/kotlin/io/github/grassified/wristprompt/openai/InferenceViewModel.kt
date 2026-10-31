@@ -29,6 +29,7 @@ class InferenceViewModel(
     private val saveModel: suspend (CredentialLease, String) -> Unit = { _, _ -> },
     private val conversationStore: ConversationStore? = null,
     private val conversationIdentity: suspend (CredentialLease) -> String = { throw SecureStorageException() },
+    private val localConversationIdentity: (suspend (InferenceAccessState) -> String)? = null,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ProofState())
     val state = mutableState.asStateFlow()
@@ -44,12 +45,17 @@ class InferenceViewModel(
     private var cleared = false
     private var ownerScope: String? = null
     private var writer: ConversationWriter? = null
+    private val mutableHistory = MutableStateFlow(ConversationHistory())
+    val history = mutableHistory.asStateFlow()
+    private var restoreOnStartup = true
     init {
         viewModelScope.launch {
             accounts.distinctUntilChanged { old, next -> old == next }.collect { account ->
                 observedAccess = account
                 cancelOperation()
                 prepared = null
+                ownerScope = null
+                mutableHistory.value = ConversationHistory()
                 clearChat()
                 mutableState.value = ProofState(problem = account.problem, mode = account.mode)
                 if (account.usable) loadModels()
@@ -80,6 +86,12 @@ class InferenceViewModel(
         mutableState.value = ProofState(stage = ProofStage.LOADING, mode = state.value.mode)
         launchOperation {
             try {
+                if (conversationStore != null && localConversationIdentity != null) {
+                    val access = accounts.value
+                    val localOwner = conversationStore.owner(localConversationIdentity.invoke(access))
+                    if (run != epoch || accounts.value != access) return@launchOperation
+                    resolveHistory(localOwner, run)
+                }
                 val catalog = session.catalog()
                 if (run != epoch) return@launchOperation
                 val saved = selectedModel(catalog.credential)
@@ -91,9 +103,15 @@ class InferenceViewModel(
                 val owner = conversationStore?.owner(conversationIdentity(catalog.credential))
                 if (run != epoch || !compatible(catalog)) return@launchOperation
                 ownerScope = owner
+                if (owner != null) resolveHistory(owner, run)
                 if (priorModel != null && priorModel != restored) clearChat()
                 mutableState.value = ProofState(ProofStage.READY, catalog.models,
                     restored, mode = catalog.credential.mode)
+                writer?.entry?.let { entry ->
+                    conversation.readOnly(if (entry.owner == owner && entry.model == restored && entry.route == catalog.credential.mode.name) null
+                        else "Read-only chat. Select its original model and reopen it, or start a new chat.")
+                    publishChat()
+                }
             } catch (cancelled: CancellationException) { cancelled(run); throw cancelled
             } catch (failure: Exception) { failed(run, failure) }
         }
@@ -144,9 +162,91 @@ class InferenceViewModel(
         inputRevision++ // Consume once even if an external result is delivered again.
     }
     fun newChat() {
+        restoreOnStartup = false
+        mutableHistory.value = history.value.copy(loading = false, error = null)
         cancelOperation()
         clearChat()
         if (state.value.busy) mutableState.value = state.value.copy(stage = ProofStage.CANCELLED)
+    }
+    private suspend fun resolveHistory(owner: String, run: Long) {
+        val store = conversationStore ?: return
+        writer?.awaitIdle()
+        val entries = store.list(owner)
+        if (run != epoch) return
+        ownerScope = owner
+        mutableHistory.value = ConversationHistory(entries)
+        if (restoreOnStartup) {
+            restoreOnStartup = false
+            val latest = entries.firstOrNull()?.let { store.load(it.id, owner) }
+            if (run != epoch || ownerScope != owner) return
+            if (latest != null) {
+                conversation.restore(latest.snapshot)
+                conversation.readOnly("Stored chat. Load its original model to continue, or start a new chat.")
+                writer = ConversationWriter(store, latest)
+                publishChat()
+            }
+        }
+    }
+    fun refreshHistory() {
+        if (chat.value.busy || operation?.isActive == true) {
+            mutableHistory.value = history.value.copy(error = "Finish or stop the current operation first."); return
+        }
+        val owner = ownerScope ?: return
+        val run = epoch
+        mutableHistory.value = history.value.copy(loading = true, error = null)
+        launchOperation {
+            try { resolveHistory(owner, run) }
+            catch (_: Exception) { if (run == epoch) mutableHistory.value = history.value.copy(loading = false, error = "Chats could not be loaded. Saved data has not been reset.") }
+        }
+    }
+    fun openChat(id: String, onOpened: () -> Unit = {}) {
+        if (chat.value.busy || operation?.isActive == true || cleared) return
+        val store = conversationStore ?: return
+        val owner = ownerScope ?: return
+        val run = ++epoch
+        inputRevision++; restoreOnStartup = false
+        mutableHistory.value = history.value.copy(loading = true, error = null)
+        launchOperation {
+            try {
+                writer?.awaitIdle()
+                val entry = store.load(id, owner) ?: throw ConversationStorageException()
+                if (run != epoch || ownerScope != owner || accounts.value != observedAccess) return@launchOperation
+                conversation.restore(entry.snapshot)
+                val current = prepared?.takeIf(::compatible)
+                val canContinue = current != null && entry.route == current.credential.mode.name && entry.model == state.value.selectedSlug
+                conversation.readOnly(if (canContinue) null else "Read-only chat. Select its original model and reopen it, or start a new chat.")
+                writer = ConversationWriter(store, entry); contextModel = entry.model
+                publishChat(); mutableHistory.value = history.value.copy(loading = false, error = null)
+                onOpened()
+            } catch (_: Exception) { if (run == epoch) mutableHistory.value = history.value.copy(loading = false, error = "Chat could not be opened. Saved data has not been reset.") }
+        }
+    }
+    fun renameChat(id: String, title: String) = editHistory(id, title)
+    fun deleteChat(id: String) = editHistory(id, null)
+    private fun editHistory(id: String, title: String?) {
+        if (chat.value.busy || operation?.isActive == true || cleared) return
+        val store = conversationStore ?: return
+        val owner = ownerScope ?: return
+        val run = ++epoch
+        mutableHistory.value = history.value.copy(loading = true, error = null)
+        launchOperation {
+            try {
+                writer?.awaitIdle()
+                val entry = store.load(id, owner) ?: throw ConversationStorageException()
+                if (run != epoch || ownerScope != owner || accounts.value != observedAccess) return@launchOperation
+                if (title == null) {
+                    store.delete(id, owner, entry.revision)
+                    if (run == epoch && writer?.entry?.id == id) { clearChat(); restoreOnStartup = false }
+                } else {
+                    require(title.isNotBlank() && title.length <= 120)
+                    store.rename(id, owner, entry.revision, title)
+                    if (run == epoch && writer?.entry?.id == id) writer = ConversationWriter(store, checkNotNull(store.load(id, owner)))
+                }
+                if (run == epoch) resolveHistory(owner, run)
+            } catch (_: Exception) { if (run == epoch) mutableHistory.value = history.value.copy(loading = false,
+                error = if (title == null) "Chat could not be deleted. Saved data has not been reset."
+                    else "Name could not be saved. Use a non-empty name up to 120 characters, or try again.") }
+        }
     }
     fun send() {
         if (operation?.isActive == true || state.value.busy) return

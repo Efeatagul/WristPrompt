@@ -30,11 +30,11 @@ internal enum class DebugScenario {
     MARKDOWN_MALFORMED, MARKDOWN_LONG_URL, ERROR_API_LIMIT, INCOMPLETE_PARTIAL,
     CONVERSATION_LIMIT, SECURE_STORAGE_FAILURE, STREAM_TO_COMPLETED_PLAIN,
     STREAM_TO_COMPLETED_MARKDOWN, STREAM_TO_COMPLETED_LONG, SINGLE_LONG_PARAGRAPH,
-    REAL_MULTI_PARAGRAPH, DIAGNOSTIC_PROOF_CURRENT_ATTEMPT;
+    REAL_MULTI_PARAGRAPH, DIAGNOSTIC_PROOF_CURRENT_ATTEMPT, SAVED_CHATS_HISTORY;
     companion object { fun parse(name: String?): DebugScenario? = entries.singleOrNull { it.name == name } }
 }
 
-/** No Context, repository, preference store, HTTP client or serializable credential record. */
+/** No Context, persistent repository, preference store, HTTP client or credential record. */
 internal class DebugScenarios(val scenario: DebugScenario) {
     val mode = if (scenario in setOf(DebugScenario.API_KEY_CONFIGURED, DebugScenario.ERROR_401_API_KEY, DebugScenario.API_KEY_WATCH_ONLY, DebugScenario.ERROR_API_LIMIT))
         CredentialMode.OPENAI_API_KEY else CredentialMode.CHATGPT_PLAN
@@ -44,6 +44,7 @@ internal class DebugScenarios(val scenario: DebugScenario) {
         activeClientId = "debug".takeUnless { scenario == DebugScenario.SIGNED_OUT })
     val key = ApiKeyState(storageError = scenario == DebugScenario.SECURE_STORAGE_FAILURE, loaded = true, mode = mode, configured = mode == CredentialMode.OPENAI_API_KEY)
     val surface = when (scenario) {
+        DebugScenario.SAVED_CHATS_HISTORY -> Surface.HISTORY
         DebugScenario.DIAGNOSTIC_PROOF_CURRENT_ATTEMPT -> Surface.PROOF
         DebugScenario.MANY_MODELS, DebugScenario.THOUSAND_MODELS, DebugScenario.SINGLE_MODEL, DebugScenario.LONG_MODEL_NAMES, DebugScenario.MODELS_LOADED, DebugScenario.MODEL_UNAVAILABLE,
         DebugScenario.MODEL_DISCOVERY_OFFLINE, DebugScenario.MODEL_DISCOVERY_RECOVERED -> Surface.MODELS
@@ -202,12 +203,13 @@ internal class DebugScenarios(val scenario: DebugScenario) {
             completions++; onEvent(ResponseEvent.Completed(text))
         }
     }
+    private val historyStore = if (scenario == DebugScenario.SAVED_CHATS_HISTORY) DebugHistoryStore() else null
     val vm = InferenceViewModel(access, InferenceSession({
         if (reauth) throw ApiFailure(ApiProblem.REAUTHORIZE)
         // Presentation-only renewal boundary. Real rotation/storage/HTTP is covered in PhoneIndependenceTest.
         if (scenario == DebugScenario.WATCH_ONLY_REFRESHED && refreshes == 0) refreshes++
         lease
-    }, provider) { it === lease })
+    }, provider) { it === lease }, conversationStore = historyStore, conversationIdentity = { "a".repeat(64) })
     fun failure(): ApiFailure? = when (scenario) {
         // A bare plan admission 401 means permission, not terminal refresh failure (D3-E).
         DebugScenario.ERROR_401_REAUTH -> ApiErrors.parse(401, "{}")

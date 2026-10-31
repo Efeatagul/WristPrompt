@@ -82,9 +82,14 @@ class SqliteConversationStore(context: Context) : ConversationStore {
         }
     }
     override suspend fun list(owner: String): List<ConversationSummary> = access { db ->
-        db.rawQuery("SELECT id,title,model,route,updated,revision FROM conversations WHERE owner=? AND deleted=0 ORDER BY updated DESC,id LIMIT 100",
+        db.rawQuery("SELECT substr(id,1,37),substr(title,1,121),substr(model,1,257),substr(route,1,32),updated,revision FROM conversations WHERE owner=? AND deleted=0 ORDER BY updated DESC,id LIMIT 100",
             arrayOf(owner)).use { c -> buildList {
-                while (c.moveToNext()) add(ConversationSummary(c.getString(0), c.getString(1), c.getString(2), c.getString(3), c.getLong(4), c.getLong(5)))
+                while (c.moveToNext()) {
+                    val item = ConversationSummary(c.getString(0), c.getString(1), c.getString(2), c.getString(3), c.getLong(4), c.getLong(5))
+                    require(UUID.fromString(item.id).toString() == item.id && item.title.isNotBlank() && item.title.length <= 120 &&
+                        item.model.length in 1..256 && item.route in setOf("CHATGPT_PLAN", "OPENAI_API_KEY") && item.updated >= 0 && item.revision >= 0)
+                    add(item)
+                }
             } }
     }
     override suspend fun delete(id: String, owner: String, revision: Long) = access { db ->

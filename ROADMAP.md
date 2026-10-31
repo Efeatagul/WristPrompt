@@ -540,3 +540,11 @@ Canonical SQLite checkpoints and completed-only durable replay are implemented o
 the D6-B feature branch; see docs/D6_B_STORAGE.md for scope and evidence boundaries.
 History/reopen UI remains D6-C. Consolidated lifecycle/physical acceptance is D6-D;
 no D6 completion or physical PASS is claimed here.
+
+## D6-C history implementation — 2026-10-31
+
+Chats/New Chat/open/continue/rename/delete and inert startup restoration are
+implemented on the contributor C branch. Automated gates and scoped phone-emulator
+interaction evidence are recorded in docs/D6_C_HISTORY.md. Wear round/max-font/
+rotary and owner physical results remain pending; do not promote phone screenshots
+to Wear or physical acceptance. Next gate: D6-D consolidated persistence acceptance.

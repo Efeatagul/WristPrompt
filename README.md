@@ -4,15 +4,16 @@ Your key. Your model. Your watch.
 
 **Pre-release / active development.** A native Wear OS AI client for OpenAI,
 with a dense watch-native interface and a minimal Android setup companion.
-D5-F is **PASS WITH KNOWN DEBT**; D5-G is **PHYSICAL ACCEPTANCE PENDING**;
-D6 is **NOT STARTED**. This is a development snapshot, with no production-readiness claim.
+D5 is complete with known table-rendering debt. D6 storage/history are implemented
+on the contributor branches; consolidated acceptance remains pending. This is a
+development snapshot, with no production-readiness claim.
 
 ## What works
 
 - Continue with ChatGPT and a separate OpenAI API-key/BYOK mode.
 - Account-specific model discovery and explicit account/model selection.
 - Watch-direct inference after setup, using Responses API streaming.
-- Multi-turn chat in process memory, real Stop that cancels HTTP transport,
+- Saved local chats with reopen/continue/rename/delete, real Stop that cancels HTTP transport,
   and explicit Latest to return to the bottom without forced autoscroll.
 - Native Markdown, Wear-adapted tables and horizontally scrollable code.
 - Account, Settings and sanitized Diagnostics with explicit recovery actions.
@@ -32,12 +33,13 @@ Model discovery does not guarantee model eligibility, quota or successful infere
 
 ## Current limits
 
-Conversation history is **memory-only**. Closing/restarting the process loses
-chat; there is no persistent conversation list or cloud conversation sync.
-Activity recreation and process death have different behavior. Background and
-screen-off continuation are best effort. D6 plans persistent conversation management;
-it has not started. Physical Day 5 UX, spoken TalkBack and release-device profiling
-remain pending. Funded BYOK success has not been physically verified.
+Chats are saved in app-private storage on the watch; there is no cloud conversation
+sync. Unsent drafts and live streaming tokens are not restored after process death.
+Interrupted attempts stay excluded and never resend automatically. Continuing a saved
+chat requires its original account/billing ownership and a currently validated matching
+model; otherwise it is read-only. Background/screen-off continuation remains best
+effort. D6 physical acceptance, spoken TalkBack and release-device profiling remain
+pending. Funded BYOK success has not been physically verified.
 
 ## Requirements and build
 

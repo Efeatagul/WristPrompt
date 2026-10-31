@@ -38,8 +38,8 @@ class LauncherTest(unittest.TestCase):
         return calls
 
     def test_list_has_all_names(self):
-        self.assertEqual(83, len(runner.scenarios()))
-        self.assertEqual(83, len(set(runner.scenarios())))
+        self.assertEqual(84, len(runner.scenarios()))
+        self.assertEqual(84, len(set(runner.scenarios())))
 
     def test_unknown_rejected_before_adb(self):
         with patch.object(sys, 'argv', ['tool', '--scenario', 'UNKNOWN']), \

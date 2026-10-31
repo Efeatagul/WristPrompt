@@ -13,9 +13,10 @@ data class ChatState(
     val messages: List<ChatMessage> = emptyList(), val draft: String = "",
     val stage: ChatStage = ChatStage.EMPTY, val partial: String = "",
     val problem: ApiProblem? = null, val limitReached: Boolean = false,
+    val readOnlyReason: String? = null,
 ) {
     val busy get() = stage == ChatStage.STARTING || stage == ChatStage.RECEIVING
-    val canSend get() = !busy && !limitReached && draft.isNotBlank() && draft.length <= ChatConversation.MAX_PROMPT_CHARS
+    val canSend get() = !busy && readOnlyReason == null && !limitReached && draft.isNotBlank() && draft.length <= ChatConversation.MAX_PROMPT_CHARS
     override fun toString() = SafeDiagnostics.REDACTED
 }
 
@@ -33,6 +34,7 @@ class ChatConversation {
     private var nextId = 0L
     private var attempts = 0
     fun reset() { history = emptyList(); pending = null; pendingUserId = null; attempts = 0; state = ChatState() }
+    fun readOnly(reason: String?) { state = state.copy(readOnlyReason = reason) }
     fun snapshot(): ConversationSnapshot = ConversationSnapshot(
         messages = state.messages.map { StoredMessage(it.id, it.role.name, it.status.name, listOf(ContentPart.Text(it.text))) },
         replay = history.toList(), attempts = attempts, nextId = nextId,
