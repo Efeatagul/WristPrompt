@@ -76,6 +76,10 @@ Wear-adapted records/fallbacks. See DAY5_C_REPORT.md for limits and failure fall
 
 ## Future persistence boundary
 
+Local D6-A design is recorded in [D6_A_PERSISTENCE_ARCHITECTURE.md](D6_A_PERSISTENCE_ARCHITECTURE.md).
+It selects platform SQLite, typed content and separate transactional replay; no
+production storage is implemented or accepted by this documentation change.
+
 D6 is NOT STARTED. Durable DISPLAY TRANSCRIPT and RESPONSES REPLAY CONTEXT require
 separate versioned records and compatibility decisions; do not serialize D5
 presentation objects. No storage write per streaming token. The next developer

@@ -108,6 +108,11 @@ writes; do not persist UI projection objects as its schema.
 
 ## Next contributor action
 
+An unmerged D6-A design is available in
+[D6_A_PERSISTENCE_ARCHITECTURE.md](D6_A_PERSISTENCE_ARCHITECTURE.md). Review its
+transaction/ownership contracts before D6-B. No implementation, Android validation
+or owner physical acceptance is claimed by that audit; upstream status is unchanged.
+
 **Start D6-A: audit and design persistent conversation architecture**, read-only
 first. See [D6/D7 backlog](D6_D7_BACKLOG.md) for issue discovery, dependencies and
 branch suggestions. D6-A replaces the earlier D6-0 task name, not an extra phase.
