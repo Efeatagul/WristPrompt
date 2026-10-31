@@ -1,5 +1,33 @@
 # Day 5 Phase H — targeted physical-failure remediation — 2026-10-31
 
+## Final owner physical revalidation — 2026-10-31
+
+**D5 = PASS WITH KNOWN DEBT — COMPLETE.** D6 = NOT STARTED. D7 = NOT STARTED.
+VERIFIED PHYSICALLY means owner-reported Galaxy Watch 7 evidence, not agent-run tests.
+This final retest supersedes the earlier failed/incomplete closure status without
+rewriting its observations or promoting unexercised checks to PASS.
+
+| Retest | Owner result |
+| --- | --- |
+| R1 | PASS — normal completed response remains visible. |
+| R2 | PASS — terminal Markdown works correctly and looks good. |
+| R3 | PASS — reader position stable; Latest appears appropriately and works. |
+| R4 | PASS — Stop cancels immediately; retained partial is identified as partial/excluded. |
+| R5 | PASS — completed code blocks work very well; horizontal touch movement feels natural, like inspecting code in an IDE. |
+| R6 | FAIL / KNOWN DEBT — five-distribution content remains readable and understandable, but does not visibly render as intended structured Wear table/stacked records. Non-blocking for D5 and D6. |
+| R7 | PASS — artificial paragraph/text gaps are gone. |
+| R8 | PASS — diagnostic inference works again; expected/actual proof consistency appears correct. |
+| R9 | PASS — maximum-font header/Menu now acceptable. |
+| R10 | PASS — UI, navigation and hardware responsiveness remain smooth. |
+
+Spoken physical TalkBack was not exercised and is not required for Day 5 closure.
+Hardware was mildly warm, judged normal by the owner. No scientific battery-life
+claim is made. Existing historical known debt remains open. No authenticated
+hardware trace was collected; the precise original terminal wire shape remains
+unproven. Automated and emulator evidence below remains historical, not rerun.
+
+## Historical record before final retest
+
 ## A. Result
 
 **PASS — PHYSICAL REVALIDATION REQUIRED.**

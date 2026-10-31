@@ -1,9 +1,30 @@
 # Day 5 status — updated 2026-10-31
 
-Current phase: **D5-H — PASS — PHYSICAL REVALIDATION REQUIRED**.
-D5-H automated/emulator remediation complete; **PHYSICAL REVALIDATION PENDING**.
-D5-F remains PASS WITH KNOWN DEBT. D5-G is **PHYSICAL ACCEPTANCE FAILED / INCOMPLETE
-DUE TO REPRODUCED UX DEFECTS**; Day 5 is open. D6 is NOT STARTED.
+## Final owner physical revalidation — 2026-10-31
+
+**D5 = PASS WITH KNOWN DEBT — COMPLETE.** D6 = NOT STARTED. D7 = NOT STARTED.
+VERIFIED PHYSICALLY means owner-reported Galaxy Watch 7 evidence, not agent-run tests.
+This final retest supersedes the earlier failed/incomplete closure status without
+rewriting its observations or promoting unexercised checks to PASS.
+
+| Retest | Owner result |
+| --- | --- |
+| R1 | PASS — normal completed response remains visible. |
+| R2 | PASS — terminal Markdown works correctly and looks good. |
+| R3 | PASS — reader position stable; Latest appears appropriately and works. |
+| R4 | PASS — Stop cancels immediately; retained partial is identified as partial/excluded. |
+| R5 | PASS — completed code blocks work very well; horizontal touch movement feels natural, like inspecting code in an IDE. |
+| R6 | FAIL / KNOWN DEBT — five-distribution content remains readable and understandable, but does not visibly render as intended structured Wear table/stacked records. Non-blocking for D5 and D6. |
+| R7 | PASS — artificial paragraph/text gaps are gone. |
+| R8 | PASS — diagnostic inference works again; expected/actual proof consistency appears correct. |
+| R9 | PASS — maximum-font header/Menu now acceptable. |
+| R10 | PASS — UI, navigation and hardware responsiveness remain smooth. |
+
+Spoken physical TalkBack was not exercised and is not required for Day 5 closure.
+Hardware was mildly warm, judged normal by the owner. No scientific battery-life
+claim is made. Existing historical known debt remains open. No authenticated
+hardware trace was collected; the precise original terminal wire shape remains
+unproven. Automated and emulator evidence below remains historical, not rerun.
 
 Owner evidence: [DAY5_G_REPORT.md](DAY5_G_REPORT.md). Root causes, validation,
 limitations and affected retest: [DAY5_H_REPORT.md](DAY5_H_REPORT.md).
@@ -11,7 +32,7 @@ Only synthetic emulator operations were performed in D5-H; no physical operation
 Normal streaming remains plain/coalesced; terminal reconciliation remains native
 Markdown. No persistence, auth/billing/storage/signing or licensing change.
 
-## D5-H evidence — current
+## D5-H automated/emulator evidence — recorded before final retest
 
 - VERIFIED AUTOMATICALLY: full Wear run **470 tests / 53 suites**, zero failures,
   errors or skips, run once. Final targeted header/stale-result verification:
@@ -84,7 +105,7 @@ local-path history sanitation preserves all 28 engineering commits; original/new
 IDs are mapped in docs/HISTORY_REWRITE.md. This is a source development snapshot,
 not Day 5 physical closure or a stable release.
 
-## D5-G targeted checklist — PENDING END-OF-DAY PHYSICAL TEST
+## Historical D5-G targeted checklist — superseded by final retest above
 
 - Galaxy Watch default/max-font Chat/model/billing and recovery-label readability.
 - Long prose/Markdown/list touch + rotary; streaming while reading, Stop/Latest,

@@ -287,11 +287,12 @@ for inference/refresh after setup. Document intentional lifecycle limits.
 
 ## Day 5 — WristPrompt UX 2.0 + Markdown
 
-D5-0 read-only audit completed in chat. D5-A through D5-F are complete for their
-automated/emulator scope. D5-G physical acceptance failed/incomplete on owner
-Galaxy Watch 7; D5-H remediation is complete locally with physical revalidation
-pending. Day 5 remains open; D6 is NOT STARTED.
-DAY5_STATUS.md owns current phase evidence; Day 4 remains PASS WITH KNOWN DEBT.
+**D5 COMPLETE — PASS WITH KNOWN DEBT.** Owner Galaxy Watch 7 retest R1–R10
+closes physical revalidation with R6 structured table rendering as non-blocking
+known debt. TalkBack remains untested, not required for closure; historical debt
+remains open. DAY5_G_REPORT.md and DAY5_H_REPORT.md preserve initial and final evidence.
+VERIFIED AUTOMATICALLY, VERIFIED ON EMULATOR and VERIFIED PHYSICALLY remain distinct.
+D6 and D7 are NOT STARTED. This handoff implements neither phase.
 
 - [x] D5-0: read-only UX/performance architecture audit and phase plan.
 - [x] D5-A: chat-first shell, shallow retained navigation, static Wear theme,
@@ -331,17 +332,13 @@ DAY5_STATUS.md owns current phase evidence; Day 4 remains PASS WITH KNOWN DEBT.
   30 rotary frame windows, 12 reset cycles and 4/4 process restarts. One narrow
   large-font recovery fix. DAY5_F_REPORT.md / DAY5_F_METRICS.json distinguish
   timing/memory evidence from spoken TalkBack and physical/release-device debt.
-- [ ] D5-G: owner Galaxy Watch 7 acceptance FAILED / INCOMPLETE due to reproduced
-  completion/Markdown, text-gap, maximum-font header and diagnostic UX defects.
-  P6/P7/P13 unexercised. Supplied evidence: DAY5_G_REPORT.md; do not close Day 5.
-- [x] D5-H: targeted remediation, automated/emulator scope only. PASS — PHYSICAL
-  REVALIDATION REQUIRED. Empty-output terminal-summary preservation, nonempty rich
-  fallback, logical paragraph/continuation spacing, adaptive header/Menu and labelled
-  attempt-owned diagnostic output. Full Wear 470-test run plus final narrow checks;
-  debug/release/lint, isolation and focused emulator cases pass. Exact scope and
-  physical-cause uncertainty: DAY5_H_REPORT.md. No full catalog rerun or D6 work.
-- [ ] D5-H physical revalidation: only affected checks in DAY5_H_REPORT.md.
-  D5-G stays open until owner supplies evidence; no automatic D6 start.
+- [x] D5-G: physical acceptance closed after final owner revalidation, PASS WITH
+  KNOWN DEBT. Initial failed observations remain in DAY5_G_REPORT.md.
+- [x] D5-H: automated/emulator remediation complete; full Wear 470-test run plus
+  final narrow checks, builds/lint/isolation and focused emulator evidence recorded
+  in DAY5_H_REPORT.md; no new suite rerun for this handoff.
+- [x] D5-H physical revalidation: owner R1–R5/R7–R10 PASS; R6 table presentation
+  FAIL / KNOWN DEBT, non-blocking. Spoken TalkBack untested; no battery-life claim.
 
 Gate: preserve inference/auth/account/billing/composer safety; verify automated
 and emulator results separately from physical evidence. D5 is not release freeze.
@@ -349,15 +346,45 @@ No persistent conversation storage or new background infrastructure in D5.
 
 ## Day 6 — persistent conversations — NOT STARTED
 
-- [ ] D6-0 read-only architecture audit: transcript versus Responses replay,
-  bounded off-main persistence, transaction boundaries, queries/indexes and storage
-  choice. Reconcile PROJECT_SPEC.md's existing memory-only release scope then.
-- [ ] Separately authorize/implement conversation list, New Chat, reopen/continue,
-  rename/delete and process/reboot persistence after D6-0 acceptance.
-- [ ] No database writes per streaming token; lazy/bounded retrieval; no cloud sync.
+- [ ] D6-A: FIRST task, read-only architecture audit and decision/implementation
+  plan before broad production changes. Select storage, schema/versioning,
+  transactions, compatibility ownership, migrations, recovery and cleanup.
+- [ ] D6-B: approved durable conversations, completed exchanges and metadata;
+  typed Text/ImageAttachment-ready content parts; atomic commits and tests.
+- [ ] D6-C: history, New Chat, reopen/continue, rename/delete, restart restoration;
+  pin/favorite optional only if trivial.
+- [ ] D6-D: lifecycle/migration/recovery acceptance, separate emulator/physical evidence.
 
-This schedule is not permission to implement D6 now. No database technology or
-schema has been selected, and persistence is not implemented.
+DISPLAY TRANSCRIPT != RESPONSES API REPLAY CONTEXT. Preserve validated opaque
+continuation/reasoning items. No persisted Compose objects or per-token writes.
+Image binaries belong in app-private files with durable metadata references,
+not large base64 database rows. D6-A owns the exact schema/storage choice.
+No image-input implementation in D6-A; no database selected in this handoff.
+
+## Day 7 — companion productivity + multimodal input + final integration — NOT STARTED
+
+- [ ] D7-A: durable named custom USER prompt presets managed on phone (list,
+  create/edit/rename/delete, multiline editor); no hidden always-on system prompt.
+- [ ] D7-B: sync presets to watch; explicit insertion/editing in composer;
+  non-empty draft uses insert/replace/cancel, never silent overwrite or auto-send.
+- [ ] D7-C: multiple Android Photo Picker import, normalization/compression,
+  app-private managed library and thumbnails; bounded Wear Data Layer asset/data
+  sync, stale/replay protection, cleanup; watch multi-select/removal. No full
+  remote phone-gallery browser or broad permission when Picker is sufficient.
+- [ ] D7-D: existing Responses stack supports text + N images in one user message;
+  explicit unsupported route/model error, no automatic switching/billing fallback.
+- [ ] D7-E: presets + edits + text + multiple attachments + watch review/explicit Send.
+- [ ] D7-F: image generation and fullscreen zoom/pan viewer — STRETCH, defer if core unstable.
+- [ ] D7-G: final integration, physical Galaxy Watch acceptance and Monday alpha readiness.
+
+Order: D6-A → B → C → D. D7-A and C may begin once D6-A establishes persistence
+and attachment boundaries. D7-B depends on A; D7-D on C + attachment-capable D6-B;
+D7-E on B + D; D7-G gates core integration. D7-F never blocks core readiness.
+Monday target: 2026-11-02. Prioritize stability/persistence, custom prompts,
+multi-image input, integration/release sanity, then image generation stretch.
+This schedule is not implementation authorization in this documentation-only pass.
+Use feature branches and issue-scoped PRs; never push implementation directly to main.
+Document actual checks and separate emulator from owner physical evidence.
 
 ## Later phase — RC / release hardening and freeze — NOT STARTED
 

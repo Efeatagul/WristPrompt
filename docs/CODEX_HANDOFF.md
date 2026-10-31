@@ -7,11 +7,10 @@ phone/watch debug pair; preserve owner installations and keys.
 
 ## Current state
 
-D5-F — PASS WITH KNOWN DEBT.
-D5-G — PHYSICAL ACCEPTANCE FAILED / INCOMPLETE DUE TO REPRODUCED UX DEFECTS.
-D5-H — PASS — PHYSICAL REVALIDATION REQUIRED.
-D5-H automated/emulator remediation complete; PHYSICAL REVALIDATION PENDING.
-D6 — NOT STARTED.
+**D5: PASS WITH KNOWN DEBT — COMPLETE.**
+D6: NOT STARTED. D7: NOT STARTED.
+Final owner Galaxy Watch 7 retest: R1–R5/R7–R10 PASS; R6 structured Markdown
+Wear table rendering FAIL / non-blocking known debt. TalkBack remains untested.
 
 WristPrompt is an OpenAI-only, local-first/backend-free native Wear OS client:
 ChatGPT OAuth and explicit API-key billing, account model discovery, watch-direct
@@ -50,7 +49,7 @@ now distinguishes logical blocks from bounded continuations. At large font the
 title has an intentional word break and Menu a full-width row. Diagnostics labels
 the expected versus actual test output and local current attempt; no credentials.
 The owner's precise terminal payload was not collected: the decoder failure is
-synthetically proven, physical attribution remains an inference pending retest.
+synthetically proven, the exact original wire shape remains unproven; the owner now confirms symptom recovery.
 
 Full Wear run 470 tests / 53 suites passes, with a later narrow header/stale-result
 check rather than another full run. Builds/lint/isolation and focused emulator
@@ -101,25 +100,46 @@ writes; do not persist UI projection objects as its schema.
 - Funded BYOK success not physically verified.
 - Paired-emulator CapabilityClient synchronization limitation; keep production gating.
 - Destructive Keystore/AtomicFile interruption not physically tested.
-- D5-G failed/incomplete; D5-H affected physical retest pending. Spoken TalkBack remains unexercised/outside D5-H.
+- Known physical D5 debt: readable Markdown table content does not produce the intended structured Wear records. Non-blocking for D6.
+- Spoken physical TalkBack remains untested and is not required for D5 closure.
 - Release-device profiling/battery/runtime equivalence pending; historical D5-A PSS causality unresolved.
-- Physical maximum-font header/Menu revalidation pending after D5-H.
+- Final owner R9 confirms acceptable physical maximum-font header/Menu.
 - Passing source-publication gates and completed history remediation are tracked in [PUBLICATION_AUDIT.md](PUBLICATION_AUDIT.md).
 
-## Next action
+## Next contributor action
 
-The owner must revalidate only the affected checks listed in DAY5_H_REPORT.md:
-completion/terminal Markdown/Latest/Stop, code/table reading, paragraph continuity,
-max-font Chat header/Menu, current diagnostic output. Record supplied evidence;
-no physical operations or destructive tests automatically. Do not close Day 5
-or promote unexercised P6/P7/P13 to PASS. D6 needs separate authorization.
+**Start D6-A: audit and design persistent conversation architecture**, read-only
+first. See [D6/D7 backlog](D6_D7_BACKLOG.md) for issue discovery, dependencies and
+branch suggestions. D6-A replaces the earlier D6-0 task name, not an extra phase.
+Deliver an architecture decision and implementation plan before broad production
+changes. Select no database merely from this handoff. D6/D7 remain unimplemented.
 
-After Day 5, the next developer task is **D6-0: READ-ONLY persistence architecture
-audit**, separately authorized. Likely goals: conversation list, reopen/continue,
-rename/delete, New Chat, optional pin/favorite, persistent completed exchanges,
-versioned migrations and account/model/billing compatibility. Select no database or
-schema before the audit. Reconcile current SPEC memory-only scope at that time.
-Later RC/release hardening follows D6. Do not start D6 as part of this handoff.
+Monday (2026-11-02) priority: stability, then (1) D6 persistence, (2) custom prompts,
+(3) multi-image input, (4) integration/release sanity, (5) image generation stretch.
+Image generation must not block or destabilize the core build.
+
+Presets are durable named USER prompt text authored on the phone, synced to watch,
+and explicitly inserted into its draft. User may edit/combine text and images;
+non-empty draft requires insert/replace/cancel. No hidden master/system prompt,
+no automatic inference; the watch reviews and explicitly presses Send.
+
+Use Android Photo Picker multi-select → normalize/resize/compress → app-private
+WristPrompt-managed library → bounded asset/data sync → watch thumbnails and
+multiple selection/removal. Do not browse the entire phone gallery remotely.
+One user message supports text + N images; unsupported model/route errors clearly,
+with no model switch or billing fallback. Extend the existing Responses stack.
+
+D6 schema anticipates Text and ImageAttachment. DISPLAY TRANSCRIPT != RESPONSES
+API REPLAY CONTEXT; preserve opaque validated continuation/reasoning where needed.
+No Compose persistence or per-token writes. Commit completed canonical exchanges
+transactionally or equivalently safely; binaries normally live in private files
+referenced by durable metadata. Exact schema belongs to D6-A.
+
+Use a feature branch and open a PR for each implementation issue; do not push
+implementation directly to main. Keep PR scope to the issue, without mixing D6/D7
+phases. State tests actually run and distinguish VERIFIED AUTOMATICALLY, VERIFIED
+ON EMULATOR and VERIFIED PHYSICALLY. Never claim physical PASS without owner
+results; never run destructive owner-device tests without exact authorization.
 
 ## License and publication
 

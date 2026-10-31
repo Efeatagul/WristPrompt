@@ -79,8 +79,11 @@ Wear-adapted records/fallbacks. See DAY5_C_REPORT.md for limits and failure fall
 D6 is NOT STARTED. Durable DISPLAY TRANSCRIPT and RESPONSES REPLAY CONTEXT require
 separate versioned records and compatibility decisions; do not serialize D5
 presentation objects. No storage write per streaming token. The next developer
-step after owner D5-G acceptance is a separately authorized read-only D6-0 audit,
-including reconciliation of the current memory-only specification and roadmap.
+step is D6-A, a read-only architecture audit first. D5 is complete with known debt.
+D6 must anticipate Text/ImageAttachment content parts, app-private binary files,
+transactional completed exchanges and separate replay records. D7 adds phone-owned
+presets and an imported photo library; normal inference remains watch-direct.
+See CODEX_HANDOFF.md and D6_D7_BACKLOG.md for authorized future product scope.
 
 See [../PROJECT_SPEC.md](../PROJECT_SPEC.md), [../DECISIONS.md](../DECISIONS.md),
 [TESTING.md](TESTING.md) and [CODEX_HANDOFF.md](CODEX_HANDOFF.md).

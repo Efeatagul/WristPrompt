@@ -63,11 +63,11 @@ Keep production gating. See [../EMULATOR_CAPABILITY_INVESTIGATION.md](../EMULATO
 
 D5-F's recorded baseline is in [../DAY5_F_REPORT.md](../DAY5_F_REPORT.md),
 [../DAY5_F_METRICS.json](../DAY5_F_METRICS.json) and [../DAY5_STATUS.md](../DAY5_STATUS.md).
-Do not substitute old runs for newly executed checks. Physical D5-G remains pending;
-the owner will supply P1–P13. Current repository has grouped physical checklist areas,
-not an already recorded numbered P1–P13 result set. Preserve the owner's numbering
-when received. Update DAY5_STATUS.md, create DAY5_G_REPORT.md and update ROADMAP.md
-only with supplied evidence. Recommend remediation for reproducible material defects.
+Do not substitute old runs for newly executed checks. D5 physical closure is PASS
+WITH KNOWN DEBT after the owner's Galaxy Watch 7 R1–R10 final retest. Initial P1–P13
+observations and final R results remain in DAY5_G_REPORT.md; R6 structured tables
+remain non-blocking debt and spoken TalkBack remains untested. Never infer missing
+physical results. D6/D7 acceptance belongs to their issues, not this handoff.
 
 Non-blocking physical checks are batched. Never clear real app data, uninstall owner
 apps, revoke sessions, corrupt credentials/Keystore or intentionally exhaust usage

@@ -148,14 +148,14 @@ RESPONSES API REPLAY CONTEXT, including opaque validated continuation/reasoning
 items where applicable. Do not serialize D5 UI projection objects as the future
 persistent schema. No storage write per streaming token.
 
-D5-F — PASS WITH KNOWN DEBT.
-D5-G — PHYSICAL ACCEPTANCE PENDING.
-D6 — NOT STARTED.
+D5 — PASS WITH KNOWN DEBT — COMPLETE (owner Galaxy Watch 7 final retest).
+Known physical table-rendering debt and untested TalkBack remain documented.
+D6 — NOT STARTED. D7 — NOT STARTED.
 
-The owner will supply D5-G P1–P13 results. Record only supplied evidence in
-DAY5_STATUS.md, a new DAY5_G_REPORT.md and ROADMAP.md. Do not fabricate or infer
-physical results. Then, after Day 5 closure and separate authorization, D6-0 is a
-read-only persistence architecture audit. Do not start it automatically.
+Next contributor starts D6-A, a read-only persistence architecture audit first;
+see docs/CODEX_HANDOFF.md and docs/D6_D7_BACKLOG.md. A handoff/backlog is not
+permission to implement phases automatically. Preserve supplied historical and
+final owner evidence in DAY5_STATUS.md and DAY5_G_REPORT.md.
 
 Use VERIFIED AUTOMATICALLY, VERIFIED ON EMULATOR and VERIFIED PHYSICALLY distinctly.
 Physical results require owner/device evidence; pending physical checks are not
