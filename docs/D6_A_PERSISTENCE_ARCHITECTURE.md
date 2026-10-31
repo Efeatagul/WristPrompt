@@ -205,7 +205,7 @@ in conversation metadata; users may intentionally put sensitive text in prompts.
 ## Evidence and current blockers
 
 This is a source audit and architecture proposal, not a completed D6 implementation.
-No Android tests, emulator scenarios, lint or build ran for this documentation edit.
+No emulator scenarios, lint or APK assembly ran for this documentation edit.
 No physical result is claimed. Owner physical acceptance remains pending.
 The connected contributor account has pull-only access upstream, so upstream merges
 require the maintainer. The contributor fork and upstream PR #13 now exist.
@@ -214,5 +214,7 @@ downloaded from Google's official repository and SHA-1 checked against its packa
 metadata. Its current SDK license differed from the existing accepted hash; the
 contributor explicitly read and accepted the terms before workspace setup.
 `gradlew.bat --version` passed with Gradle 9.6.0 and Temurin 17.0.20.1.
-A focused baseline ChatConversationTest run is in progress, not yet a test PASS.
+A focused baseline `gradlew.bat :wear:testDebugUnitTest --tests '*ChatConversationTest'
+--console=plain --no-daemon` passed, compiling Wear main and unit-test sources.
+This validates existing memory-only chat behavior, not the proposed persistence.
 Preserve project pins rather than downgrading them.
