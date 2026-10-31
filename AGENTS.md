@@ -1,5 +1,25 @@
 # WristPrompt engineering rules
 
+## Contribution branch rules
+
+- Never implement directly on `main`. Before editing, inspect `git status`,
+  `git branch --show-current`, and the relevant diff/commit range. Stop if the
+  checkout is on `main` or another issue's branch; preserve existing user work.
+- Fetch and update the latest `main`, then create a fresh branch for exactly one
+  issue, feature, fix, or coherent maintenance task. Keep unrelated changes off
+  that branch and do not automatically start another issue on it.
+- After a PR merges, return to `main`, update it, and only then create the next
+  task branch. Avoid cumulative PRs unless the work is explicitly documented as
+  stacked, intentionally based on its dependency branch, and later cleaned onto
+  current `main`.
+- Before opening or updating a PR, inspect its final diff against `main` and
+  commit range for scope contamination. Resolve conflicts deliberately, preserve
+  fixes already merged into `main`, and rerun affected checks after resolution.
+- Do not add unrelated refactors, formatting, warning cleanup, dependency
+  upgrades, documentation rewrites, or speculative cleanup. See
+  [CONTRIBUTING.md](CONTRIBUTING.md) for branch, stacked-work, commit, and PR
+  workflow details.
+
 ## Read before changing files
 
 - Read this file and the relevant parts of [PROJECT_SPEC.md](PROJECT_SPEC.md),
@@ -55,21 +75,18 @@
   required, unresolved risks, and a suggested commit message.
 - Distinguish unit, emulator, and physical-device evidence. Do not check off a
   milestone based on compilation alone. Update the roadmap only with evidence.
-- For the rest of the six-day sprint, label results VERIFIED AUTOMATICALLY,
-  VERIFIED PHYSICALLY, PENDING END-OF-DAY PHYSICAL TEST, or BLOCKED. Unit/emulator
-  evidence never establishes physical behavior. Continue automated tests, builds,
-  lint/static checks and git diff --check after implementation tasks.
-- Batch non-blocking device checks into the concise end-of-day checklist in
-  DAY2_STATUS.md (or that day's status document); do not require device tests after
-  every task. Continue within authorized scope when automated evidence is strong,
-  the next work does not depend on the result, and failure cannot risk credential
-  corruption, data loss or irreversible state. Ordinary UI/error/state/recovery
-  changes normally wait until end of day.
-- Ask for immediate manual evidence only when continuing is materially unsafe or
-  likely to waste substantial work; explain the dependency/risk. Examples include
-  signing changes, credential-format migration, destructive storage/Keystore work,
-  fundamental authentication changes, registration invalidation risk, or required
-  release/debug behavior differences. A pending physical check is not itself a blocker.
+- Label results `VERIFIED AUTOMATICALLY`, `VERIFIED ON EMULATOR`, or
+  `VERIFIED PHYSICALLY` as applicable. Unit and emulator evidence never establishes
+  physical behavior. Run the affected automated checks and `git diff --check`; for
+  documentation-only changes, use relevant whitespace, link, security/privacy,
+  and licensing checks instead of the Android matrix.
+- Batch non-blocking device checks into the relevant current status document.
+  Continue within authorized scope when automated evidence is strong, the next
+  work does not depend on the result, and failure cannot risk credential
+  corruption, data loss, or irreversible state.
+- Request immediate manual evidence only when continuing is materially unsafe or
+  likely to waste substantial work. Explain the dependency or risk. A pending
+  physical check alone is not a blocker.
 - Never clear real app data, uninstall WristPrompt, revoke a real session, delete
   credentials, invalidate Keystore keys or intentionally exhaust usage without
   explicit authorization for that exact action. Never run destructive physical
@@ -141,21 +158,22 @@ changes require repository/security/link/whitespace checks, not full D5 acceptan
 - Model picker shows only authoritative display name and selected state; no
   speed/quality/reasoning/capability metadata or inferred ranking.
 
-### Persistence and next phase
+### Current project state and persistence invariants
 
-Conversation state is MEMORY ONLY. D6 must keep DISPLAY TRANSCRIPT separate from
-RESPONSES API REPLAY CONTEXT, including opaque validated continuation/reasoning
-items where applicable. Do not serialize D5 UI projection objects as the future
-persistent schema. No storage write per streaming token.
+D5 is PASS WITH KNOWN DEBT; the physical Markdown table-rendering debt and
+untested TalkBack remain documented. D6-A–C are merged on `main`. D6-D
+consolidated lifecycle, migration, and recovery acceptance is pending. D7
+implementation has not started. Check [docs/CODEX_HANDOFF.md](docs/CODEX_HANDOFF.md),
+[ROADMAP.md](ROADMAP.md), and [docs/D6_D7_BACKLOG.md](docs/D6_D7_BACKLOG.md) for
+the current handoff and evidence. A handoff or backlog is not, by itself,
+authorization to start a new phase.
 
-D5 — PASS WITH KNOWN DEBT — COMPLETE (owner Galaxy Watch 7 final retest).
-Known physical table-rendering debt and untested TalkBack remain documented.
-D6 — NOT STARTED. D7 — NOT STARTED.
-
-Next contributor starts D6-A, a read-only persistence architecture audit first;
-see docs/CODEX_HANDOFF.md and docs/D6_D7_BACKLOG.md. A handoff/backlog is not
-permission to implement phases automatically. Preserve supplied historical and
-final owner evidence in DAY5_STATUS.md and DAY5_G_REPORT.md.
+Persistent conversation records are implemented. Keep DISPLAY TRANSCRIPT
+separate from RESPONSES API REPLAY CONTEXT, including validated opaque
+continuation/reasoning items where applicable. Persist completed whole exchanges
+only; interrupted, cancelled, or failed attempts stay out of replay. Do not
+serialize D5 UI projection objects as the persistence schema or write on every
+streaming token.
 
 Use VERIFIED AUTOMATICALLY, VERIFIED ON EMULATOR and VERIFIED PHYSICALLY distinctly.
 Physical results require owner/device evidence; pending physical checks are not
