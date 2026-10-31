@@ -295,6 +295,15 @@ class WatchProfiles(private val record: SecretRecord, private val dispatcher: Co
         val bytes = kotlinx.serialization.json.Json.encodeToString(RegistrationIdentity.serializer(), identity).encodeToByteArray()
         MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     } }
+    suspend fun localConversationIdentity(client: String, generation: Long): String = withContext(dispatcher) { mutex.withLock {
+        val vault = read()
+        require(vault.selectedClientId == client && vault.generation == generation &&
+            client !in vault.signOutPending && client !in blockedSignOuts)
+        val profile = vault.profiles.single { it.identity.clientId == client }
+        require(profile.planUsageEnabled)
+        val bytes = kotlinx.serialization.json.Json.encodeToString(RegistrationIdentity.serializer(), profile.identity).encodeToByteArray()
+        MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+    } }
     private fun replace(vault: WatchVault, profile: CredentialProfile): List<CredentialProfile> = vault.profiles.map {
         if (it.identity.clientId == profile.identity.clientId) profile else it
     }

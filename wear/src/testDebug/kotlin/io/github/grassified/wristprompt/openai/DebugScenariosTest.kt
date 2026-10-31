@@ -14,8 +14,19 @@ class DebugScenariosTest {
     @After fun cleanup() { fixtures.forEach { it.vm.viewModelScope.cancel() }; Dispatchers.resetMain() }
     private fun fixture(s: DebugScenario) = DebugScenarios(s).also { fixtures += it }
     @Test fun namesAreUniqueAndRoundTrip() {
-        assertEquals(83, DebugScenario.entries.size)
+        assertEquals(84, DebugScenario.entries.size)
         DebugScenario.entries.forEach { assertSame(it, DebugScenario.parse(it.name)) }
+    }
+    @Test fun historyFixtureSupportsLocalActionsWithoutGenerating(): Unit = runTest {
+        val f = fixture(DebugScenario.SAVED_CHATS_HISTORY); launch { f.prepare() }; runCurrent()
+        assertEquals(io.github.grassified.wristprompt.ui.Surface.HISTORY, f.surface)
+        assertEquals(25, f.vm.history.value.entries.size); assertEquals(0, f.generations)
+        val id = f.vm.history.value.entries.first().id
+        f.vm.openChat(id); runCurrent(); assertEquals(2, f.vm.chat.value.messages.size)
+        f.vm.renameChat(id, "Renamed synthetic chat"); runCurrent()
+        assertEquals("Renamed synthetic chat", f.vm.history.value.entries.first().title)
+        f.vm.deleteChat(id); runCurrent(); assertEquals(24, f.vm.history.value.entries.size)
+        assertEquals(0, f.generations)
     }
     @Test fun largeAndLongCatalogsKeepExactNamesAndOrder(): Unit = runTest {
         for ((scenario, count) in listOf(DebugScenario.SINGLE_MODEL to 1, DebugScenario.MANY_MODELS to 40, DebugScenario.THOUSAND_MODELS to 1000,

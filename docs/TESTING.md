@@ -32,6 +32,11 @@ No stable binaries or signing keys should be uploaded by this workflow.
 
 ## Synthetic emulator scenarios
 
+History fixture: `--scenario SAVED_CHATS_HISTORY` (25 synthetic, memory-only chats).
+Its actions must not increase inference generations until explicit Send. On Windows,
+run Python in UTF-8 mode (`python -X utf8 ...`); host tests need a writable disposable
+temporary directory. See [D6_C_HISTORY.md](D6_C_HISTORY.md) for exact evidence limits.
+
 Use a disposable test lab with the named AVDs `WristPrompt_Watch7` and, for paired
 Data Layer investigation, `WristPrompt_Phone`. Runners discover and validate the
 watch; do not hardcode owner device serials. Install matched-signing debug APKs.

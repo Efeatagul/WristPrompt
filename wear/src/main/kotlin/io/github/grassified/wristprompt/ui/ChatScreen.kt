@@ -17,6 +17,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.Color
@@ -48,6 +50,8 @@ internal fun ChatScreen(
         }
     }
     val presentation by owner.state.collectAsStateWithLifecycle()
+    val readOnlyReason by remember(proof) { proof.chat.map { it.readOnlyReason }.distinctUntilChanged() }
+        .collectAsStateWithLifecycle(initialValue = null)
     var inspected by remember { mutableStateOf<List<MarkdownLink>?>(null) }
     // A reset invalidates displayed destinations along with the conversation.
     LaunchedEffect(presentation.rows.isEmpty()) { if (presentation.rows.isEmpty()) inspected = null }
@@ -63,6 +67,7 @@ internal fun ChatScreen(
         if (largeFont) addAll(listOf("chat-title", "chat-menu", "chat-model", "chat-billing"))
         else add("chat-header")
         if (showSetup) add("chat-unavailable")
+        if (readOnlyReason != null) add("chat-readonly")
         if (presentation.rows.isEmpty()) add("chat-empty") else addAll(presentation.rows.map { it.key })
     }
     val scroll = rememberChatScroll(navigation, keys)
@@ -93,6 +98,7 @@ internal fun ChatScreen(
         if (showSetup) {
             item(key = "chat-unavailable", contentType = "status") { ShellText(setup.text) }
         }
+        readOnlyReason?.let { reason -> item(key = "chat-readonly", contentType = "status") { ShellText(reason) } }
         if (presentation.rows.isEmpty()) {
             item(key = "chat-empty", contentType = "status") { ShellText("Ask anything") }
         } else chatItems(presentation) { inspected = it }
@@ -146,6 +152,7 @@ internal fun ComposerScreen(
     val chat by proof.chat.collectAsStateWithLifecycle()
     ShellList(Modifier.fillMaxSize(), rememberShellScroll(navigation, Surface.COMPOSER)) {
         item { ShellText("Review message", heading = true) }
+        chat.readOnlyReason?.let { reason -> item { ShellText(reason) } }
         item { ShellText("Model: ${ui.model}", compact = true) }
         if (!ui.proofAvailable || state.selectedSlug == null) item { ShellText(ui.status) }
         action(if (chat.draft.isEmpty()) "Write message" else "Replace draft", !chat.busy && !state.busy, write)

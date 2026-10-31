@@ -117,6 +117,7 @@ internal fun WearShellContent(
                     surface == Surface.CHAT -> ChatScreen(proof, state, ui, navigation, supplementalGuidance, presentationMetrics)
                     surface == Surface.COMPOSER -> ComposerScreen(proof, state, ui, navigation,
                         interruptedInput, inputUnavailable, write)
+                    surface == Surface.HISTORY -> HistoryScreen(proof, navigation)
                     else -> ShellList(Modifier.fillMaxSize(), rememberShellScroll(navigation, surface)) {
                         action("Back", onClick = back)
 
@@ -124,6 +125,7 @@ internal fun WearShellContent(
                             Surface.MENU -> {
                                 item { ShellText("Menu", heading = true) }
                                 action("New Chat", onClick = interaction::newChat)
+                                action("Chats") { proof.refreshHistory(); navigation.open(Surface.HISTORY) }
                                 action("Account & Connection") { navigation.open(Surface.CONNECTION) }
                                 action("Settings & About") { navigation.open(Surface.SETTINGS) }
                             }
@@ -131,7 +133,7 @@ internal fun WearShellContent(
                                 item { ShellText("Settings & About", heading = true) }
                                 item { ShellText("About WristPrompt", heading = true) }
                                 item { ShellText("WristPrompt · ${appVersion}") }
-                                paragraphs("Conversation stays in memory for this session. New Chat, changing model or ending the app process clears it.")
+                                paragraphs("Chats are saved privately on this watch. Use Chats to reopen, rename or delete them. Unsent drafts are not saved after the app process ends.")
                                 action("Diagnostics") { navigation.open(Surface.DETAILS) }
                             }
                             Surface.PROOF -> {
@@ -222,7 +224,7 @@ internal fun WearShellContent(
                                 item { ShellText(ui.status) }
                                 if (ui.showOutput) paragraphs(state.output)
                             }
-                            Surface.CHAT, Surface.COMPOSER -> Unit
+                            Surface.CHAT, Surface.COMPOSER, Surface.HISTORY -> Unit
                         }
                     }
                 }

@@ -11,6 +11,7 @@ class WatchProfilesTest {
         val record = Record(); val vault = WatchProfiles(record) { now }; val req = request()
         vault.prepare("phone", req); vault.accept("phone", ProfileProtocol.encode(transfer(req)))
         val lease = vault.credential { it }; val owner = vault.conversationIdentity(lease)
+        assertEquals(owner, vault.localConversationIdentity(lease.clientId, lease.generation))
         assertEquals(64, owner.length); assertFalse(owner.contains("subject"))
         val restored = WatchProfiles(record) { now }; restored.load()
         assertEquals(owner, restored.conversationIdentity(restored.credential { it }))
@@ -19,6 +20,7 @@ class WatchProfilesTest {
         restored.accept("phone", ProfileProtocol.encode(transfer(next, "other-subject", "oaiapp_other")))
         assertNotEquals(owner, restored.conversationIdentity(restored.credential { it }))
         assertThrows(Exception::class.java) { runBlocking { restored.conversationIdentity(lease) } }
+        assertThrows(Exception::class.java) { runBlocking { restored.localConversationIdentity(lease.clientId, lease.generation) } }
     }
     private class Record : SecretRecord {
         var data: ByteArray? = null

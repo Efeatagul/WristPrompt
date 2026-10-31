@@ -8,7 +8,8 @@ phone/watch debug pair; preserve owner installations and keys.
 ## Current state
 
 **D5: PASS WITH KNOWN DEBT — COMPLETE.**
-D6: NOT STARTED. D7: NOT STARTED.
+D6-B/C implementation is present on contributor branches; consolidated D6-D
+acceptance is pending. D7 is NOT STARTED.
 Final owner Galaxy Watch 7 retest: R1–R5/R7–R10 PASS; R6 structured Markdown
 Wear table rendering FAIL / non-blocking known debt. TalkBack remains untested.
 
@@ -17,7 +18,8 @@ ChatGPT OAuth and explicit API-key billing, account model discovery, watch-direc
 streaming, real Stop, multi-turn memory chat, chat-first D5 UI, approximately 100 ms
 coalesced presentation, explicit Latest, native Markdown/tables/code, a name-only
 model picker, Account/Settings/Diagnostics and concise recovery actions.
-Conversation history is memory-only. No persistent conversation manager exists.
+Local persistent history is implemented by D6-B/C; detailed acceptance and remaining
+Wear/physical checks are recorded in D6_B_STORAGE.md and D6_C_HISTORY.md.
 
 ## Read and build
 
@@ -108,22 +110,22 @@ writes; do not persist UI projection objects as its schema.
 
 ## Next contributor action
 
+D6-C history/startup/rename/delete work is recorded in [D6_C_HISTORY.md](D6_C_HISTORY.md).
+Continue with D6-D consolidated acceptance after C integration. Upstream #14 may
+still await maintainer merge; fork main contains the tested B integration. Keep
+upstream and fork merge evidence distinct. Wear/physical pending results remain open.
+
 D6-B canonical checkpoint/store work is documented in [D6_B_STORAGE.md](D6_B_STORAGE.md).
 The contributor is authorized to continue D6/D7 without per-issue approval, and to
 prepare dependent branches while upstream merges are pending. This overrides the
 historical phase-stop directions below for this development run. Upstream merges
 still require actual GitHub write permission; do not bypass repository protections.
 
-An unmerged D6-A design is available in
-[D6_A_PERSISTENCE_ARCHITECTURE.md](D6_A_PERSISTENCE_ARCHITECTURE.md). Review its
-transaction/ownership contracts before D6-B. No implementation, Android validation
-or owner physical acceptance is claimed by that audit; upstream status is unchanged.
-
-**Start D6-A: audit and design persistent conversation architecture**, read-only
-first. See [D6/D7 backlog](D6_D7_BACKLOG.md) for issue discovery, dependencies and
-branch suggestions. D6-A replaces the earlier D6-0 task name, not an extra phase.
-Deliver an architecture decision and implementation plan before broad production
-changes. Select no database merely from this handoff. D6/D7 remain unimplemented.
+D6-A was merged upstream as `78d5cc2`; its design is in
+[D6_A_PERSISTENCE_ARCHITECTURE.md](D6_A_PERSISTENCE_ARCHITECTURE.md), refined by B's
+bounded SQLite checkpoint decision. Next is D6-D consolidated validation, followed
+by D7-A/B presets and D7-C/D/E multi-image/composer work in dependency order.
+See [D6/D7 backlog](D6_D7_BACKLOG.md) for issue scopes and branch suggestions.
 
 Monday (2026-11-02) priority: stability, then (1) D6 persistence, (2) custom prompts,
 (3) multi-image input, (4) integration/release sanity, (5) image generation stretch.

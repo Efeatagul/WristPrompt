@@ -1356,3 +1356,15 @@ unchanged. Replacement/removal changes the scope. This prevents revision-counter
 reuse from attaching old chats to a newly provisioned key. No token hashes or raw
 credential/registration identifiers enter chat metadata. Negative tests cover
 migration, recreation, failed persistence and stale leases. No new dependency.
+
+## D6-C history ownership — 2026-10-31
+
+History is scoped to a random local owner derived from the verified local
+registration identity or protected API-key provisioning scope. Resolve that owner
+before network model discovery for offline read-only viewing; send still requires
+current credentials/catalog and the original model/explicit billing path. Never
+select a different model merely to reopen a chat. Startup restores canonical data
+without a request or unsent draft. Rename/delete use revisions and wait for queued
+terminal checkpoints, preventing a Stop/open/rename race from using an old revision.
+Native history actions remain separate from the coalesced transcript; observe only
+distinct read-only/busy values. See docs/D6_C_HISTORY.md for validation and limits.

@@ -18,9 +18,9 @@ internal const val CHAT_INPUT_KEY = "chat_text"
 
 // Native Wear RemoteInput intent contract; avoids adding a library for two intent constants.
 // https://developer.android.com/reference/androidx/wear/input/RemoteInputIntentHelper
-internal fun chatInputIntent(): Intent = Intent("android.support.wearable.input.action.REMOTE_INPUT")
+internal fun chatInputIntent(label: String = "Message"): Intent = Intent("android.support.wearable.input.action.REMOTE_INPUT")
     .putExtra("android.support.wearable.input.extra.REMOTE_INPUTS",
-        arrayOf(RemoteInput.Builder(CHAT_INPUT_KEY).setLabel("Message").setAllowFreeFormInput(true)
+        arrayOf(RemoteInput.Builder(CHAT_INPUT_KEY).setLabel(label).setAllowFreeFormInput(true)
             .addExtras(Bundle().apply {
                 // WearableRemoteInputExtender's documented DONE mapping (not EditorInfo's numeric value).
                 putInt("android.support.wearable.input.extra.INPUT_ACTION_TYPE", 2)
