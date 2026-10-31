@@ -33,13 +33,14 @@ class DurableChatViewModelTest {
     }
     private class Provider : AiProvider {
         var requests = 0
+        val inputs = mutableListOf<List<JsonObject>>()
         var action: suspend (suspend (ResponseEvent) -> Unit) -> Unit = { emit ->
-            repeat(50) { emit(ResponseEvent.Delta("x")) }; emit(ResponseEvent.Completed("done"))
+            repeat(50) { emit(ResponseEvent.Delta("x")) }; emit(ResponseEvent.Completed("x".repeat(50)))
         }
         override suspend fun models(credential: CredentialLease) = listOf(AiModel("synthetic", "Synthetic"))
         override suspend fun stream(credential: CredentialLease, model: String, onEvent: suspend (ResponseEvent) -> Unit) = error("not proof")
         override suspend fun stream(credential: CredentialLease, model: String, input: List<JsonObject>, onEvent: suspend (ResponseEvent) -> Unit) {
-            requests++; action(onEvent)
+            requests++; inputs += input; action(onEvent)
         }
     }
     private fun create(store: Store, provider: Provider): InferenceViewModel {
@@ -67,7 +68,37 @@ class DurableChatViewModelTest {
         assertEquals(1, provider.requests); assertEquals(1, store.writes.size)
         assertTrue(store.writes.single().snapshot.replay.isEmpty())
         assertEquals(ApiProblem.CHAT_STORAGE, model.chat.value.problem)
-        assertFalse(model.chat.value.stage == ChatStage.COMPLETED)
+        assertEquals(ChatStage.FAILED, model.chat.value.stage)
+        assertEquals("x".repeat(50), model.chat.value.partial)
+        assertEquals(ChatMessageStatus.EXCLUDED, model.chat.value.messages.single().status)
+        assertTrue(model.chat.value.messages.none { it.role == ChatRole.ASSISTANT })
+        advanceUntilIdle()
+        assertEquals(1, provider.requests) // Neither failure nor recovery observation retries inference.
+        store.failAt = -1
+        model.draft("explicit next question"); model.send(); runCurrent()
+        assertEquals(2, provider.requests)
+        assertEquals(1, provider.inputs.last().size) // Failed turn never entered in-memory replay.
+        assertEquals(ChatStage.COMPLETED, model.chat.value.stage)
+    }
+    @Test fun completionStorageFailurePreservesPreviouslyCommittedReplay() = runTest {
+        val store = Store(); val provider = Provider(); val model = create(store, provider); runCurrent()
+        model.draft("committed question"); model.send(); runCurrent()
+        val committed = store.writes.last().snapshot.replay
+        store.failAt = 3 // Second turn's begin succeeds; its completion fails.
+        model.draft("unsaved question"); model.send(); runCurrent()
+        assertEquals(2, provider.requests)
+        assertEquals(3, store.writes.size)
+        assertEquals(committed, store.writes.last().snapshot.replay)
+        assertEquals(ApiProblem.CHAT_STORAGE, model.chat.value.problem)
+        assertEquals("x".repeat(50), model.chat.value.partial)
+        assertEquals(1, model.chat.value.messages.count { it.role == ChatRole.ASSISTANT })
+        assertEquals(ChatMessageStatus.EXCLUDED, model.chat.value.messages.last().status)
+        advanceUntilIdle()
+        assertEquals(2, provider.requests)
+        store.failAt = -1
+        model.draft("explicit later question"); model.send(); runCurrent()
+        assertEquals(committed, provider.inputs.last().dropLast(1))
+        assertEquals(ChatStage.COMPLETED, model.chat.value.stage)
     }
     @Test fun stopStoresExcludedPartialAndNeverReplay() = runTest {
         val store = Store(); val provider = Provider().apply { action = { emit -> emit(ResponseEvent.Delta("partial")); awaitCancellation() } }

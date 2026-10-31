@@ -178,7 +178,8 @@ class InferenceViewModel(
                     }
                 }
                 if (run == epoch) {
-                    val beforeCompletion = conversation.snapshot()
+                    // Keep visible streaming text for in-memory rollback only; busy durable snapshots omit it.
+                    val beforeCompletion = conversation.snapshot().copy(partial = conversation.state.partial)
                     // The completed-event boundary wins over a later Stop. Publish only after durable commit.
                     conversation.complete(result)
                     try { activeWriter?.write(conversation.snapshot()) }
