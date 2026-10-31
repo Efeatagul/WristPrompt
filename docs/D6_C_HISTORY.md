@@ -1,6 +1,7 @@
 # D6-C conversation history
 
-Issue #4, layered on D6-B (upstream PR #14; fork merge `ba09ccf`).
+Issue #4, rebuilt on merged D6-B (#16, superseding #14), including the
+completion-storage-failure display recovery. Original D6-C implementation: @Efeatagul.
 
 ## Behavior
 
