@@ -1341,3 +1341,18 @@ behavior and laziness; no giant whole-answer text container or background work.
 Native max-font title breaks intentionally at the brand word boundary; Menu uses
 a full-width independent target. Diagnostic proof remains exact streamed output
 plus completion, labelled separately from chat and owned by the existing epoch.
+
+## D6-B storage refinement — 2026-10-31
+
+Use bounded typed domain checkpoints in separate SQLite display/replay columns,
+committed with ownership/metadata in one transaction. This refines D6-A's proposed
+normalized per-message schema for the existing twelve-attempt conversation bound.
+No UI projections or rendered Markdown are serialized. Private binary attachment
+lifecycle and its schema extension remain D7-C/D. See docs/D6_B_STORAGE.md.
+
+An optional random conversationScope is added lazily to the encrypted API vault;
+old v1 records decode with the default null field, and their secret/selection stay
+unchanged. Replacement/removal changes the scope. This prevents revision-counter
+reuse from attaching old chats to a newly provisioned key. No token hashes or raw
+credential/registration identifiers enter chat metadata. Negative tests cover
+migration, recreation, failed persistence and stale leases. No new dependency.

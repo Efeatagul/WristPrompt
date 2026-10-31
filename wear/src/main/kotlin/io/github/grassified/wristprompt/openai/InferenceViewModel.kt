@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.grassified.wristprompt.auth.CredentialMode
 import io.github.grassified.wristprompt.storage.SecureStorageException
+import io.github.grassified.wristprompt.storage.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
@@ -26,6 +27,8 @@ class InferenceViewModel(
     private val session: InferenceSession,
     private val selectedModel: suspend (CredentialLease) -> String? = { null },
     private val saveModel: suspend (CredentialLease, String) -> Unit = { _, _ -> },
+    private val conversationStore: ConversationStore? = null,
+    private val conversationIdentity: suspend (CredentialLease) -> String = { throw SecureStorageException() },
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ProofState())
     val state = mutableState.asStateFlow()
@@ -39,6 +42,8 @@ class InferenceViewModel(
     private var operation: Job? = null
     @Volatile private var epoch = 0L
     private var cleared = false
+    private var ownerScope: String? = null
+    private var writer: ConversationWriter? = null
     init {
         viewModelScope.launch {
             accounts.distinctUntilChanged { old, next -> old == next }.collect { account ->
@@ -83,6 +88,9 @@ class InferenceViewModel(
                 if (run != epoch || !compatible(catalog)) return@launchOperation
                 prepared = catalog
                 val restored = catalog.models.firstOrNull { it.slug == saved }?.slug ?: catalog.models.first().slug
+                val owner = conversationStore?.owner(conversationIdentity(catalog.credential))
+                if (run != epoch || !compatible(catalog)) return@launchOperation
+                ownerScope = owner
                 if (priorModel != null && priorModel != restored) clearChat()
                 mutableState.value = ProofState(ProofStage.READY, catalog.models,
                     restored, mode = catalog.credential.mode)
@@ -120,6 +128,7 @@ class InferenceViewModel(
         if (!wasChatBusy && !state.value.busy) return
         cancelOperation()
         if (wasChatBusy) { conversation.fail(null, cancelled = true); publishChat() }
+        if (wasChatBusy) persistTerminal()
         if (state.value.busy) mutableState.value = state.value.copy(stage = ProofStage.CANCELLED)
     }
     // Input results are accepted only for the context that launched the platform composer.
@@ -144,32 +153,56 @@ class InferenceViewModel(
         val catalog = prepared?.takeIf(::compatible) ?: return
         val selected = state.value.selectedSlug?.takeIf { slug -> catalog.models.any { it.slug == slug } } ?: return
         contextModel = selected
+        if (!conversation.state.canSend) return
+        val title = conversation.state.draft.take(120).ifBlank { "Chat" }
+        if (conversationStore != null && writer == null) {
+            val owner = ownerScope ?: return
+            writer = ConversationWriter(conversationStore, ConversationEntry(owner = owner, route = catalog.credential.mode.name,
+                model = selected, title = title, updated = System.currentTimeMillis(), snapshot = conversation.snapshot()))
+        }
         val input = conversation.begin()
         publishChat()
         if (input == null) return
         val run = ++epoch
+        val activeWriter = writer
+        val started = conversation.snapshot()
         inputRevision++
         launchOperation {
             try {
+                activeWriter?.write(started)
+                currentCoroutineContext().ensureActive()
+                if (run != epoch || !compatible(catalog)) return@launchOperation
                 val result = session.chat(catalog, selected, input) { progress ->
                     withContext(Dispatchers.Main.immediate) {
                         if (run == epoch) { conversation.progress(progress.output); publishChat() }
                     }
                 }
-                if (run == epoch) { conversation.complete(result); publishChat() }
+                if (run == epoch) {
+                    val beforeCompletion = conversation.snapshot()
+                    // The completed-event boundary wins over a later Stop. Publish only after durable commit.
+                    conversation.complete(result)
+                    try { activeWriter?.write(conversation.snapshot()) }
+                    catch (failure: Exception) {
+                        if (run == epoch) { conversation.restore(beforeCompletion); conversation.fail(ApiProblem.CHAT_STORAGE); publishChat() }
+                        throw failure
+                    }
+                    if (run == epoch) publishChat()
+                }
             } catch (cancelled: CancellationException) {
-                if (run == epoch) { conversation.fail(null, cancelled = true); publishChat() }
+                if (run == epoch) { conversation.fail(null, cancelled = true); publishChat(); persistTerminal() }
                 throw cancelled
             } catch (failure: Exception) {
                 if (run == epoch) {
                     val problem = when (failure) {
                         is ApiFailure -> failure.problem
                         is SecureStorageException -> ApiProblem.STORAGE
+                        is ConversationStorageException -> ApiProblem.CHAT_STORAGE
                         else -> ApiProblem.PROTOCOL
                     }
                     invalidateModel(problem)
                     conversation.fail(problem)
                     publishChat()
+                    if (problem != ApiProblem.CHAT_STORAGE) persistTerminal()
                 }
             }
         }
@@ -192,14 +225,23 @@ class InferenceViewModel(
         }
     }
     private fun publishChat() { mutableChat.value = conversation.state }
-    private fun clearChat() { inputRevision++; contextModel = null; conversation.reset(); publishChat() }
+    private fun clearChat() { inputRevision++; contextModel = null; writer = null; conversation.reset(); publishChat() }
+    private fun persistTerminal() {
+        val activeWriter = writer ?: return
+        val snapshot = conversation.snapshot()
+        val run = epoch
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            try { activeWriter.write(snapshot) }
+            catch (_: Exception) { if (run == epoch) mutableChat.value = mutableChat.value.copy(problem = ApiProblem.CHAT_STORAGE) }
+        }
+    }
     override fun onCleared() {
         // Final owner destruction is distinct from stopping UI observation or recreation.
         // Invalidate callbacks synchronously, before cancelled IO children finish unwinding.
         cleared = true
         cancelOperation()
         inputRevision++
-        if (conversation.state.busy) { conversation.fail(null, cancelled = true); publishChat() }
+        if (conversation.state.busy) { conversation.fail(null, cancelled = true); publishChat(); persistTerminal() }
         if (state.value.busy) mutableState.value = state.value.copy(stage = ProofStage.CANCELLED)
     }
     // Future phone-browser hook; never substitute an API-key billing path.
@@ -216,6 +258,7 @@ class InferenceViewModel(
         val problem = when (failure) {
             is ApiFailure -> failure.problem
             is SecureStorageException -> ApiProblem.STORAGE
+            is ConversationStorageException -> ApiProblem.CHAT_STORAGE
             else -> ApiProblem.PROTOCOL
         }
         invalidateModel(problem)

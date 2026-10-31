@@ -6,6 +6,15 @@ stabilization. Commands below are available workflows, not newly executed eviden
 
 ## Automated checks
 
+D6 storage-focused suites: `ConversationPersistenceTest`, `DurableChatViewModelTest`,
+`ApiKeyRepositoryTest`, `ChatConversationTest` and `ChatViewModelTest`.
+The androidTest-only `ConversationStorageInstrumentation` is a real SQLite gate
+using a separate device-protected synthetic database in the disposable target app. Build `:wear:assembleDebugAndroidTest`,
+install the matched debug and test APKs on a verified disposable emulator, then run
+`am instrument -w io.github.grassified.wristprompt.test/io.github.grassified.wristprompt.storage.ConversationStorageInstrumentation`.
+Require the explicit PASS stream; a zero shell exit alone is insufficient. Never
+run this workflow against owner hardware. See [D6_B_STORAGE.md](D6_B_STORAGE.md).
+
 ```sh
 ./gradlew :wear:testDebugUnitTest
 ./gradlew :mobile:testDebugUnitTest
