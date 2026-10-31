@@ -59,6 +59,15 @@ class CredentialRouter(
             CredentialMode.OPENAI_API_KEY -> keys.conversationIdentity(lease)
         }
     }
+    suspend fun localConversationIdentity(access: InferenceAccessState): String {
+        require(state.value == access && access.usable)
+        val identity = when (access.mode) {
+            CredentialMode.CHATGPT_PLAN -> profiles.localConversationIdentity(checkNotNull(access.client), access.generation)
+            CredentialMode.OPENAI_API_KEY -> keys.conversationIdentity(keys.credential())
+        }
+        require(state.value == access)
+        return identity
+    }
     suspend fun selectModel(lease: CredentialLease, slug: String) {
         if (!isCurrent(lease)) throw ApiFailure(ApiProblem.STALE_ACCOUNT)
         when (lease.mode) {

@@ -1,6 +1,10 @@
 # Wear debug scenario acceptance — canonical guide
 
-Current D5-H catalog: **83 scenarios**: D5-F’s 77 plus six targeted remediation fixtures.
+Current D6-C catalog: **84 scenarios**. `SAVED_CHATS_HISTORY` adds a synthetic
+25-chat history with open/rename/delete and explicit continuation; it performs no
+real inference or file persistence. Use it for round-screen/normal/max-font history
+interaction. Actual SQLite lifecycle evidence is a separate instrumentation gate.
+Historical D5-H catalog: **83 scenarios**: D5-F’s 77 plus six targeted remediation fixtures.
 D5-C added 22, D5-D added two model fixtures, and D5-E added four failure/limit fixtures.
 The D5-B inventory below has 47 entries; the D5-C inventory appends 22.
 This guide owns the current catalog and commands. Historical

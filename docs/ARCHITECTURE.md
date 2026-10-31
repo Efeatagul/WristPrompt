@@ -76,6 +76,10 @@ Wear-adapted records/fallbacks. See DAY5_C_REPORT.md for limits and failure fall
 
 ## Future persistence boundary
 
+D6-C wires bounded history, inert startup restoration and explicit continuation;
+see [D6_C_HISTORY.md](D6_C_HISTORY.md). Owner/model/route mismatches cannot send.
+Local identity reads permit offline viewing without bypassing inference validation.
+
 D6-B implements the canonical store/checkpoint boundary described in
 [D6_B_STORAGE.md](D6_B_STORAGE.md). History/startup selection is D6-C; the remaining
 paragraphs below describe the historical D5 baseline and original D6-A plan.
