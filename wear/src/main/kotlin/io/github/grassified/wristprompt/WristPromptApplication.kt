@@ -25,6 +25,7 @@ class WristPromptApplication : Application() {
     private val sessionClock = SessionClock.SYSTEM
     val profiles by lazy { WatchProfiles(EncryptedRecord(this, "chatgpt_profiles"), now = sessionClock) }
     val apiKeys by lazy { ApiKeyRepository(EncryptedRecord(this, "api_key"), sessionClock) }
+    val conversations by lazy { io.github.grassified.wristprompt.storage.SqliteConversationStore(this) }
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val credentials by lazy { CredentialRouter(profiles, apiKeys, refresh::refresh, appScope) }
     val apiKeyBridge by lazy { ApiKeySetupBridge(hostIds::getOrCreate, connectivity::reachablePeers, connectivity::request, apiKeys::prepare) }

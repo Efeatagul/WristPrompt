@@ -9,6 +9,37 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ApiKeyRepositoryTest {
+    @Test fun conversationOwnerSurvivesRecreationButNotKeyReplacement(): Unit = runBlocking {
+        val record = Record(); val repo = ApiKeyRepository(record) { now }; store(repo)
+        repo.selectMode(CredentialMode.OPENAI_API_KEY)
+        val oldLease = repo.credential(); val owner = repo.conversationIdentity(oldLease)
+        val restored = ApiKeyRepository(record) { now }; restored.load()
+        assertEquals(owner, restored.conversationIdentity(restored.credential()))
+        restored.remove(); store(restored)
+        assertNotEquals(owner, restored.conversationIdentity(restored.credential()))
+        assertThrows(Exception::class.java) { runBlocking { restored.conversationIdentity(oldLease) } }
+    }
+    @Test fun preD6VaultGetsAnAdditiveStableScopeWithoutChangingCredential(): Unit = runBlocking {
+        val record = Record(); val repo = ApiKeyRepository(record) { now }; store(repo)
+        repo.selectMode(CredentialMode.OPENAI_API_KEY)
+        val old = kotlinx.serialization.json.Json.parseToJsonElement(record.read()!!.decodeToString()).let {
+            kotlinx.serialization.json.JsonObject((it as kotlinx.serialization.json.JsonObject).filterKeys { key -> key != "conversationScope" })
+        }
+        record.write(old.toString().encodeToByteArray())
+        val restored = ApiKeyRepository(record) { now }; val lease = restored.credential()
+        val owner = restored.conversationIdentity(lease)
+        assertEquals(64, owner.length); assertTrue(restored.current(lease))
+        assertEquals(owner, ApiKeyRepository(record) { now }.conversationIdentity(lease))
+        assertEquals("synthetic-user-key", restored.credential().accessToken)
+    }
+    @Test fun ownerBindingStorageFailureNeverFallsBackToAnotherScope(): Unit = runBlocking {
+        val record = Record(); val repo = ApiKeyRepository(record) { now }; store(repo); repo.selectMode(CredentialMode.OPENAI_API_KEY)
+        val old = kotlinx.serialization.json.Json.parseToJsonElement(record.read()!!.decodeToString()) as kotlinx.serialization.json.JsonObject
+        record.write(kotlinx.serialization.json.JsonObject(old.filterKeys { it != "conversationScope" }).toString().encodeToByteArray())
+        record.fail = true
+        assertThrows(SecureStorageException::class.java) { runBlocking { repo.conversationIdentity(repo.credential()) } }
+        assertTrue(repo.state.value.storageError)
+    }
     private class Record : SecretRecord {
         var encrypted: ByteArray? = null
         var fail = false

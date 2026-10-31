@@ -533,3 +533,10 @@ The earlier dated Phase C–G pending statements above are implementation handof
 history. Current owner-supplied results and evidence limits are authoritative in
 DAY2_REPORT.md / DAY2_PHYSICAL_ACCEPTANCE.md. No repeat acceptance session or
 Day 3 implementation is authorized by recording this stage result.
+
+## D6-B implementation — 2026-10-31
+
+Canonical SQLite checkpoints and completed-only durable replay are implemented on
+the D6-B feature branch; see docs/D6_B_STORAGE.md for scope and evidence boundaries.
+History/reopen UI remains D6-C. Consolidated lifecycle/physical acceptance is D6-D;
+no D6 completion or physical PASS is claimed here.

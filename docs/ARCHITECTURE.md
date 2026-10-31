@@ -76,6 +76,10 @@ Wear-adapted records/fallbacks. See DAY5_C_REPORT.md for limits and failure fall
 
 ## Future persistence boundary
 
+D6-B implements the canonical store/checkpoint boundary described in
+[D6_B_STORAGE.md](D6_B_STORAGE.md). History/startup selection is D6-C; the remaining
+paragraphs below describe the historical D5 baseline and original D6-A plan.
+
 Local D6-A design is recorded in [D6_A_PERSISTENCE_ARCHITECTURE.md](D6_A_PERSISTENCE_ARCHITECTURE.md).
 It selects platform SQLite, typed content and separate transactional replay; no
 production storage is implemented or accepted by this documentation change.

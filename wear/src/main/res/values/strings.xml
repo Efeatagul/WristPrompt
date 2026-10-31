@@ -15,6 +15,7 @@
     <string name="authorizing">Authorizing… Finish in your phone’s browser.</string>
     <string name="plan_disabled">Identity connected. ChatGPT plan usage disabled.</string>
     <string name="setup_storage_error">Protected credentials unavailable. Requests are blocked. Secrets cannot be recovered here; reauthorization or API-key reconfiguration is required once protected storage is available.</string>
+    <string name="chat_storage_error">Chat could not be saved. Previous saved messages are unchanged. Check available storage and try again. Your sign-in details have not been reset.</string>
     <string name="authorization_failed">Authorization failed on phone. Open WristPrompt there for details, then retry from watch.</string>
     <string name="authorization_expired">Authorization expired. Try Continue with ChatGPT again.</string>
     <string name="plan_welcome">ChatGPT plan usage is enabled. When ChatGPT plan is selected, eligible AI requests use your plan. OpenAI API mode uses separate API billing. Manage ChatGPT usage in ChatGPT settings.</string>

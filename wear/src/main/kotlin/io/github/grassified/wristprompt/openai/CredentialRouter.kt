@@ -52,6 +52,13 @@ class CredentialRouter(
         CredentialMode.CHATGPT_PLAN -> profiles.selectedModel(lease.clientId)
         CredentialMode.OPENAI_API_KEY -> keys.selectedModel()
     }
+    suspend fun conversationIdentity(lease: CredentialLease): String {
+        if (!isCurrent(lease)) throw ApiFailure(ApiProblem.STALE_ACCOUNT)
+        return when (lease.mode) {
+            CredentialMode.CHATGPT_PLAN -> profiles.conversationIdentity(lease)
+            CredentialMode.OPENAI_API_KEY -> keys.conversationIdentity(lease)
+        }
+    }
     suspend fun selectModel(lease: CredentialLease, slug: String) {
         if (!isCurrent(lease)) throw ApiFailure(ApiProblem.STALE_ACCOUNT)
         when (lease.mode) {

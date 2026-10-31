@@ -22,6 +22,7 @@ internal fun problemText(problem: ApiProblem?): Int = when (problem) {
     ApiProblem.INTERRUPTED -> R.string.proof_interrupted
     ApiProblem.INCOMPLETE -> R.string.proof_incomplete
     ApiProblem.STORAGE -> R.string.setup_storage_error
+    ApiProblem.CHAT_STORAGE -> R.string.chat_storage_error
     ApiProblem.STALE_ACCOUNT -> R.string.proof_stale_account
     ApiProblem.PROTOCOL, null -> R.string.proof_protocol
 }

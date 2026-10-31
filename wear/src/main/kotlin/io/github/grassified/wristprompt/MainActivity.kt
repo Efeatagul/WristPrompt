@@ -27,7 +27,8 @@ class MainActivity : ComponentActivity() {
             val proof: InferenceViewModel = viewModel(factory = viewModelFactory {
                 initializer {
                     val app = application as WristPromptApplication
-                    InferenceViewModel(app.credentials.state, app.inference, app.credentials::selectedModel, app.credentials::selectModel)
+                    InferenceViewModel(app.credentials.state, app.inference, app.credentials::selectedModel, app.credentials::selectModel,
+                        app.conversations, app.credentials::conversationIdentity)
                 }
             })
             WristPromptTheme {

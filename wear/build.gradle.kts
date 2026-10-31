@@ -14,6 +14,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+        testInstrumentationRunner = "io.github.grassified.wristprompt.storage.ConversationStorageInstrumentation"
     }
 
     buildFeatures {
