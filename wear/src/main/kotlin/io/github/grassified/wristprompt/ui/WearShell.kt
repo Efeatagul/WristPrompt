@@ -26,7 +26,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
-import androidx.wear.compose.foundation.lazy.TransformingLazyColumnScope
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -137,6 +136,9 @@ internal fun WearShellContent(
                             }
                             Surface.PROOF -> {
                                 item { ShellText("Inference proof", heading = true) }
+                                paragraphs("Diagnostic test only. This is separate from your chat replies.")
+                                paragraphs("Expected output: ${ResponsesProtocol.expected(state.mode)}")
+                                state.attemptId?.let { item { ShellText("Test attempt: $it") } }
                                 item { ShellText(ui.status) }
                                 ui.account?.let { item { ShellText(it, compact = true) } }
                                 item { ShellText("Model: ${ui.model}", compact = true) }
@@ -155,7 +157,7 @@ internal fun WearShellContent(
                                     }
                                 }
                                 if (ui.showOutput) {
-                                    item { ShellText(if (state.completedObserved) "Output · response.completed observed" else "Output · not completed") }
+                                    item { ShellText(if (state.completedObserved) "Test output · response.completed observed" else "Test output · not completed") }
                                     paragraphs(state.output)
                                 }
                                 if (key.mode == CredentialMode.CHATGPT_PLAN && state.problem in
@@ -285,29 +287,29 @@ internal fun rememberShellScroll(
 }
 
 @Composable
-internal fun ShellList(modifier: Modifier, scroll: TransformingLazyColumnState, spacing: androidx.compose.ui.unit.Dp = 10.dp, content: TransformingLazyColumnScope.() -> Unit) {
+internal fun ShellList(modifier: Modifier, scroll: TransformingLazyColumnState, spacing: androidx.compose.ui.unit.Dp = 10.dp, content: ShellListScope.() -> Unit) {
     ScreenScaffold(scrollState = scroll, modifier = modifier.clipToBounds(), timeText = {},
         contentPadding = PaddingValues(top = 24.dp, bottom = 40.dp)) { padding ->
         TransformingLazyColumn(state = scroll, modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 24.dp, end = 24.dp,
                 top = padding.calculateTopPadding(), bottom = padding.calculateBottomPadding()),
-            verticalArrangement = Arrangement.spacedBy(spacing),
-            horizontalAlignment = Alignment.CenterHorizontally, content = content)
+            verticalArrangement = Arrangement.spacedBy(0.dp),
+            horizontalAlignment = Alignment.CenterHorizontally) { content(ShellListScope(this, spacing)) }
     }
 }
 
 @Composable
-internal fun ShellText(text: String, heading: Boolean = false, compact: Boolean = false) {
-    Text(text, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp), textAlign = TextAlign.Center,
+internal fun ShellText(text: String, heading: Boolean = false, compact: Boolean = false, paragraph: Boolean = false) {
+    Text(text, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp), textAlign = if (paragraph) TextAlign.Start else TextAlign.Center,
         style = if (heading) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium,
         maxLines = if (compact) 2 else Int.MAX_VALUE, overflow = TextOverflow.Ellipsis)
 }
 
-internal fun TransformingLazyColumnScope.action(label: String, enabled: Boolean = true, onClick: () -> Unit) {
+internal fun ShellListScope.action(label: String, enabled: Boolean = true, onClick: () -> Unit) {
     item { Button(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth(), label = { Text(label, maxLines = 2, overflow = TextOverflow.Ellipsis) }) }
 }
 
-internal fun TransformingLazyColumnScope.continueAction(enabled: Boolean, onClick: () -> Unit) {
+internal fun ShellListScope.continueAction(enabled: Boolean, onClick: () -> Unit) {
     item {
         Button(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = Color.Black, contentColor = Color.White),
@@ -316,25 +318,14 @@ internal fun TransformingLazyColumnScope.continueAction(enabled: Boolean, onClic
     }
 }
 
-// Break long guidance/output into independently scrollable rows instead of one viewport-sized item.
-internal fun TransformingLazyColumnScope.paragraphs(text: String) {
-    for (part in readableChunks(text)) item { ShellText(part) }
-}
-
-internal fun readableChunks(text: String): List<String> = buildList {
-    var offset = 0
-    while (offset < text.length) {
-        var end = minOf(offset + 80, text.length)
-        if (end < text.length) {
-            val space = text.lastIndexOf(' ', end - 1)
-            if (space >= offset + 40) end = space + 1
-            // Preserve Unicode surrogate pairs and all original output characters.
-            if (text[end - 1].isHighSurrogate() && text[end].isLowSurrogate()) end--
-        }
-        add(text.substring(offset, end))
-        offset = end
+// Real paragraphs keep their separation; bounded continuations share zero item spacing.
+internal fun ShellListScope.paragraphs(text: String) {
+    for (part in shellTextSegments(text)) item(contentType = if (part.continuation) SHELL_CONTINUATION else "shell-paragraph") {
+        ShellText(part.text, paragraph = true)
     }
 }
+
+internal fun readableChunks(text: String): List<String> = shellTextSegments(text).map { it.text }
 
 
 // Explicit existing commands only; no resend, automatic discovery, OAuth or credential changes.
@@ -349,6 +340,6 @@ private fun performRecovery(action: RecoveryAction, proof: InferenceViewModel, n
     }
 }
 
-private fun androidx.wear.compose.foundation.lazy.TransformingLazyColumnScope.recoveryAction(
+private fun ShellListScope.recoveryAction(
     recovery: RecoveryAction, proof: InferenceViewModel, navigation: ShellNavigationViewModel, enabled: Boolean,
 ) { action(recovery.label, enabled) { performRecovery(recovery, proof, navigation) } }

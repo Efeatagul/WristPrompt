@@ -65,16 +65,18 @@ object ResponseEvents {
                 "response.completed" -> {
                     val response = root.getValue("response").jsonObject
                     require(response["status"]?.jsonPrimitive?.content == "completed")
-                    val text = response["output"]?.jsonArray?.flatMap { item ->
-                        val obj = item.jsonObject
+                    val items = response["output"]?.jsonArray?.map { it.jsonObject }
+                    val text = items?.flatMap { obj ->
                         if (obj["type"]?.jsonPrimitive?.content == "message") obj["content"]?.jsonArray.orEmpty() else emptyList()
                     }?.mapNotNull { part -> when (part.jsonObject["type"]?.jsonPrimitive?.content) {
                         "output_text" -> part.jsonObject.getValue("text").jsonPrimitive.content
                         "refusal" -> part.jsonObject.getValue("refusal").jsonPrimitive.content
                         else -> null
-                    } }?.joinToString("")
+                    } }?.let { parts -> if (items.isNullOrEmpty()) null else parts.joinToString("") }
                     require(text == null || text.length <= ResponsesProtocol.MAX_TEXT_CHARS)
-                    ResponseEvent.Completed(text, response["output"]?.jsonArray?.map { it.jsonObject })
+                    // A summary without output items is not an explicit empty replacement.
+                    // Match the existing omitted-output contract: retain validated deltas.
+                    ResponseEvent.Completed(text, items?.takeIf { it.isNotEmpty() })
                 }
                 "response.failed" -> ResponseEvent.Failed(ApiErrors.parse(null, root.getValue("response").toString()))
                 "response.incomplete" -> ResponseEvent.Incomplete

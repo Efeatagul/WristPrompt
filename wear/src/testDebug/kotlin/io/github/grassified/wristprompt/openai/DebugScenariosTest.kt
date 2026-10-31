@@ -14,7 +14,7 @@ class DebugScenariosTest {
     @After fun cleanup() { fixtures.forEach { it.vm.viewModelScope.cancel() }; Dispatchers.resetMain() }
     private fun fixture(s: DebugScenario) = DebugScenarios(s).also { fixtures += it }
     @Test fun namesAreUniqueAndRoundTrip() {
-        assertEquals(77, DebugScenario.entries.size)
+        assertEquals(83, DebugScenario.entries.size)
         DebugScenario.entries.forEach { assertSame(it, DebugScenario.parse(it.name)) }
     }
     @Test fun largeAndLongCatalogsKeepExactNamesAndOrder(): Unit = runTest {
@@ -42,6 +42,7 @@ class DebugScenariosTest {
     @Test fun everyScenarioPreparesWithoutNetworkOrStores(): Unit = runTest {
         DebugScenario.entries.forEach { scenario ->
             val f = fixture(scenario); val job = launch { f.prepare() }; runCurrent()
+            if (scenario == DebugScenario.DIAGNOSTIC_PROOF_CURRENT_ATTEMPT) { advanceTimeBy(250); runCurrent() }
             assertTrue("${scenario.name} ready", job.isCompleted)
             f.vm.viewModelScope.cancel()
         }
@@ -178,6 +179,26 @@ class DebugScenariosTest {
         val f = fixture(DebugScenario.WATCH_ONLY_AUTHENTICATED)
         try { f.authBridge.request(); fail("Expected fail-if-touched") } catch (_: IllegalStateException) { }
         assertEquals(1, f.bridgeLookups); assertEquals(0, f.bridgeRequests)
+    }
+
+    @Test fun remediationFixturesReallyCompleteWithoutRepeatedOutputAndDiagnosticUsesSecondAttempt() = runTest {
+        for (scenario in listOf(DebugScenario.STREAM_TO_COMPLETED_PLAIN, DebugScenario.STREAM_TO_COMPLETED_MARKDOWN,
+            DebugScenario.STREAM_TO_COMPLETED_LONG)) {
+            val f = fixture(scenario); launch { f.prepare() }; runCurrent()
+            assertEquals(ChatStage.RECEIVING, f.vm.chat.value.stage)
+            advanceTimeBy(10000); runCurrent()
+            assertEquals(ChatStage.COMPLETED, f.vm.chat.value.stage)
+            assertEquals(markdownFixture(scenario), f.vm.chat.value.messages.single { it.role == ChatRole.ASSISTANT }.text)
+            assertEquals(1, f.generations)
+            f.vm.draft("Next"); f.vm.send(); advanceTimeBy(10000); runCurrent()
+            assertEquals(3, f.inputs.last().size)
+            assertEquals(2, f.generations)
+        }
+        val f = fixture(DebugScenario.DIAGNOSTIC_PROOF_CURRENT_ATTEMPT); launch { f.prepare() }; advanceTimeBy(250); runCurrent()
+        assertEquals(2, f.generations)
+        assertEquals(ProofStage.SUCCEEDED, f.vm.state.value.stage)
+        assertEquals("WristPrompt works.", f.vm.state.value.output)
+        assertNotNull(f.vm.state.value.attemptId)
     }
 
 }

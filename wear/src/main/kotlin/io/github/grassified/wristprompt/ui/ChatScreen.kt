@@ -76,9 +76,14 @@ internal fun ChatScreen(
     }
     ShellList(Modifier.fillMaxSize(), scroll, spacing = 0.dp) {
         if (largeFont) {
-            item(key = "chat-title", contentType = "header") { ShellText("WristPrompt", heading = true) }
+            item(key = "chat-title", contentType = "header") {
+                // Keep the native scaled title size; split the brand at its word boundary.
+                Text("Wrist\nPrompt", modifier = Modifier.fillMaxWidth().semantics { contentDescription = "WristPrompt" },
+                    textAlign = TextAlign.Center, style = MaterialTheme.typography.titleMedium)
+            }
             item(key = "chat-menu", contentType = "header") {
-                TextButton(onClick = { navigation.open(Surface.MENU) }) { Text("Menu") }
+                TextButton(onClick = { navigation.open(Surface.MENU) },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Menu", maxLines = 1, softWrap = false) }
             }
             item(key = "chat-model", contentType = "header") { ModelAffordance(ui, navigation, false) }
             item(key = "chat-billing", contentType = "header") { BillingText(ui) }

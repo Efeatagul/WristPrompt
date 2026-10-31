@@ -178,4 +178,35 @@ class InferenceViewModelTest {
         vm.loadModels(); runCurrent(); assertEquals(ProofStage.READY, vm.state.value.stage)
     }
 
+    @Test fun diagnosticAttemptOutputCompletionAndModelStayTogetherAndOldCallbacksAreRejected() = runTest {
+        val provider = Provider()
+        var attempt = 0
+        var late: (suspend (ResponseEvent) -> Unit)? = null
+        provider.stream = { emit ->
+            attempt++
+            if (attempt == 1) {
+                emit(ResponseEvent.Delta("old")); late = emit; awaitCancellation()
+            } else {
+                emit(ResponseEvent.Delta("WristPrompt ")); emit(ResponseEvent.Delta("works."))
+                emit(ResponseEvents.decode(null, """{"type":"response.completed","response":{"status":"completed","output":[]}}"""))
+            }
+        }
+        val vm = InferenceViewModel(accounts(), InferenceSession({ CredentialLease("client", 0, "synthetic-secret", 999) }, provider) { true }).also { model = it }
+        runCurrent(); vm.test(); runCurrent()
+        val first = vm.state.value.attemptId!!
+        assertEquals("old", vm.state.value.output)
+        vm.stop(); vm.test(); runCurrent()
+        val current = vm.state.value
+        assertTrue(current.attemptId!! > first)
+        assertEquals(ProofStage.SUCCEEDED, current.stage)
+        assertEquals("WristPrompt works.", current.output)
+        assertTrue(current.completedObserved)
+        assertEquals("slug", current.selectedSlug)
+        assertEquals(io.github.grassified.wristprompt.auth.CredentialMode.CHATGPT_PLAN, current.mode)
+        assertEquals("[REDACTED]", current.toString())
+        try { late!!(ResponseEvent.Delta("old late output")) } catch (_: CancellationException) { }
+        assertEquals(current, vm.state.value)
+        assertEquals(2, attempt)
+    }
+
 }

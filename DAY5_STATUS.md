@@ -1,9 +1,39 @@
-# Day 5 status — 2026-10-30
+# Day 5 status — updated 2026-10-31
 
-Current phase: **D5-F — PASS WITH KNOWN DEBT**. Full A–Y handoff and targeted
-D5-G checklist: [DAY5_F_REPORT.md](DAY5_F_REPORT.md). Durable measured samples:
-[DAY5_F_METRICS.json](DAY5_F_METRICS.json). D5-A–F are complete for automated/emulator
-scope; D5-G physical UX and D6 remain unstarted. No commit/push or physical testing.
+Current phase: **D5-H — PASS — PHYSICAL REVALIDATION REQUIRED**.
+D5-H automated/emulator remediation complete; **PHYSICAL REVALIDATION PENDING**.
+D5-F remains PASS WITH KNOWN DEBT. D5-G is **PHYSICAL ACCEPTANCE FAILED / INCOMPLETE
+DUE TO REPRODUCED UX DEFECTS**; Day 5 is open. D6 is NOT STARTED.
+
+Owner evidence: [DAY5_G_REPORT.md](DAY5_G_REPORT.md). Root causes, validation,
+limitations and affected retest: [DAY5_H_REPORT.md](DAY5_H_REPORT.md).
+Only synthetic emulator operations were performed in D5-H; no physical operations.
+Normal streaming remains plain/coalesced; terminal reconciliation remains native
+Markdown. No persistence, auth/billing/storage/signing or licensing change.
+
+## D5-H evidence — current
+
+- VERIFIED AUTOMATICALLY: full Wear run **470 tests / 53 suites**, zero failures,
+  errors or skips, run once. Final targeted header/stale-result verification:
+  **29 tests / 3 suites PASS**. Final 471-test inventory is covered across runs;
+  no full final-inventory rerun is claimed. Details: DAY5_H_REPORT.md.
+- Wear debug/release builds and lint pass; lint has 0 errors / 6 existing warnings.
+  Python tools: 40 tests pass. Release source/manifest/DEX scenario isolation passes.
+- VERIFIED ON EMULATOR: the ten targeted content/header/diagnostic cases plus
+  normal-font header baseline, with terminal-state checks and reviewed captures.
+  Final 2x header/Menu interaction and exact diagnostic output are checked separately.
+  No full 83-scenario catalog rerun. Font scale restored.
+- An empty terminal output array previously decoded as an empty replacement and
+  replay array, erasing deltas before Markdown projection. A deterministic test
+  failed before the decoder fix and passes after. **The owner's actual terminal
+  payload was not captured; attribution of that physical failure is an inference.**
+- Paragraph continuations no longer receive shell-item or Markdown-block gaps.
+  Native font scaling, semantic labels and normal-font header remain intact.
+- Physical retest: P2/P3/P5 completion/Markdown/reader-position; affected code/table
+  portions of P6/P7; P4 Stop regression; app-wide paragraph continuity; P11 maximum
+  font header/Menu; P9 current diagnostic proof/output. P13 is outside D5-H.
+
+## Historical D5-F evidence (not rerun by this summary)
 
 **VERIFIED AUTOMATICALLY:** complete Wear run 459 tests / 52 suites, zero failures/
 errors/skips; subsequent narrow label correction 40 tests / 4 suites and added

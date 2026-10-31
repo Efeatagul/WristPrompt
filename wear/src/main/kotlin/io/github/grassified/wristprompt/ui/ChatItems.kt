@@ -12,7 +12,6 @@ import androidx.compose.ui.unit.sp
 import android.app.RemoteInput
 import android.content.Intent
 import android.os.Bundle
-import androidx.wear.compose.foundation.lazy.TransformingLazyColumnScope
 import io.github.grassified.wristprompt.openai.*
 
 internal const val CHAT_INPUT_KEY = "chat_text"
@@ -29,7 +28,7 @@ internal fun chatInputIntent(): Intent = Intent("android.support.wearable.input.
             }).build()))
     .putExtra("android.support.wearable.input.extra.CONFIRM_LABEL", "Done")
 
-internal fun TransformingLazyColumnScope.chatItems(presentation: ChatPresentation, inspect: (List<MarkdownLink>) -> Unit) {
+internal fun ShellListScope.chatItems(presentation: ChatPresentation, inspect: (List<MarkdownLink>) -> Unit) {
     for (row in presentation.rows) item(key = row.key, contentType = row.markdown?.kind ?: row.type) { TranscriptText(row, inspect) }
 }
 

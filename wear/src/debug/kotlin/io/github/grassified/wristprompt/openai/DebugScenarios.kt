@@ -28,7 +28,9 @@ internal enum class DebugScenario {
     MARKDOWN_DEEP_NESTING, MARKDOWN_DELIMITER_STRESS, STREAMING_MARKDOWN, STREAMING_MARKDOWN_OPEN_SYNTAX,
     INTERRUPTED_MARKDOWN, STOPPED_MARKDOWN, TERMINAL_MARKDOWN_REPLACEMENT, MARKDOWN_LIST_LONG,
     MARKDOWN_MALFORMED, MARKDOWN_LONG_URL, ERROR_API_LIMIT, INCOMPLETE_PARTIAL,
-    CONVERSATION_LIMIT, SECURE_STORAGE_FAILURE;
+    CONVERSATION_LIMIT, SECURE_STORAGE_FAILURE, STREAM_TO_COMPLETED_PLAIN,
+    STREAM_TO_COMPLETED_MARKDOWN, STREAM_TO_COMPLETED_LONG, SINGLE_LONG_PARAGRAPH,
+    REAL_MULTI_PARAGRAPH, DIAGNOSTIC_PROOF_CURRENT_ATTEMPT;
     companion object { fun parse(name: String?): DebugScenario? = entries.singleOrNull { it.name == name } }
 }
 
@@ -42,6 +44,7 @@ internal class DebugScenarios(val scenario: DebugScenario) {
         activeClientId = "debug".takeUnless { scenario == DebugScenario.SIGNED_OUT })
     val key = ApiKeyState(storageError = scenario == DebugScenario.SECURE_STORAGE_FAILURE, loaded = true, mode = mode, configured = mode == CredentialMode.OPENAI_API_KEY)
     val surface = when (scenario) {
+        DebugScenario.DIAGNOSTIC_PROOF_CURRENT_ATTEMPT -> Surface.PROOF
         DebugScenario.MANY_MODELS, DebugScenario.THOUSAND_MODELS, DebugScenario.SINGLE_MODEL, DebugScenario.LONG_MODEL_NAMES, DebugScenario.MODELS_LOADED, DebugScenario.MODEL_UNAVAILABLE,
         DebugScenario.MODEL_DISCOVERY_OFFLINE, DebugScenario.MODEL_DISCOVERY_RECOVERED -> Surface.MODELS
         DebugScenario.LONG_USER_PROMPT, DebugScenario.COMPOSER_RECREATION -> Surface.COMPOSER
@@ -118,7 +121,15 @@ internal class DebugScenarios(val scenario: DebugScenario) {
             return (1..count).map { AiModel("debug-$it", if (scenario == DebugScenario.LONG_MODEL_NAMES)
                 "Synthetic authoritative model name with a long service supplied label $it" else "Synthetic model $it") }
         }
-        override suspend fun stream(credential: CredentialLease, model: String, onEvent: suspend (ResponseEvent) -> Unit): Unit = error("Chat only")
+        override suspend fun stream(credential: CredentialLease, model: String, onEvent: suspend (ResponseEvent) -> Unit) {
+            check(scenario == DebugScenario.DIAGNOSTIC_PROOF_CURRENT_ATTEMPT)
+            generations++
+            onEvent(ResponseEvent.Delta("WristPrompt "))
+            delay(100)
+            onEvent(ResponseEvent.Delta("works."))
+            onEvent(ResponseEvents.decode(null, """{"type":"response.completed","response":{"status":"completed","output":[]}}"""))
+            completions++
+        }
         override suspend fun stream(credential: CredentialLease, model: String, input: List<JsonObject>, onEvent: suspend (ResponseEvent) -> Unit) {
             generations++; inputs += input
             failure()?.let { throw it }
@@ -156,13 +167,17 @@ internal class DebugScenarios(val scenario: DebugScenario) {
             val markdown = markdownFixture(scenario)
             if (markdown != null) {
                 val streamingMarkdown = scenario in setOf(DebugScenario.STREAMING_MARKDOWN, DebugScenario.STREAMING_MARKDOWN_OPEN_SYNTAX)
-                if (streamingMarkdown) {
-                    for (chunk in markdown.chunked(8)) { onEvent(ResponseEvent.Delta(chunk)); delay(100) }
+                if (streamingMarkdown || scenario.name.startsWith("STREAM_TO_COMPLETED_")) {
+                    for (chunk in markdown.chunked(if (streamingMarkdown) 8 else 64)) { onEvent(ResponseEvent.Delta(chunk)); delay(100) }
                 } else onEvent(ResponseEvent.Delta(markdown))
                 if (scenario == DebugScenario.STOPPED_MARKDOWN) awaitCancellation()
                 if (scenario == DebugScenario.INTERRUPTED_MARKDOWN) throw ApiFailure(ApiProblem.INTERRUPTED)
                 if (scenario == DebugScenario.STREAMING_MARKDOWN_OPEN_SYNTAX) awaitCancellation()
                 completions++
+                if (scenario.name.startsWith("STREAM_TO_COMPLETED_")) {
+                    onEvent(ResponseEvents.decode(null, """{"type":"response.completed","response":{"status":"completed","output":[]}}"""))
+                    return
+                }
                 onEvent(ResponseEvent.Completed(if (scenario == DebugScenario.TERMINAL_MARKDOWN_REPLACEMENT) "# Authoritative replacement\n\n**Final** text wins." else markdown))
                 return
             }
@@ -213,6 +228,10 @@ internal class DebugScenarios(val scenario: DebugScenario) {
             vm.state.first { it.stage == ProofStage.FAILED && it.problem == ApiProblem.NETWORK }; return
         }
         vm.state.first { it.stage == ProofStage.READY }
+        if (scenario == DebugScenario.DIAGNOSTIC_PROOF_CURRENT_ATTEMPT) {
+            repeat(2) { vm.test(); vm.state.first { it.stage == ProofStage.SUCCEEDED } }
+            return
+        }
         if (scenario == DebugScenario.CONVERSATION_LIMIT) {
             repeat(ChatConversation.MAX_ATTEMPTS) {
                 vm.draft("Synthetic bounded question"); vm.send(); vm.chat.first { it.stage == ChatStage.COMPLETED }
@@ -230,7 +249,8 @@ internal class DebugScenarios(val scenario: DebugScenario) {
         if (markdownScenario) {
             vm.draft("Synthetic Markdown request"); vm.send()
             vm.chat.first { chat -> when (scenario) {
-                DebugScenario.STREAMING_MARKDOWN, DebugScenario.STREAMING_MARKDOWN_OPEN_SYNTAX, DebugScenario.STOPPED_MARKDOWN -> chat.stage == ChatStage.RECEIVING
+                DebugScenario.STREAMING_MARKDOWN, DebugScenario.STREAMING_MARKDOWN_OPEN_SYNTAX, DebugScenario.STOPPED_MARKDOWN,
+                DebugScenario.STREAM_TO_COMPLETED_PLAIN, DebugScenario.STREAM_TO_COMPLETED_MARKDOWN, DebugScenario.STREAM_TO_COMPLETED_LONG -> chat.stage == ChatStage.RECEIVING
                 DebugScenario.INTERRUPTED_MARKDOWN -> chat.stage == ChatStage.FAILED
                 else -> chat.stage == ChatStage.COMPLETED
             } }

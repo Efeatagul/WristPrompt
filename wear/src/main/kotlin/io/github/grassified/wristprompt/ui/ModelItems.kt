@@ -7,7 +7,6 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.foundation.lazy.TransformingLazyColumnScope
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.MaterialTheme
@@ -19,7 +18,7 @@ import io.github.grassified.wristprompt.openai.AiModel
 internal fun modelRowKey(model: AiModel): String = "model:${model.slug}"
 internal fun modelRowName(model: AiModel): String = model.displayName.ifBlank { model.slug }
 
-internal fun TransformingLazyColumnScope.modelItems(
+internal fun ShellListScope.modelItems(
     models: List<AiModel>, selectedSlug: String?, enabled: Boolean, onSelect: (String) -> Unit,
 ) {
     items(count = models.size, key = { modelRowKey(models[it]) }, contentType = { "model" }) { index ->

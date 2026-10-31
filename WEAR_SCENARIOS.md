@@ -1,6 +1,6 @@
 # Wear debug scenario acceptance — canonical guide
 
-Current D5-F catalog: **77 scenarios**: D5-E’s 75 plus two isolated stress fixtures.
+Current D5-H catalog: **83 scenarios**: D5-F’s 77 plus six targeted remediation fixtures.
 D5-C added 22, D5-D added two model fixtures, and D5-E added four failure/limit fixtures.
 The D5-B inventory below has 47 entries; the D5-C inventory appends 22.
 This guide owns the current catalog and commands. Historical
@@ -369,3 +369,18 @@ All earlier identifiers/meanings are retained. These fixtures remain debug-only,
 with no credential/repository/network use. D5-F performance/accessibility evidence,
 readiness-versus-interaction limits and the physical D5-G checklist are in
 [DAY5_F_REPORT.md](DAY5_F_REPORT.md). No new ACK fields or lifecycle commands.
+
+## D5-H focused remediation — 2026-10-31
+
+Use `--list --category remediation` to list the six added fixtures:
+STREAM_TO_COMPLETED_PLAIN, STREAM_TO_COMPLETED_MARKDOWN, STREAM_TO_COMPLETED_LONG,
+SINGLE_LONG_PARAGRAPH, REAL_MULTI_PARAGRAPH, DIAGNOSTIC_PROOF_CURRENT_ATTEMPT.
+The three stream fixtures feed a terminal empty-output summary through the real
+ResponseEvents decoder, rather than injecting a preassembled final string.
+Diagnostics runs two synthetic tests and shows the second successful attempt.
+Reuse STOPPED_MARKDOWN, MARKDOWN_CODE and MARKDOWN_TABLE; use EMPTY_CHAT at font
+scale 2.0 for the header. Do not run the full catalog for this phase.
+
+Readiness is not terminal or visual acceptance: wait for completion, inspect the
+answer, and verify the Menu action at maximum font. Restore font scale afterward.
+No physical-device operations. Evidence: [DAY5_H_REPORT.md](DAY5_H_REPORT.md).

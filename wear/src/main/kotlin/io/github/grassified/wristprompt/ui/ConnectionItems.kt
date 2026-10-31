@@ -1,10 +1,9 @@
 package io.github.grassified.wristprompt.ui
 
-import androidx.wear.compose.foundation.lazy.TransformingLazyColumnScope
 import io.github.grassified.wristprompt.auth.*
 import io.github.grassified.wristprompt.openai.InferenceViewModel
 
-internal fun TransformingLazyColumnScope.connectionItems(
+internal fun ShellListScope.connectionItems(
     ui: ShellPresentation, accounts: WatchAccountState, key: ApiKeyState,
     setup: KeySetupStatus, changing: Boolean, actions: ConnectionActions, proof: InferenceViewModel, onDiagnostics: () -> Unit, onUsage: () -> Unit,
 ) {

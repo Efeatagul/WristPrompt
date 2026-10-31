@@ -1320,3 +1320,24 @@ Bounded compatibility result: PASS — GPLv3 WITH NARROW LINKING EXCEPTION.
 Third-party notices remain intact. Full D5 acceptance was not rerun for license/docs
 changes; no production/build/tool behavior or phase boundary changed. See
 THIRD_PARTY_NOTICES.md and docs/PUBLICATION_AUDIT.md for evidence and publication gates.
+
+## 2026-10-31 — D5-H terminal summary and logical text boundaries
+
+A terminal `output: []` decoded to empty text and an empty replay list; this
+synthetically reproduced answer disappearance before the Markdown worker ran.
+Treat no terminal items like the existing omitted-output summary: retain bounded
+streamed text and use the existing completed-message replay construction. Explicit
+terminal text, including explicit empty text, remains authoritative; nonempty
+structured output/reasoning retains the prior validation/replay path. Only
+response.completed commits success. No real service payload was captured, so
+attribution to the owner's exact physical failure remains an inference. Official
+Responses streaming and SIWC inference contracts were rechecked; no endpoint,
+request fields, credential selection or auth change. See DAY5_H_REPORT.md.
+
+Spacing is owned by logical items/blocks. Bounded shell/Markdown continuation
+segments carry continuation metadata and receive no paragraph gap; real blocks
+retain spacing. A thin shell list adapter preserves existing item/key/navigation
+behavior and laziness; no giant whole-answer text container or background work.
+Native max-font title breaks intentionally at the brand word boundary; Menu uses
+a full-width independent target. Diagnostic proof remains exact streamed output
+plus completion, labelled separately from chat and owned by the existing epoch.

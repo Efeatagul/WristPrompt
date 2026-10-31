@@ -2,7 +2,10 @@ package io.github.grassified.wristprompt.openai
 
 /** Synthetic text only. Never referenced by production sources. */
 internal fun markdownFixture(scenario: DebugScenario): String? = when (scenario) {
-    DebugScenario.MARKDOWN_BASIC, DebugScenario.STREAMING_MARKDOWN,
+    DebugScenario.STREAM_TO_COMPLETED_PLAIN -> "A continuous plain sentence whose streamed text remains visible when the completion summary does not repeat the output."
+    DebugScenario.SINGLE_LONG_PARAGRAPH, DebugScenario.STREAM_TO_COMPLETED_LONG -> "This is one continuous sentence without a paragraph break and with bounded internal segments ".repeat(50)
+    DebugScenario.REAL_MULTI_PARAGRAPH -> "First real paragraph.\n\nSecond real paragraph.\n\nThird real paragraph."
+    DebugScenario.MARKDOWN_BASIC, DebugScenario.STREAMING_MARKDOWN, DebugScenario.STREAM_TO_COMPLETED_MARKDOWN,
     DebugScenario.INTERRUPTED_MARKDOWN, DebugScenario.STOPPED_MARKDOWN,
     DebugScenario.TERMINAL_MARKDOWN_REPLACEMENT -> """
         # Watch notes

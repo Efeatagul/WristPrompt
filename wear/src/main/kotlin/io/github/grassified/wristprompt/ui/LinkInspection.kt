@@ -14,18 +14,14 @@ internal fun LinkInspection(links: List<MarkdownLink>, back: () -> Unit) {
         buildList {
             for (link in links) {
                 val value = "${link.label}\n${link.host?.let { "HTTP(S) host: $it" } ?: "Non-actionable destination"}\n${link.destination}"
-                var offset = 0
-                while (offset < value.length) {
-                    val end = safeEnd(value, offset, minOf(offset + 512, value.length))
-                    add(value.substring(offset, end)); offset = end
-                }
+                add(value)
             }
         }
     }
     ShellList(Modifier.fillMaxSize(), scroll) {
         action("Back", onClick = back)
         item { ShellText("Link details", heading = true) }
-        for (part in parts) item { ShellText(part) }
+        for (part in parts) paragraphs(part)
         item { ShellText("Inspection only. Links do not open.") }
     }
 }

@@ -151,7 +151,7 @@ class ShellPresentationTest {
         val text = "Line one\n\n" + "word ".repeat(60) + "x".repeat(79) + "😀" + "tail".repeat(80)
         val chunks = readableChunks(text)
         assertEquals(text, chunks.joinToString(""))
-        assertTrue(chunks.all { it.length <= 80 && !it.last().isHighSurrogate() && !it.first().isLowSurrogate() })
+        assertTrue(chunks.all { it.length <= 512 && !it.last().isHighSurrogate() && !it.first().isLowSurrogate() })
         assertTrue(readableChunks("").isEmpty())
     }
 }

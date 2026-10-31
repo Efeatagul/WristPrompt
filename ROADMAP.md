@@ -288,7 +288,9 @@ for inference/refresh after setup. Document intentional lifecycle limits.
 ## Day 5 — WristPrompt UX 2.0 + Markdown
 
 D5-0 read-only audit completed in chat. D5-A through D5-F are complete for their
-automated/emulator scope; D5-G physical UX and D6 remain unstarted.
+automated/emulator scope. D5-G physical acceptance failed/incomplete on owner
+Galaxy Watch 7; D5-H remediation is complete locally with physical revalidation
+pending. Day 5 remains open; D6 is NOT STARTED.
 DAY5_STATUS.md owns current phase evidence; Day 4 remains PASS WITH KNOWN DEBT.
 
 - [x] D5-0: read-only UX/performance architecture audit and phase plan.
@@ -329,7 +331,17 @@ DAY5_STATUS.md owns current phase evidence; Day 4 remains PASS WITH KNOWN DEBT.
   30 rotary frame windows, 12 reset cycles and 4/4 process restarts. One narrow
   large-font recovery fix. DAY5_F_REPORT.md / DAY5_F_METRICS.json distinguish
   timing/memory evidence from spoken TalkBack and physical/release-device debt.
-- [ ] D5-G: targeted owner-authorized physical UX acceptance. PHYSICAL ACCEPTANCE PENDING.
+- [ ] D5-G: owner Galaxy Watch 7 acceptance FAILED / INCOMPLETE due to reproduced
+  completion/Markdown, text-gap, maximum-font header and diagnostic UX defects.
+  P6/P7/P13 unexercised. Supplied evidence: DAY5_G_REPORT.md; do not close Day 5.
+- [x] D5-H: targeted remediation, automated/emulator scope only. PASS — PHYSICAL
+  REVALIDATION REQUIRED. Empty-output terminal-summary preservation, nonempty rich
+  fallback, logical paragraph/continuation spacing, adaptive header/Menu and labelled
+  attempt-owned diagnostic output. Full Wear 470-test run plus final narrow checks;
+  debug/release/lint, isolation and focused emulator cases pass. Exact scope and
+  physical-cause uncertainty: DAY5_H_REPORT.md. No full catalog rerun or D6 work.
+- [ ] D5-H physical revalidation: only affected checks in DAY5_H_REPORT.md.
+  D5-G stays open until owner supplies evidence; no automatic D6 start.
 
 Gate: preserve inference/auth/account/billing/composer safety; verify automated
 and emulator results separately from physical evidence. D5 is not release freeze.

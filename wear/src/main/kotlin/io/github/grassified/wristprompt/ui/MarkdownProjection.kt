@@ -22,6 +22,7 @@ internal data class MarkdownLink(val label: String, val destination: String) {
 }
 internal data class MarkdownBlock(
     val kind: MarkdownKind, val inline: AnnotatedString, val level: Int = 0,
+    val continuation: Boolean = false, val continues: Boolean = false,
     val marker: String = "", val links: List<MarkdownLink> = emptyList(), val language: String = "",
 ) {
     override fun toString() = "MarkdownBlock(redacted)"
@@ -102,7 +103,7 @@ internal class MarkdownProjection(
                 if (block.inline.isEmpty()) result.add(block)
                 while (offset < block.inline.length) {
                     val end = safeEnd(block.inline.text, offset, minOf(offset + SEGMENT, block.inline.length))
-                    result.add(block.copy(inline = block.inline.subSequence(offset, end), marker = if (offset == 0) block.marker else "",
+                    result.add(block.copy(inline = block.inline.subSequence(offset, end), continuation = offset > 0, continues = end < block.inline.length, marker = if (offset == 0) block.marker else "",
                         language = if (offset == 0) block.language else "", links = if (offset == 0) block.links else emptyList()))
                     offset = end
                     require(result.size <= MAX_BLOCKS)
@@ -133,7 +134,7 @@ internal class MarkdownProjection(
                 }
             }
             walk(root)
-            return result.toList()
+            return if (result.isEmpty() && source.isNotEmpty()) fallback(source) else result.toList()
         } catch (_: Exception) { return fallback(source) }
         finally { metrics.active--; metrics.nanos += System.nanoTime() - start }
     }
@@ -143,7 +144,7 @@ internal class MarkdownProjection(
             var offset = 0
             while (offset < source.length) {
                 val end = safeEnd(source, offset, minOf(offset + SEGMENT, source.length))
-                add(MarkdownBlock(MarkdownKind.PLAIN, AnnotatedString(source.substring(offset, end))))
+                add(MarkdownBlock(MarkdownKind.PLAIN, AnnotatedString(source.substring(offset, end)), continuation = offset > 0, continues = end < source.length))
                 offset = end
             }
         }

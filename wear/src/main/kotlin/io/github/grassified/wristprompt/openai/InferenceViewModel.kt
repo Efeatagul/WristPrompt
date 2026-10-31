@@ -15,8 +15,10 @@ data class ProofState(
     val protocolDetail: ProtocolDetail? = null, val httpStatus: Int? = null,
     val errorCode: String? = null, val requestId: String? = null, val errorShape: ErrorShape? = null,
     val mode: CredentialMode = CredentialMode.CHATGPT_PLAN,
+    val attemptId: Long? = null,
 ) {
     val busy: Boolean get() = stage == ProofStage.LOADING || stage == ProofStage.STREAMING
+    override fun toString() = io.github.grassified.wristprompt.bridge.SafeDiagnostics.REDACTED
 }
 
 class InferenceViewModel(
@@ -58,7 +60,7 @@ class InferenceViewModel(
                 saveModel(catalog.credential, slug)
                 if (run == epoch) {
                     if (state.value.selectedSlug != slug) clearChat()
-                    mutableState.value = state.value.copy(selectedSlug = slug, output = "", completedObserved = false,
+                    mutableState.value = state.value.copy(selectedSlug = slug, output = "", completedObserved = false, attemptId = null,
                         stage = if (state.value.stage == ProofStage.FAILED) ProofStage.FAILED else ProofStage.READY)
                 }
             } catch (cancelled: CancellationException) { cancelled(run); throw cancelled
@@ -93,7 +95,7 @@ class InferenceViewModel(
         val catalog = prepared?.takeIf(::compatible) ?: return
         val selected = state.value.selectedSlug?.takeIf { slug -> catalog.models.any { it.slug == slug } } ?: return
         val run = ++epoch
-        mutableState.value = state.value.copy(stage = ProofStage.LOADING, output = "", completedObserved = false, problem = null, protocolDetail = null, httpStatus = null, errorCode = null, requestId = null, errorShape = null)
+        mutableState.value = state.value.copy(stage = ProofStage.LOADING, output = "", completedObserved = false, attemptId = run, problem = null, protocolDetail = null, httpStatus = null, errorCode = null, requestId = null, errorShape = null)
         launchOperation {
             try {
                 val result = session.test(catalog, selected, onCatalog = { fresh ->

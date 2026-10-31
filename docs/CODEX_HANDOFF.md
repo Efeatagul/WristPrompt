@@ -8,7 +8,9 @@ phone/watch debug pair; preserve owner installations and keys.
 ## Current state
 
 D5-F — PASS WITH KNOWN DEBT.
-D5-G — PHYSICAL ACCEPTANCE PENDING.
+D5-G — PHYSICAL ACCEPTANCE FAILED / INCOMPLETE DUE TO REPRODUCED UX DEFECTS.
+D5-H — PASS — PHYSICAL REVALIDATION REQUIRED.
+D5-H automated/emulator remediation complete; PHYSICAL REVALIDATION PENDING.
 D6 — NOT STARTED.
 
 WristPrompt is an OpenAI-only, local-first/backend-free native Wear OS client:
@@ -36,7 +38,25 @@ export ANDROID_HOME="$HOME/Android/Sdk"
 both apps without a third module. See TESTING.md for lint/release/scenario commands.
 Do not change dependency pins merely to match another machine's global tools.
 
-## Latest recorded evidence, not rerun for this handoff
+## D5-H current evidence — 2026-10-31
+
+[../DAY5_G_REPORT.md](../DAY5_G_REPORT.md) records only supplied Galaxy Watch 7
+observations; [../DAY5_H_REPORT.md](../DAY5_H_REPORT.md) owns remediation evidence.
+An empty terminal output array no longer erases accumulated text/replay; explicit
+terminal text still wins. Canonical completion already commits atomically before
+partial clear; no session/coalescer ownership redesign was needed. Active output
+stays plain. Empty rich conversion falls back to source. Shell/Markdown spacing
+now distinguishes logical blocks from bounded continuations. At large font the
+title has an intentional word break and Menu a full-width row. Diagnostics labels
+the expected versus actual test output and local current attempt; no credentials.
+The owner's precise terminal payload was not collected: the decoder failure is
+synthetically proven, physical attribution remains an inference pending retest.
+
+Full Wear run 470 tests / 53 suites passes, with a later narrow header/stale-result
+check rather than another full run. Builds/lint/isolation and focused emulator
+checks pass. See the report for exact counts, final changes and limitations.
+
+## Historical evidence before D5-H, not rerun for this handoff
 
 Original evidence commit IDs map to sanitized history in [HISTORY_REWRITE.md](HISTORY_REWRITE.md).
 Source: [../DAY5_STATUS.md](../DAY5_STATUS.md) and
@@ -81,17 +101,18 @@ writes; do not persist UI projection objects as its schema.
 - Funded BYOK success not physically verified.
 - Paired-emulator CapabilityClient synchronization limitation; keep production gating.
 - Destructive Keystore/AtomicFile interruption not physically tested.
-- D5-G physical UX and physical spoken TalkBack pending.
+- D5-G failed/incomplete; D5-H affected physical retest pending. Spoken TalkBack remains unexercised/outside D5-H.
 - Release-device profiling/battery/runtime equivalence pending; historical D5-A PSS causality unresolved.
-- Cosmetic readable large-font word breaks remain.
+- Physical maximum-font header/Menu revalidation pending after D5-H.
 - Passing source-publication gates and completed history remediation are tracked in [PUBLICATION_AUDIT.md](PUBLICATION_AUDIT.md).
 
 ## Next action
 
-The owner will execute D5-G on Galaxy Watch 7 and supply P1–P13. Do not invent results,
-number an unreceived result set or execute physical tests automatically. Record the
-owner's exact scope in DAY5_STATUS.md, a new DAY5_G_REPORT.md and ROADMAP.md. Recommend
-remediation only for reproducible material defects, then close Day 5 if supported.
+The owner must revalidate only the affected checks listed in DAY5_H_REPORT.md:
+completion/terminal Markdown/Latest/Stop, code/table reading, paragraph continuity,
+max-font Chat header/Menu, current diagnostic output. Record supplied evidence;
+no physical operations or destructive tests automatically. Do not close Day 5
+or promote unexercised P6/P7/P13 to PASS. D6 needs separate authorization.
 
 After Day 5, the next developer task is **D6-0: READ-ONLY persistence architecture
 audit**, separately authorized. Likely goals: conversation list, reopen/continue,
