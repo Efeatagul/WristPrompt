@@ -7,6 +7,19 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class WatchProfilesTest {
+    @Test fun durableConversationIdentitySurvivesRecreationAndRejectsStaleAccount(): Unit = runBlocking {
+        val record = Record(); val vault = WatchProfiles(record) { now }; val req = request()
+        vault.prepare("phone", req); vault.accept("phone", ProfileProtocol.encode(transfer(req)))
+        val lease = vault.credential { it }; val owner = vault.conversationIdentity(lease)
+        assertEquals(64, owner.length); assertFalse(owner.contains("subject"))
+        val restored = WatchProfiles(record) { now }; restored.load()
+        assertEquals(owner, restored.conversationIdentity(restored.credential { it }))
+        restored.select(null) // Explicitly add a different registration, not reauthorize the selected one.
+        val next = request(); restored.prepare("phone", next)
+        restored.accept("phone", ProfileProtocol.encode(transfer(next, "other-subject", "oaiapp_other")))
+        assertNotEquals(owner, restored.conversationIdentity(restored.credential { it }))
+        assertThrows(Exception::class.java) { runBlocking { restored.conversationIdentity(lease) } }
+    }
     private class Record : SecretRecord {
         var data: ByteArray? = null
         var writes = 0

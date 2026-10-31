@@ -18,6 +18,7 @@ import kotlinx.serialization.Serializable
 @Serializable private data class ApiVault(
     val version: Int = 1, val mode: CredentialMode = CredentialMode.CHATGPT_PLAN, val modeRevision: Long = 0,
     val key: String? = null, val keyRevision: Long = 0, val model: String? = null,
+    val conversationScope: String? = null,
     val pending: KeyContext? = null, val accepted: KeyReceipt? = null,
 ) { override fun toString() = SafeDiagnostics.REDACTED }
 
@@ -36,6 +37,7 @@ class ApiKeyRepository(private val record: SecretRecord, private val now: Sessio
                 require(it.version == 1 && it.modeRevision >= 0 && it.keyRevision >= 0)
                 require(it.key == null || ApiKeyProtocol.sane(it.key))
                 require(it.model == null || validModel(it.model))
+                require(it.conversationScope == null || java.util.UUID.fromString(it.conversationScope).toString() == it.conversationScope)
             }
         } finally { bytes.fill(0) }
     } catch (_: Exception) { mutableState.value = mutableState.value.copy(storageError = true); throw SecureStorageException() }
@@ -70,14 +72,14 @@ class ApiKeyRepository(private val record: SecretRecord, private val now: Sessio
             val p = v.pending ?: throw BridgeProtocolException()
             require(p.node == node && p.request.requestId == t.requestId && p.request.hostId == t.hostId && p.request.isFresh(now()))
             deleting = false
-            save(v.copy(key = t.key, keyRevision = Math.addExact(v.keyRevision, 1), model = null, pending = null,
+            save(v.copy(key = t.key, keyRevision = Math.addExact(v.keyRevision, 1), model = null, conversationScope = java.util.UUID.randomUUID().toString(), pending = null,
                 accepted = KeyReceipt(node, t.requestId, t.transferId, digest, p.request.createdAtEpochMs + BridgeProtocol.REQUEST_LIFETIME_MS)))
             ProfileAck(1, t.requestId, t.transferId)
         }
     }
     suspend fun remove() = withContext(Dispatchers.IO) { mutex.withLock {
         deleting = true
-        val v = read(); save(v.copy(key = null, keyRevision = Math.addExact(v.keyRevision, 1), model = null, pending = null, accepted = null))
+        val v = read(); save(v.copy(key = null, keyRevision = Math.addExact(v.keyRevision, 1), model = null, conversationScope = null, pending = null, accepted = null))
         deleting = false
     } }
     suspend fun credential(): CredentialLease = withContext(Dispatchers.IO) { mutex.withLock {
@@ -96,6 +98,13 @@ class ApiKeyRepository(private val record: SecretRecord, private val now: Sessio
             v.keyRevision == lease.generation && v.key == lease.accessToken
     } }
     suspend fun selectedModel(): String? = withContext(Dispatchers.IO) { mutex.withLock { read().model } }
+    suspend fun conversationIdentity(lease: CredentialLease): String = withContext(Dispatchers.IO) { mutex.withLock {
+        val v = read()
+        require(!deleting && v.key != null && v.key == lease.accessToken && v.keyRevision == lease.generation &&
+            v.mode == lease.mode && v.modeRevision == lease.modeRevision)
+        val identity = v.conversationScope ?: java.util.UUID.randomUUID().toString().also { save(v.copy(conversationScope = it)) }
+        MessageDigest.getInstance("SHA-256").digest(identity.encodeToByteArray()).joinToString("") { "%02x".format(it) }
+    } }
     suspend fun selectModel(lease: CredentialLease, slug: String) = withContext(Dispatchers.IO) { mutex.withLock {
         val v = read(); require(validModel(slug))
         require(v.mode == CredentialMode.OPENAI_API_KEY && v.modeRevision == lease.modeRevision && v.keyRevision == lease.generation)

@@ -33,6 +33,29 @@ class ChatConversation {
     private var nextId = 0L
     private var attempts = 0
     fun reset() { history = emptyList(); pending = null; pendingUserId = null; attempts = 0; state = ChatState() }
+    fun snapshot(): ConversationSnapshot = ConversationSnapshot(
+        messages = state.messages.map { StoredMessage(it.id, it.role.name, it.status.name, listOf(ContentPart.Text(it.text))) },
+        replay = history.toList(), attempts = attempts, nextId = nextId,
+        partial = if (state.busy) "" else state.partial, terminal = state.stage.name,
+    ).also { it.validate() }
+
+
+    /** Process restoration is inert: pending work becomes excluded, never resumed. */
+    fun restore(snapshot: ConversationSnapshot) {
+        snapshot.validate()
+        require(snapshot.messages.all { it.parts.all { part -> part is ContentPart.Text } })
+        val interrupted = snapshot.messages.any { it.status == "PENDING" }
+        val restored = snapshot.messages.map { m -> ChatMessage(m.id, ChatRole.valueOf(m.role),
+            m.parts.joinToString("") { (it as ContentPart.Text).text },
+            if (m.status == "PENDING") ChatMessageStatus.EXCLUDED else ChatMessageStatus.valueOf(m.status)) }
+        history = snapshot.replay.toList(); attempts = snapshot.attempts; nextId = snapshot.nextId
+        pending = null; pendingUserId = null
+        state = ChatState(messages = restored,
+            stage = if (interrupted) ChatStage.FAILED else if (snapshot.terminal in setOf("FAILED", "CANCELLED")) ChatStage.valueOf(snapshot.terminal)
+                else if (restored.isEmpty()) ChatStage.EMPTY else ChatStage.COMPLETED,
+            partial = snapshot.partial, problem = ApiProblem.INCOMPLETE.takeIf { interrupted },
+            limitReached = attempts >= MAX_ATTEMPTS || size(history) > MAX_CONTEXT_BYTES)
+    }
     fun draft(text: String) {
         if (!state.busy) state = state.copy(draft = text, stage = ChatStage.COMPOSING, problem = null)
     }
@@ -58,16 +81,7 @@ class ChatConversation {
         val user = checkNotNull(pending)
         val output = result.outputItems ?: listOf(message("assistant", result.output))
         // Unsupported/tool output must never become an implicit tool or be silently discarded.
-        require(output.all { item ->
-            when (item["type"]?.jsonPrimitive?.content) {
-                "reasoning" -> item["encrypted_content"]?.jsonPrimitive?.let { it.isString && it.content.isNotBlank() } == true
-                "message" -> item["role"]?.jsonPrimitive?.content == "assistant" &&
-                    item["status"]?.jsonPrimitive?.content.let { it == null || it == "completed" } &&
-                    item["content"]?.jsonArray?.all { part -> part.jsonObject["type"]?.jsonPrimitive?.content in setOf("output_text", "refusal") } == true
-                null -> item["role"]?.jsonPrimitive?.content == "assistant" && item["content"]?.jsonPrimitive?.isString == true
-                else -> false
-            }
-        })
+        validateReplayOutput(output)
         require(size(output) <= ResponsesProtocol.MAX_BODY_BYTES)
         val next = history + user + output
         val full = size(next) > MAX_CONTEXT_BYTES || attempts >= MAX_ATTEMPTS

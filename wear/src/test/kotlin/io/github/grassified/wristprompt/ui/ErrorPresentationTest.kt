@@ -5,6 +5,12 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ErrorPresentationTest {
+    @Test fun chatSaveFailureDoesNotSuggestCredentialRecoveryEvenAfterStop() {
+        val error = chatError(ChatState(stage = ChatStage.CANCELLED, problem = ApiProblem.CHAT_STORAGE))!!
+        assertEquals("Chat could not be saved", error.title)
+        assertEquals(RecoveryAction.DIAGNOSTICS, error.action)
+        assertFalse(error.text.contains("Sign in")); assertFalse(error.text.contains("API key"))
+    }
     @Test fun largeFontAccountRecoveryRemainsRecognizableWithoutChangingItsAction() {
         for (problem in listOf(ApiProblem.REAUTHORIZE, ApiProblem.INVALID_API_KEY, ApiProblem.API_LIMIT)) {
             val action = errorPresentation(problem).action!!

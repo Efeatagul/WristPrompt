@@ -32,6 +32,7 @@ internal fun errorPresentation(problem: ApiProblem): ErrorPresentation = when (p
     ApiProblem.NO_MODELS -> ErrorPresentation("Model unavailable", action = RecoveryAction.MODELS)
     ApiProblem.STALE_ACCOUNT -> ErrorPresentation("Account changed", "Reload models to continue.", RecoveryAction.MODELS)
     ApiProblem.STORAGE -> ErrorPresentation("Secure storage unavailable", "Requests are blocked to protect your account.", RecoveryAction.DIAGNOSTICS)
+    ApiProblem.CHAT_STORAGE -> ErrorPresentation("Chat could not be saved", "Previous saved messages are unchanged. Check available storage and try again.", RecoveryAction.DIAGNOSTICS)
     ApiProblem.INTERRUPTED -> ErrorPresentation("Response interrupted", EXCLUDED_RESPONSE)
     ApiProblem.INCOMPLETE -> ErrorPresentation("Response incomplete", EXCLUDED_RESPONSE)
     ApiProblem.REFRESH_NOT_READY -> ErrorPresentation("Account temporarily unavailable", "Start a new message later.")
@@ -41,6 +42,7 @@ internal fun errorPresentation(problem: ApiProblem): ErrorPresentation = when (p
 }
 
 internal fun chatError(chat: ChatState): ErrorPresentation? = when {
+    chat.problem == ApiProblem.CHAT_STORAGE -> errorPresentation(ApiProblem.CHAT_STORAGE)
     chat.limitReached && chat.stage !in setOf(ChatStage.FAILED, ChatStage.CANCELLED) -> ErrorPresentation("Start a new chat to continue", action = RecoveryAction.NEW_CHAT)
     chat.stage == ChatStage.CANCELLED -> ErrorPresentation("Response stopped", EXCLUDED_RESPONSE)
     chat.stage == ChatStage.FAILED -> {

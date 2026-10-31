@@ -108,6 +108,12 @@ writes; do not persist UI projection objects as its schema.
 
 ## Next contributor action
 
+D6-B canonical checkpoint/store work is documented in [D6_B_STORAGE.md](D6_B_STORAGE.md).
+The contributor is authorized to continue D6/D7 without per-issue approval, and to
+prepare dependent branches while upstream merges are pending. This overrides the
+historical phase-stop directions below for this development run. Upstream merges
+still require actual GitHub write permission; do not bypass repository protections.
+
 An unmerged D6-A design is available in
 [D6_A_PERSISTENCE_ARCHITECTURE.md](D6_A_PERSISTENCE_ARCHITECTURE.md). Review its
 transaction/ownership contracts before D6-B. No implementation, Android validation
