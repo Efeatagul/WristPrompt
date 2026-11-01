@@ -3,6 +3,7 @@ package io.github.grassified.wristprompt.openai
 import androidx.lifecycle.viewModelScope
 import io.github.grassified.wristprompt.auth.CredentialMode
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.*
 import kotlinx.serialization.json.*
@@ -39,6 +40,121 @@ class ChatViewModelTest {
     private fun lease() = CredentialLease(access.value.client!!, access.value.generation, "synthetic", Long.MAX_VALUE,
         access.value.mode, access.value.modeRevision)
     private fun send(model: InferenceViewModel, prompt: String = "User question") { model.draft(prompt); model.send() }
+    @Test fun photoPickerCancelAndApplyPreserveTextAndNeverSend(): Unit = runTest {
+        val directory = java.nio.file.Files.createTempDirectory("synthetic-images").toFile()
+        val provider = Provider(); val model = create(provider); runCurrent()
+        val store = io.github.grassified.wristprompt.images.ImageFileStore(directory)
+        val catalog = store.importBatch(2) {
+            io.github.grassified.wristprompt.images.ImageContent(byteArrayOf(it.toByte()), byteArrayOf(it.toByte()), 1, 1)
+        }
+        val picker = io.github.grassified.wristprompt.images.WatchImagesViewModel(store) { false }
+        try {
+            model.draft("Exact text draft")
+            assertTrue(picker.begin(model))
+            picker.toggle(catalog.records[0].id); picker.toggle(catalog.records[1].id)
+            picker.cancel()
+            assertTrue(model.imageSelection.selected.value.isEmpty())
+            assertEquals("Exact text draft", model.chat.value.draft)
+            assertTrue(picker.begin(model))
+            picker.toggle(catalog.records[0].id); picker.toggle(catalog.records[1].id)
+            picker.apply(model) { }
+            withContext(Dispatchers.Default) { withTimeout(5000) { picker.edit.first { it == null } } }
+            assertEquals(2, model.imageSelection.selected.value.size)
+            assertEquals("Exact text draft", model.chat.value.draft)
+            assertTrue(picker.begin(model)); picker.toggle(catalog.records[0].id)
+            picker.cancel()
+            assertEquals(2, model.imageSelection.selected.value.size)
+            assertTrue(provider.inputs.isEmpty())
+        } finally { picker.viewModelScope.cancel(); directory.deleteRecursively() }
+    }
+    @Test fun photoSelectionNeverDispatchesAndCannotBeSilentlySentAsText(): Unit = runTest {
+        val provider = Provider(); val model = create(provider); runCurrent()
+        model.draft("Text draft stays")
+        val ids = List(2) { io.github.grassified.wristprompt.images.ImageLimits.newId() }
+        assertTrue(model.imageSelection.replace(emptyList(), ids, ids.toSet()))
+        model.send(); runCurrent()
+        assertTrue(provider.inputs.isEmpty())
+        assertEquals("Text draft stays", model.chat.value.draft)
+        model.imageSelection.prune(setOf(ids[1]))
+        model.send(); runCurrent()
+        assertTrue(provider.inputs.isEmpty())
+        model.newChat(); runCurrent()
+        assertTrue(model.imageSelection.selected.value.isEmpty())
+        assertTrue(provider.inputs.isEmpty())
+    }
+    @Test fun presetsOnlyMutateDraftUntilExplicitSendAndKeepOwnership(): Unit = runTest {
+        val provider = Provider(); val model = create(provider); runCurrent()
+        val mode = access.value.mode
+        val selected = model.state.value.selectedSlug
+        assertTrue(model.applyPreset("Preset", false, "", model.inputToken()!!))
+        assertEquals("Preset", model.chat.value.draft)
+        model.draft(model.chat.value.draft + " edited")
+        assertEquals("Preset edited", model.chat.value.draft)
+        assertTrue(model.applyPreset("Next", false, "Preset edited", model.inputToken()!!))
+        assertEquals("Preset edited\n\nNext", model.chat.value.draft)
+        assertTrue(model.applyPreset("Replacement", true, model.chat.value.draft, model.inputToken()!!))
+        assertEquals("Replacement", model.chat.value.draft)
+        assertEquals(selected, model.state.value.selectedSlug)
+        assertEquals(mode, access.value.mode)
+        assertTrue(provider.inputs.isEmpty())
+        model.send(); runCurrent()
+        assertEquals(1, provider.inputs.size)
+        assertEquals("Replacement", provider.inputs.single().single()["content"]!!.jsonPrimitive.content)
+    }
+    @Test fun oversizeOrChangedDraftRejectsPreservingExactContent(): Unit = runTest {
+        val provider = Provider(); val model = create(provider); runCurrent()
+        val original = "  Original\r\n\t"
+        model.draft(original)
+        assertFalse(model.applyPreset("x".repeat(8192), false, original, model.inputToken()!!))
+        assertEquals(original, model.chat.value.draft)
+        assertFalse(model.applyPreset("x".repeat(8193), true, original, model.inputToken()!!))
+        assertEquals(original, model.chat.value.draft)
+        val token = model.inputToken()!!
+        model.draft("User edit")
+        assertFalse(model.applyPreset("Preset", true, original, token))
+        assertEquals("User edit", model.chat.value.draft)
+        model.newChat()
+        assertFalse(model.applyPreset("Preset", true, "", token))
+        assertTrue(provider.inputs.isEmpty())
+    }
+    @Test fun pickerCancelDeleteUpdateAndSyncNeverOwnDraftOrInvokeInference(): Unit = runTest {
+        val provider = Provider(); val model = create(provider); runCurrent()
+        val memory = io.github.grassified.wristprompt.presets.PresetMemoryStore()
+        val store = io.github.grassified.wristprompt.presets.SyncedPresetStore(memory)
+        val source = io.github.grassified.wristprompt.presets.PresetCodec.newId()
+        val preset = io.github.grassified.wristprompt.presets.PromptPreset(io.github.grassified.wristprompt.presets.PresetCodec.newId(), 1, "Name", "Synthetic")
+        suspend fun sync(record: io.github.grassified.wristprompt.presets.PromptPreset) {
+            val wire = io.github.grassified.wristprompt.presets.PresetWire
+            store.accept("phone", setOf("phone"), listOf(io.github.grassified.wristprompt.presets.PresetDelivery(wire.path(record), wire.encode(
+                io.github.grassified.wristprompt.presets.PresetPacket(source = source, catalog = io.github.grassified.wristprompt.presets.PresetCatalog(records = listOf(record)))))))
+        }
+        val picker = io.github.grassified.wristprompt.presets.WatchPresetsViewModel(store) { true }
+        suspend fun awaitCondition(condition: () -> Boolean) {
+            withContext(Dispatchers.Default) { withTimeout(5000) { while (!condition()) delay(5) } }
+            runCurrent()
+        }
+        try {
+            sync(preset); awaitCondition { picker.state.value.catalog.records.size == 1 }
+            picker.select(preset, model)
+            picker.apply(io.github.grassified.wristprompt.presets.PresetChoice.INSERT, model)
+            awaitCondition { model.chat.value.draft == "Synthetic" }
+            sync(preset.copy(revision = 2, text = "Updated"))
+            awaitCondition { picker.state.value.catalog.records.single().revision == 2L }
+            assertEquals("Synthetic", model.chat.value.draft)
+            val original = "  Draft\r\n\t"
+            model.draft(original)
+            picker.refresh(); picker.select(preset, model)
+            picker.apply(io.github.grassified.wristprompt.presets.PresetChoice.CANCEL, model); runCurrent()
+            assertEquals(original, model.chat.value.draft)
+            picker.select(preset, model)
+            sync(preset.copy(revision = 3, name = "", text = "", deleted = true)); awaitCondition { picker.state.value.catalog.records.single().deleted }
+            picker.apply(io.github.grassified.wristprompt.presets.PresetChoice.REPLACE, model); awaitCondition { picker.state.value.error != null }
+            assertEquals(original, model.chat.value.draft)
+            assertNotNull(picker.state.value.error)
+            assertTrue(provider.inputs.isEmpty())
+            assertFalse(picker.state.value.toString().contains("Synthetic"))
+        } finally { picker.viewModelScope.cancel() }
+    }
     @Test fun twoTurnsUseChatPayloadAndAppendExactlyOnceWithoutProofMatch(): Unit = runTest {
         val provider = Provider(); val model = create(provider); runCurrent()
         send(model, "Arbitrary text"); runCurrent()

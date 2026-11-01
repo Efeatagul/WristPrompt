@@ -9,6 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import io.github.grassified.wristprompt.auth.OpenAiRevocation
 import io.github.grassified.wristprompt.storage.EncryptedRecord
 import io.github.grassified.wristprompt.openai.*
+import kotlinx.coroutines.launch
 import android.app.Application
 import android.content.Context
 import androidx.datastore.preferences.preferencesDataStore
@@ -19,7 +20,18 @@ import io.github.grassified.wristprompt.storage.HostIdRepository
 
 private val Context.installationStore by preferencesDataStore(name = "installation")
 
+private val Context.syncedPresetStore by preferencesDataStore(name = "synced_prompt_presets")
+
 class WristPromptApplication : Application() {
+    val presets by lazy { io.github.grassified.wristprompt.presets.SyncedPresetStore(syncedPresetStore) }
+    val presetSync by lazy { io.github.grassified.wristprompt.presets.WatchPresetSync(connectivity, presets) }
+    val images by lazy { io.github.grassified.wristprompt.images.ImageFileStore(java.io.File(noBackupFilesDir, "image_library_v1")) }
+    val imageSync by lazy { io.github.grassified.wristprompt.images.ImageDataSync(this, connectivity, images) }
+    override fun onCreate() {
+        super.onCreate()
+        appScope.launch { presetSync.refresh() }
+        appScope.launch { imageSync.refresh() }
+    }
     private val connectivity by lazy { WearConnectivity(this, BridgeProtocol.MOBILE_CAPABILITY) }
     private val hostIds by lazy { HostIdRepository(installationStore) }
     private val sessionClock = SessionClock.SYSTEM

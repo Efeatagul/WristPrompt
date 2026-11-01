@@ -49,7 +49,8 @@ or billing fallback. Image generation/viewer is optional STRETCH, not a core gat
 D6-A must decide storage/schema first, separate display from replay, anticipate
 Text/ImageAttachment, and avoid per-token writes/UI-object persistence. See
 [ROADMAP.md](ROADMAP.md) and [handoff](docs/CODEX_HANDOFF.md). D6-B/C are implemented
-on contributor branches with consolidated acceptance pending; D7 is NOT STARTED.
+on contributor branches with consolidated acceptance pending. D7-A phone presets
+are implemented with manual checks pending; see [docs/D7_A_PRESETS.md](docs/D7_A_PRESETS.md).
 
 ## Runtime responsibilities
 

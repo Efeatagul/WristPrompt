@@ -17,6 +17,9 @@ data class ProofState(
     val errorCode: String? = null, val requestId: String? = null, val errorShape: ErrorShape? = null,
     val mode: CredentialMode = CredentialMode.CHATGPT_PLAN,
     val attemptId: Long? = null,
+    val configuration: InferenceConfiguration = InferenceConfiguration(),
+    val thinkingNotice: String? = null,
+    val thinkingSaving: Boolean = false,
 ) {
     val busy: Boolean get() = stage == ProofStage.LOADING || stage == ProofStage.STREAMING
     override fun toString() = io.github.grassified.wristprompt.bridge.SafeDiagnostics.REDACTED
@@ -34,6 +37,7 @@ class InferenceViewModel(
     private val mutableState = MutableStateFlow(ProofState())
     val state = mutableState.asStateFlow()
     private val conversation = ChatConversation()
+    val imageSelection = io.github.grassified.wristprompt.images.ImageSelection()
     private var inputRevision = 0L
     private var observedAccess = accounts.value
     private var contextModel: String? = null
@@ -70,20 +74,74 @@ class InferenceViewModel(
             try {
                 saveModel(catalog.credential, slug)
                 if (run == epoch) {
-                    if (state.value.selectedSlug != slug) clearChat()
+                    val previous = conversation.configuration.controls.singleOrNull()
+                    val changed = state.value.selectedSlug != slug
+                    if (changed) clearChat()
+                    val capability = catalog.models.first { it.slug == slug }.thinking
+                    val retained = previous?.let { old -> capability?.takeIf {
+                        old.key == it.key && old.provider == it.provider && old.route == it.route && old.value in it.values
+                    }?.selection(old.value) }
+                    if (changed) conversation.configure(InferenceConfiguration(controls = listOfNotNull(retained)))
                     mutableState.value = state.value.copy(selectedSlug = slug, output = "", completedObserved = false, attemptId = null,
-                        stage = if (state.value.stage == ProofStage.FAILED) ProofStage.FAILED else ProofStage.READY)
+                        stage = if (state.value.stage == ProofStage.FAILED) ProofStage.FAILED else ProofStage.READY,
+                        configuration = conversation.configuration,
+                        thinkingNotice = if (changed && previous != null && retained == null) "Thinking level reset to Default for this model."
+                            else thinkingValidationNotice(catalog, slug))
+                    if (changed && previous != null) saveConfigurationCheckpoint(catalog, slug)
                 }
             } catch (cancelled: CancellationException) { cancelled(run); throw cancelled
             } catch (failure: Exception) { failed(run, failure) }
         }
     }
+    /** Only an explicit Send calls session.chat; control changes are atomic local checkpoints. */
+    fun selectThinking(value: String?) {
+        if (cleared || operation?.isActive == true || state.value.busy || chat.value.busy || chat.value.readOnlyReason != null) return
+        val catalog = prepared?.takeIf(::compatible) ?: return
+        val selected = state.value.selectedSlug ?: return
+        val model = catalog.models.firstOrNull { it.slug == selected } ?: return
+        val next = InferenceConfiguration(controls = if (value == null) emptyList()
+            else listOfNotNull(model.thinking?.selection(value)))
+        if (value != null && (next.controls.isEmpty() || model.thinking?.values?.contains(value) != true)) {
+            mutableState.value = state.value.copy(thinkingNotice = "Thinking level is unsupported. Choose Default or a supported value.")
+            return
+        }
+        val run = epoch
+        mutableState.value = state.value.copy(thinkingSaving = true)
+        launchOperation {
+            try {
+                saveConfigurationCheckpoint(catalog, selected, next)
+                if (run == epoch && compatible(catalog)) {
+                    conversation.configure(next)
+                    mutableState.value = state.value.copy(configuration = next, thinkingNotice = null, thinkingSaving = false)
+                    publishChat()
+                }
+            } catch (cancelled: CancellationException) { throw cancelled
+            } catch (_: Exception) {
+                if (run == epoch) mutableState.value = state.value.copy(thinkingSaving = false,
+                    thinkingNotice = "Thinking level could not be saved. Previous selection retained.")
+            }
+        }
+    }
+    private suspend fun saveConfigurationCheckpoint(catalog: PreparedCatalog, selected: String,
+        configuration: InferenceConfiguration = conversation.configuration) {
+        val store = conversationStore ?: return
+        val activeWriter = writer ?: ConversationWriter(store, ConversationEntry(owner = ownerScope ?: throw ConversationStorageException(),
+            route = catalog.credential.mode.name, model = selected, title = "Chat", updated = System.currentTimeMillis(),
+            snapshot = conversation.snapshot())).also { writer = it }
+        activeWriter.write(conversation.snapshot().copy(configuration = configuration))
+    }
+    private fun thinkingValidationNotice(catalog: PreparedCatalog, selected: String): String? = try {
+        val model = catalog.models.firstOrNull { it.slug == selected } ?: throw ApiFailure(ApiProblem.THINKING_UNSUPPORTED)
+        InferenceControls.validate(conversation.configuration, model, catalog.credential.mode)
+        null
+    } catch (_: ApiFailure) { "Saved thinking level is unsupported. Choose Default or a supported value before Send." }
     fun loadModels() {
         if (operation?.isActive == true || !accounts.value.usable) return
         val priorModel = contextModel ?: state.value.selectedSlug
+        val priorConfiguration = conversation.configuration
         val run = ++epoch
         prepared = null
-        mutableState.value = ProofState(stage = ProofStage.LOADING, mode = state.value.mode)
+        mutableState.value = ProofState(stage = ProofStage.LOADING, mode = state.value.mode, configuration = conversation.configuration)
         launchOperation {
             try {
                 if (conversationStore != null && localConversationIdentity != null) {
@@ -106,7 +164,9 @@ class InferenceViewModel(
                 if (owner != null) resolveHistory(owner, run)
                 if (priorModel != null && priorModel != restored) clearChat()
                 mutableState.value = ProofState(ProofStage.READY, catalog.models,
-                    restored, mode = catalog.credential.mode)
+                    restored, mode = catalog.credential.mode, configuration = conversation.configuration,
+                    thinkingNotice = if (priorModel != null && priorModel != restored && priorConfiguration.controls.isNotEmpty())
+                        "Thinking level reset to Default for this model." else thinkingValidationNotice(catalog, restored))
                 writer?.entry?.let { entry ->
                     conversation.readOnly(if (entry.owner == owner && entry.model == restored && entry.route == catalog.credential.mode.name) null
                         else "Read-only chat. Select its original model and reopen it, or start a new chat.")
@@ -156,6 +216,15 @@ class InferenceViewModel(
         if (contextModel == null) contextModel = state.value.selectedSlug
         conversation.draft(text); publishChat()
     }
+    // Presets only change ordinary draft text. They never dispatch or alter replay/model/route.
+    fun applyPreset(text: String, replace: Boolean, expectedDraft: String, token: Long): Boolean {
+        if (inputToken() != token || chat.value.draft != expectedDraft) return false
+        val result = if (replace || expectedDraft.isEmpty()) text else expectedDraft + "\n\n" + text
+        if (result.length > ChatConversation.MAX_PROMPT_CHARS) return false
+        draft(result, token)
+        inputRevision++ // Invalidate a late platform result which could overwrite this insertion.
+        return true
+    }
     fun inputResult(text: String, token: Long) {
         if (cleared || token != inputRevision || accounts.value != observedAccess) return
         draft(text, token)
@@ -183,6 +252,7 @@ class InferenceViewModel(
                 conversation.restore(latest.snapshot)
                 conversation.readOnly("Stored chat. Load its original model to continue, or start a new chat.")
                 writer = ConversationWriter(store, latest)
+                mutableState.value = state.value.copy(configuration = conversation.configuration)
                 publishChat()
             }
         }
@@ -211,11 +281,14 @@ class InferenceViewModel(
                 writer?.awaitIdle()
                 val entry = store.load(id, owner) ?: throw ConversationStorageException()
                 if (run != epoch || ownerScope != owner || accounts.value != observedAccess) return@launchOperation
+                imageSelection.clear()
                 conversation.restore(entry.snapshot)
                 val current = prepared?.takeIf(::compatible)
                 val canContinue = current != null && entry.route == current.credential.mode.name && entry.model == state.value.selectedSlug
                 conversation.readOnly(if (canContinue) null else "Read-only chat. Select its original model and reopen it, or start a new chat.")
                 writer = ConversationWriter(store, entry); contextModel = entry.model
+                mutableState.value = state.value.copy(configuration = conversation.configuration,
+                    thinkingNotice = current?.let { thinkingValidationNotice(it, entry.model) })
                 publishChat(); mutableHistory.value = history.value.copy(loading = false, error = null)
                 onOpened()
             } catch (_: Exception) { if (run == epoch) mutableHistory.value = history.value.copy(loading = false, error = "Chat could not be opened. Saved data has not been reset.") }
@@ -249,11 +322,19 @@ class InferenceViewModel(
         }
     }
     fun send() {
+        if (imageSelection.selected.value.isNotEmpty()) return // Image inference belongs to #9.
         if (operation?.isActive == true || state.value.busy) return
         val catalog = prepared?.takeIf(::compatible) ?: return
         val selected = state.value.selectedSlug?.takeIf { slug -> catalog.models.any { it.slug == slug } } ?: return
         contextModel = selected
         if (!conversation.state.canSend) return
+        val configuration = conversation.configuration
+        try { InferenceControls.validate(configuration, catalog.models.first { it.slug == selected }, catalog.credential.mode) }
+        catch (_: ApiFailure) {
+            mutableState.value = state.value.copy(thinkingNotice = "Thinking level is unsupported. Choose Default or a supported value.")
+            mutableChat.value = chat.value.copy(problem = ApiProblem.THINKING_UNSUPPORTED)
+            return
+        }
         val title = conversation.state.draft.take(120).ifBlank { "Chat" }
         if (conversationStore != null && writer == null) {
             val owner = ownerScope ?: return
@@ -272,7 +353,7 @@ class InferenceViewModel(
                 activeWriter?.write(started)
                 currentCoroutineContext().ensureActive()
                 if (run != epoch || !compatible(catalog)) return@launchOperation
-                val result = session.chat(catalog, selected, input) { progress ->
+                val result = session.chat(catalog, selected, input, configuration) { progress ->
                     withContext(Dispatchers.Main.immediate) {
                         if (run == epoch) { conversation.progress(progress.output); publishChat() }
                     }
@@ -326,7 +407,12 @@ class InferenceViewModel(
         }
     }
     private fun publishChat() { mutableChat.value = conversation.state }
-    private fun clearChat() { inputRevision++; contextModel = null; writer = null; conversation.reset(); publishChat() }
+    private fun clearChat() {
+        imageSelection.clear()
+        inputRevision++; contextModel = null; writer = null; conversation.reset()
+        mutableState.value = state.value.copy(configuration = conversation.configuration, thinkingNotice = null, thinkingSaving = false)
+        publishChat()
+    }
     private fun persistTerminal() {
         val activeWriter = writer ?: return
         val snapshot = conversation.snapshot()

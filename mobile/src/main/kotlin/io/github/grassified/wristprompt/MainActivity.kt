@@ -27,6 +27,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.grassified.wristprompt.auth.*
+import io.github.grassified.wristprompt.presets.PresetsViewModel
+import io.github.grassified.wristprompt.presets.PresetsUi
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,6 +45,18 @@ class MainActivity : ComponentActivity() {
             val api: PhoneApiKeyViewModel = viewModel(factory = viewModelFactory {
                 initializer { val app = application as WristPromptApplication; PhoneApiKeyViewModel(app.apiKeyInbox, app.connectivity::request) }
             })
+            val presets: PresetsViewModel = viewModel(factory = viewModelFactory {
+                initializer { PresetsViewModel((application as WristPromptApplication).presets) }
+            })
+            val photos: io.github.grassified.wristprompt.images.PhoneImagesViewModel = viewModel(factory = viewModelFactory {
+                initializer {
+                    val app = application as WristPromptApplication
+                    io.github.grassified.wristprompt.images.PhoneImagesViewModel(app.images, contentResolver, app::queueImages)
+                }
+            })
+            val presetApp = application as WristPromptApplication
+            val photoSync by presetApp.imageSync.status.collectAsStateWithLifecycle()
+            val presetSync by presetApp.presetPublisher.status.collectAsStateWithLifecycle()
             val state by auth.state.collectAsStateWithLifecycle()
             var usageBrowserUnavailable by remember { mutableStateOf(false) }
             MaterialTheme(colorScheme = darkColorScheme()) {
@@ -88,6 +102,10 @@ class MainActivity : ComponentActivity() {
                         Text(stringResource(R.string.no_inference))
                         HorizontalDivider()
                         ApiKeySetupUi(api)
+                        HorizontalDivider()
+                        PresetsUi(presets, presetSync, presetApp::queuePresets)
+                        HorizontalDivider()
+                        io.github.grassified.wristprompt.images.PhoneImagesUi(photos, photoSync, presetApp::queueImages)
                     }
                 }
             }

@@ -51,12 +51,12 @@ class InferenceSession(
         catalog: PreparedCatalog, selected: String,
         onCatalog: (PreparedCatalog) -> Unit,
         onProgress: (StreamResult) -> Unit,
-    ): StreamResult = generate(catalog, selected, null, onCatalog) { onProgress(it) }
+    ): StreamResult = generate(catalog, selected, null, InferenceConfiguration(), onCatalog) { onProgress(it) }
 
     suspend fun chat(catalog: PreparedCatalog, selected: String, input: List<JsonObject>,
-        onProgress: suspend (StreamResult) -> Unit): StreamResult = generate(catalog, selected, input, {}, onProgress)
+        configuration: InferenceConfiguration = InferenceConfiguration(), onProgress: suspend (StreamResult) -> Unit): StreamResult = generate(catalog, selected, input, configuration, {}, onProgress)
 
-    private suspend fun generate(catalog: PreparedCatalog, selected: String, input: List<JsonObject>?,
+    private suspend fun generate(catalog: PreparedCatalog, selected: String, input: List<JsonObject>?, configuration: InferenceConfiguration,
         onCatalog: (PreparedCatalog) -> Unit, onProgress: suspend (StreamResult) -> Unit): StreamResult = coroutineScope {
         val job = currentCoroutineContext().job
         // Track queued work too, so account/mode cancellation cannot miss a waiting generation.
@@ -88,8 +88,10 @@ class InferenceSession(
                 if (event != ResponseEvent.Ignored) onProgress(result)
                 job.ensureActive()
             }
+            val model = prepared.models.first { it.slug == selected }
+            InferenceControls.validate(configuration, model, prepared.credential.mode)
             if (input == null) provider.stream(prepared.credential, selected, receive)
-            else provider.stream(prepared.credential, selected, input, receive)
+            else provider.stream(prepared.credential, model, input, configuration, receive)
             job.ensureActive()
             result.end()
             if (!isCurrent(prepared.credential)) throw ApiFailure(ApiProblem.STALE_ACCOUNT)

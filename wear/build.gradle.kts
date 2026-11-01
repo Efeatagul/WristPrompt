@@ -35,6 +35,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.exifinterface)
     implementation(libs.commonmark)
     implementation(libs.commonmark.tables)
     implementation(libs.okhttp)

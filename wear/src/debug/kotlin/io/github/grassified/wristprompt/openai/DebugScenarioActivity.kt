@@ -161,6 +161,11 @@ class DebugScenarioActivity : ComponentActivity() {
                     finally { collecting = false; report() }
                 }
             }
+            val debugPrompts: io.github.grassified.wristprompt.presets.WatchPresetsViewModel = viewModel(factory = viewModelFactory {
+                initializer {
+                    io.github.grassified.wristprompt.presets.WatchPresetsViewModel(DebugPresetStore.create()) { true }
+                }
+            })
             val chat by f.vm.chat.collectAsStateWithLifecycle()
             io.github.grassified.wristprompt.ui.WristPromptTheme {
                 Column(Modifier.fillMaxSize()) {
@@ -170,7 +175,7 @@ class DebugScenarioActivity : ComponentActivity() {
                     Box(Modifier.weight(1f)) {
                         WearShellContent(f.accounts, f.authState, f.key, KeySetupStatus.IDLE, false, f.vm,
                             ConnectionActions({}, {}, {}, {}, {}, {}, {}), f.surface,
-                            null, metrics)
+                            null, metrics, presets = debugPrompts)
                     }
                 }
             }

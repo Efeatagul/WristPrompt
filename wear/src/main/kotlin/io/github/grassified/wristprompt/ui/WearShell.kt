@@ -43,9 +43,24 @@ internal fun WearShell(auth: WatchAuthViewModel, settings: ApiKeySettingsViewMod
     val key by settings.state.collectAsStateWithLifecycle()
     val setup by settings.setup.collectAsStateWithLifecycle()
     val changing by settings.busy.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val presets: io.github.grassified.wristprompt.presets.WatchPresetsViewModel = viewModel(factory = viewModelFactory {
+        initializer {
+            val app = context.applicationContext as io.github.grassified.wristprompt.WristPromptApplication
+            io.github.grassified.wristprompt.presets.WatchPresetsViewModel(app.presets, app.presetSync::refresh)
+        }
+    })
+    val photos: io.github.grassified.wristprompt.images.WatchImagesViewModel = viewModel(factory = viewModelFactory {
+        initializer {
+            val app = context.applicationContext as io.github.grassified.wristprompt.WristPromptApplication
+            io.github.grassified.wristprompt.images.WatchImagesViewModel(app.images, app.imageSync::refresh)
+        }
+    })
+    val photoItems by photos.store.images.collectAsStateWithLifecycle()
+    LaunchedEffect(photoItems) { proof.imageSelection.prune(photoItems.map { it.id }.toSet()) }
     WearShellContent(accounts, bridge, key, setup, changing, proof,
         ConnectionActions(auth::start, auth::select, auth::signOut, auth::confirmPlanNotice,
-            settings::selectMode, settings::request, settings::remove))
+            settings::selectMode, settings::request, settings::remove), presets = presets, photos = photos)
 }
 
 internal data class ConnectionActions(
@@ -60,6 +75,8 @@ internal fun WearShellContent(
     setup: KeySetupStatus, changing: Boolean, proof: InferenceViewModel,
     actions: ConnectionActions, initialSurface: Surface = Surface.CHAT,
     supplementalGuidance: String? = null, presentationMetrics: PresentationMetrics? = null,
+    presets: io.github.grassified.wristprompt.presets.WatchPresetsViewModel? = null,
+    photos: io.github.grassified.wristprompt.images.WatchImagesViewModel? = null,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val appVersion = remember(context) { context.packageManager.getPackageInfo(context.packageName, 0).versionName }
@@ -116,16 +133,23 @@ internal fun WearShellContent(
                     }
                     surface == Surface.CHAT -> ChatScreen(proof, state, ui, navigation, supplementalGuidance, presentationMetrics)
                     surface == Surface.COMPOSER -> ComposerScreen(proof, state, ui, navigation,
-                        interruptedInput, inputUnavailable, write)
+                        interruptedInput, inputUnavailable, write, photos?.let { { if (it.begin(proof)) navigation.open(Surface.IMAGES) } })
+                    surface == Surface.IMAGES && photos != null -> ImagesScreen(photos, proof, navigation)
+                    surface == Surface.PROMPTS && presets != null -> PromptsScreen(presets, proof, navigation)
                     surface == Surface.HISTORY -> HistoryScreen(proof, navigation)
                     else -> ShellList(Modifier.fillMaxSize(), rememberShellScroll(navigation, surface)) {
                         action("Back", onClick = back)
 
                         when (surface) {
+                            Surface.IMAGES -> item { ShellText("Photo library unavailable.") }
+                            Surface.PROMPTS -> item { ShellText("Prompts unavailable.") }
                             Surface.MENU -> {
                                 item { ShellText("Menu", heading = true) }
                                 action("New Chat", onClick = interaction::newChat)
                                 action("Chats") { proof.refreshHistory(); navigation.open(Surface.HISTORY) }
+                                photos?.let { library ->
+                                    action("Photos") { if (library.begin(proof)) navigation.open(Surface.IMAGES) }
+                                }
                                 action("Account & Connection") { navigation.open(Surface.CONNECTION) }
                                 action("Settings & About") { navigation.open(Surface.SETTINGS) }
                             }
@@ -174,8 +198,12 @@ internal fun WearShellContent(
                                 item { ShellText("Choose model", heading = true) }
                                 val catalog = ui.recovery ?: modelCatalogPresentation(state)
                                 catalog?.let { item { ShellText(it.text) } }
-                                if (state.mode == key.mode) modelItems(state.models, state.selectedSlug,
-                                    enabled = ui.proofAvailable && !state.busy && !chatBusy, onSelect = proof::select)
+                                if (state.mode == key.mode) {
+                                    modelItems(state.models, state.selectedSlug,
+                                        enabled = ui.proofAvailable && !state.busy && !chatBusy && !state.thinkingSaving, onSelect = proof::select)
+                                    thinkingItems(state, enabled = ui.proofAvailable && !state.busy && !chatBusy,
+                                        onSelect = proof::selectThinking)
+                                }
                                 val recovery = catalog?.action ?: RecoveryAction.MODELS
                                 recoveryAction(recovery, proof, navigation, !state.busy && !chatBusy &&
                                     (recovery != RecoveryAction.MODELS || ui.proofAvailable))
@@ -248,7 +276,8 @@ private fun PrimaryControl(
     val canSend = if (action == PrimaryAction.SEND) {
         val sendSource = remember(proof) { proof.chat.map { it.canSend }.distinctUntilChanged() to proof.chat.value.canSend }
         val ready by sendSource.first.collectAsStateWithLifecycle(initialValue = sendSource.second)
-        ready && ui.proofAvailable && state.selectedSlug != null
+        val selectedPhotos by proof.imageSelection.selected.collectAsStateWithLifecycle()
+        ready && ui.proofAvailable && state.selectedSlug != null && selectedPhotos.isEmpty()
     } else true
     if (action == PrimaryAction.SEND) Text(billingDisclosure(ui.billing),
         modifier = Modifier.fillMaxWidth().padding(horizontal = 36.dp),

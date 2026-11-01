@@ -115,3 +115,13 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+## D7-C EXIF metadata reader — 2026-11-01
+
+Both apps additionally pin `androidx.exifinterface:exifinterface:1.4.2` (Apache-2.0).
+The [official stable release](https://developer.android.com/jetpack/androidx/releases/exifinterface)
+and [AndroidX source license](https://android.googlesource.com/platform/frameworks/support/+/androidx-main/exifinterface/exifinterface/src/main/java/androidx/exifinterface/media/ExifInterface.java)
+were reviewed. Preserve its Apache license/notices; it does not require extending
+the Google Play services linking exception. This is a metadata reader for bounded
+image import, replacing the old platform parser flagged by Android lint for known
+security bugs; it is not a general image-loading framework. Existing pins remain unchanged.

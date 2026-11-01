@@ -7,6 +7,17 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ShellNavigationViewModelTest {
+    @org.junit.Test fun promptsReturnToComposerWithoutResettingTheChatRoute() {
+        val navigation = ShellNavigationViewModel()
+        navigation.open(Surface.COMPOSER)
+        navigation.open(Surface.PROMPTS)
+        navigation.back()
+        org.junit.Assert.assertEquals(Surface.COMPOSER, navigation.surface.value)
+        navigation.open(Surface.PROMPTS)
+        navigation.open(Surface.COMPOSER)
+        navigation.back()
+        org.junit.Assert.assertEquals(Surface.CHAT, navigation.surface.value)
+    }
     private fun navigation(store: ViewModelStore) = ViewModelProvider.create(store,
         viewModelFactory { initializer { ShellNavigationViewModel() } })[ShellNavigationViewModel::class]
     @Test fun retainedStoreKeepsPageAndInterruptionMarker() {

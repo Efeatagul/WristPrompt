@@ -8,8 +8,17 @@ phone/watch debug pair; preserve owner installations and keys.
 ## Current state
 
 **D5: PASS WITH KNOWN DEBT — COMPLETE.**
-D6-B/C implementation is present on contributor branches; consolidated D6-D
-acceptance is pending. D7 is NOT STARTED.
+D6-A–C are merged on main. D6-D nonphysical acceptance is complete; owner Galaxy
+Watch physical acceptance remains pending in #5, with PR #21 open/draft.
+D7-A phone presets are merged via PR #22; manual phone evidence
+is pending. See [D7_A_PRESETS.md](D7_A_PRESETS.md). D7-B sync/insertion is merged via PR #23; #7 remains open. See [D7_B_PRESET_SYNC.md](D7_B_PRESET_SYNC.md)
+for automated/emulator evidence and pending paired/physical checks.
+D7-H thinking controls are implemented; see [D7_H_THINKING.md](D7_H_THINKING.md)
+for route capability limits and evidence. #18 remains open for physical acceptance
+deferred to #12. D7-C photo import/library/Asset synchronization and multi-selection
+are implemented; #8 stays open for paired physical acceptance deferred to #12.
+See [D7_C_PHOTO_LIBRARY.md](D7_C_PHOTO_LIBRARY.md) for limits, evidence and the
+explicit #9 boundary. D7-D/E and other remaining work are not started.
 Final owner Galaxy Watch 7 retest: R1–R5/R7–R10 PASS; R6 structured Markdown
 Wear table rendering FAIL / non-blocking known debt. TalkBack remains untested.
 

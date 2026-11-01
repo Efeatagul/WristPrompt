@@ -27,18 +27,20 @@ class ChatConversation {
         const val MAX_ATTEMPTS = 12
         const val MAX_CONTEXT_BYTES = 196_608
     }
+    var configuration = InferenceConfiguration(); private set
+    fun configure(value: InferenceConfiguration) { value.validate(); check(!state.busy); configuration = value }
     var state = ChatState(); private set
     private var history = emptyList<JsonObject>()
     private var pending: JsonObject? = null
     private var pendingUserId: Long? = null
     private var nextId = 0L
     private var attempts = 0
-    fun reset() { history = emptyList(); pending = null; pendingUserId = null; attempts = 0; state = ChatState() }
+    fun reset() { configuration = InferenceConfiguration(); history = emptyList(); pending = null; pendingUserId = null; attempts = 0; state = ChatState() }
     fun readOnly(reason: String?) { state = state.copy(readOnlyReason = reason) }
     fun snapshot(): ConversationSnapshot = ConversationSnapshot(
         messages = state.messages.map { StoredMessage(it.id, it.role.name, it.status.name, listOf(ContentPart.Text(it.text))) },
         replay = history.toList(), attempts = attempts, nextId = nextId,
-        partial = if (state.busy) "" else state.partial, terminal = state.stage.name,
+        partial = if (state.busy) "" else state.partial, terminal = state.stage.name, configuration = configuration,
     ).also { it.validate() }
 
 
@@ -50,6 +52,7 @@ class ChatConversation {
         val restored = snapshot.messages.map { m -> ChatMessage(m.id, ChatRole.valueOf(m.role),
             m.parts.joinToString("") { (it as ContentPart.Text).text },
             if (m.status == "PENDING") ChatMessageStatus.EXCLUDED else ChatMessageStatus.valueOf(m.status)) }
+        configuration = snapshot.configuration
         history = snapshot.replay.toList(); attempts = snapshot.attempts; nextId = snapshot.nextId
         pending = null; pendingUserId = null
         state = ChatState(messages = restored,
