@@ -27,19 +27,22 @@ def main():
     try:
         device('shell', 'settings', 'put', 'system', 'font_scale', args.font_scale)
         device('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP')
-        output = device('shell', 'am', 'instrument', '-w', '-e', 'checkpoint', args.checkpoint,
-                        PACKAGE + '.test/' + PACKAGE + '.storage.ImageGenerationInstrumentation')
+        output = subprocess.check_output([adb_path(), '-s', serial, 'shell', 'am', 'instrument', '-w', '-e', 'checkpoint', args.checkpoint,
+                        PACKAGE + '.test/' + PACKAGE + '.storage.ImageGenerationInstrumentation'], text=True, stderr=subprocess.STDOUT, timeout=120)
         print(output)
         if 'PASS: D7-F' not in output or 'FAIL:' in output:
             raise RuntimeError('Generation instrumentation did not pass')
         if args.artifacts:
             args.artifacts.mkdir(parents=True, exist_ok=True)
-            for state in ('viewer-fit', 'viewer-zoom', 'viewer-pan'):
+            for state in ('viewer-fit', 'viewer-zoom', 'viewer-pan', 'reader-rotary'):
                 source = f'/data/user_de/0/{PACKAGE}/files/d7f-{args.checkpoint}-{state}.png'
                 target = args.artifacts / f'{args.checkpoint}-{args.font_scale}-{state}.png'
                 with target.open('wb') as destination:
                     subprocess.run([adb_path(), '-s', serial, 'exec-out', 'run-as', PACKAGE, 'cat', source],
                                    stdout=destination, check=True, timeout=30)
+            metrics = device('shell', 'run-as', PACKAGE, 'cat', f'/data/user_de/0/{PACKAGE}/files/d7f-{args.checkpoint}-viewer-metrics.txt')
+            (args.artifacts / f'{args.checkpoint}-{args.font_scale}-metrics.txt').write_text(metrics, encoding='utf-8')
+            print(metrics)
         print(f'VERIFIED ON EMULATOR: {name}, {args.checkpoint}, font {args.font_scale}; synthetic provider only')
     finally:
         if previous in ('', 'null'):

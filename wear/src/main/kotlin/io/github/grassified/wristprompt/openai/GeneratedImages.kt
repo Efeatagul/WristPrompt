@@ -24,6 +24,9 @@ class PreparedGeneratedImage(val reference: GeneratedAttachment, val content: Im
 class GeneratedImages(private val root: File,
     private val normalize: suspend (GeneratedOutput) -> ImageContent = { GenerationOutput.normalize(it) },
     private val validate: (LibraryImage, ImageContent) -> ImageContent = AndroidImages::validate,
+    private val syncDirectory: (File) -> Unit = { directory ->
+        FileChannel.open(directory.toPath(), StandardOpenOption.READ).use { it.force(true) }
+    },
 ) {
     companion object { const val MAX_TOTAL_BYTES = 64L * 1024 * 1024 }
     private val mutex = Mutex()
@@ -104,5 +107,5 @@ class GeneratedImages(private val root: File,
         FileOutputStream(temp).use { it.write(bytes); it.fd.sync() }
         Files.move(temp.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE)
     }
-    private fun sync(directory: File) { FileChannel.open(directory.toPath(), StandardOpenOption.READ).use { it.force(true) } }
+    private fun sync(directory: File) = syncDirectory(directory)
 }

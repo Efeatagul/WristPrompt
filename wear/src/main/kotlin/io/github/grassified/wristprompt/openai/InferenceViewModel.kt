@@ -443,6 +443,9 @@ class InferenceViewModel(
                 val result = if (imageGeneration) session.image(catalog, selected, input, progress)
                     else session.chat(catalog, selected, input, configuration, progress)
                 val generated = if (imageGeneration) checkNotNull(generatedImages).prepare(checkNotNull(result.generated)) else null
+                // Native normalization suspends after the session's terminal lease check.
+                // Revalidate that lease before acquiring canonical completion ownership.
+                if (generated != null) session.validate(catalog)
                 currentCoroutineContext().ensureActive()
                 if (!compatible(catalog)) throw ApiFailure(ApiProblem.STALE_ACCOUNT)
                 if (run == epoch) {

@@ -28,6 +28,7 @@ class ImageGenerationPipelineTest {
         val scope = ImageLimits.newId()
         var entry: ConversationEntry? = null
         var saves = 0
+        var unreadable = false
         var completing: (suspend () -> Unit)? = null
         override suspend fun owner(identityHash: String) = scope
         override suspend fun save(entry: ConversationEntry): ConversationEntry {
@@ -35,7 +36,10 @@ class ImageGenerationPipelineTest {
             entry.snapshot.validate(); saves++
             return entry.copy(revision = entry.revision + 1).also { this.entry = it }
         }
-        override suspend fun load(id: String, owner: String) = entry?.takeIf { it.id == id && it.owner == owner }
+        override suspend fun load(id: String, owner: String): ConversationEntry? {
+            if (unreadable) throw ConversationStorageException()
+            return entry?.takeIf { it.id == id && it.owner == owner }
+        }
         override suspend fun list(owner: String) = listOfNotNull(entry?.takeIf { it.owner == owner }?.let {
             ConversationSummary(it.id, it.title, it.model, it.route, it.updated, it.revision)
         })
@@ -45,12 +49,19 @@ class ImageGenerationPipelineTest {
     private class Provider : AiProvider {
         var images = 0; var texts = 0
         val inputs = mutableListOf<List<JsonObject>>()
+        val configurations = mutableListOf<InferenceConfiguration>()
         var script: suspend (suspend (ResponseEvent) -> Unit) -> Unit = { emit -> emit(event()) }
         override suspend fun models(credential: CredentialLease) = listOf(AiModel("gpt-6.1-sol", "Synthetic", thinking = OpenAiThinkingCapabilities.forModel("gpt-6.1-sol", credential.mode),
             imageGeneration = OpenAiGeneration.capability("gpt-6.1-sol", credential.mode)))
         override suspend fun stream(credential: CredentialLease, model: String, onEvent: suspend (ResponseEvent) -> Unit) = error("unused")
         override suspend fun stream(credential: CredentialLease, model: String, input: List<JsonObject>, onEvent: suspend (ResponseEvent) -> Unit) {
             texts++; inputs += input; onEvent(ResponseEvent.Completed("text follow-up"))
+        }
+        override suspend fun stream(credential: CredentialLease, model: AiModel, input: List<JsonObject>,
+            configuration: InferenceConfiguration, onEvent: suspend (ResponseEvent) -> Unit) {
+            InferenceControls.validate(configuration, model, credential.mode)
+            configurations += configuration
+            stream(credential, model.slug, input, onEvent)
         }
         override suspend fun generateImage(credential: CredentialLease, model: AiModel, input: List<JsonObject>, onEvent: suspend (ResponseEvent) -> Unit) {
             OpenAiGeneration.request(model, credential.mode, input); images++; inputs += input; script(onEvent)
@@ -62,7 +73,8 @@ class ImageGenerationPipelineTest {
     @Before fun setup() { Dispatchers.setMain(UnconfinedTestDispatcher()) }
     @After fun cleanup() { vms.forEach { it.viewModelScope.cancel() }; Dispatchers.resetMain() }
     private fun files(root: File = folder.newFolder(), prepare: suspend (GeneratedOutput) -> ImageContent = { content }) =
-        GeneratedImages(root, prepare, { _, image -> image })
+        // Windows cannot open directory FileChannels. Native fsync/promotion is covered on Android.
+        GeneratedImages(root, prepare, { _, image -> image }, syncDirectory = {})
     private fun vm(store: Store, p: Provider, files: GeneratedImages): InferenceViewModel = InferenceViewModel(access,
         InferenceSession({ lease }, p) { true }, conversationStore = store, conversationIdentity = { "a".repeat(64) }, generatedImages = files).also { vms += it }
     private suspend fun InferenceViewModel.done() = withContext(Dispatchers.Default) { withTimeout(5000) { chat.first { !it.busy && it.messages.isNotEmpty() } } }
@@ -87,10 +99,13 @@ class ImageGenerationPipelineTest {
         assertArrayEquals(content.image, files.content(saved.owner, saved.id, ref).image)
         vm.draft("explicit follow-up"); vm.send(); vm.done()
         assertEquals(1, p.images); assertEquals(1, p.texts)
+        assertEquals("medium", p.configurations.single().controls.single().value)
         assertEquals("image_generation_call", p.inputs.last()[1]["type"]!!.jsonPrimitive.content)
         assertFalse(JsonArray(p.inputs.last()).toString().contains("image_url"))
-        vm.deleteChat(saved.id); withTimeout(5000) { vm.history.first { !it.loading && it.entries.isEmpty() } }
-        assertTrue(root.walkTopDown().none { it.isFile })
+        vm.deleteChat(saved.id)
+        withContext(Dispatchers.Default) { withTimeout(5000) { vm.history.first { !it.loading && it.entries.isEmpty() } } }
+        assertFalse(File(File(File(root, saved.owner), saved.id), "${ref.id}-image.jpg").exists())
+        assertFalse(File(File(File(root, saved.owner), saved.id), "${ref.id}-thumb.jpg").exists())
     }
     @Test fun stopDuringImagePreparationWinsAndLeavesNoCompletedFileOrReplay() = runTest {
         val entered = CompletableDeferred<Unit>(); val release = CompletableDeferred<Unit>()
@@ -100,6 +115,20 @@ class ImageGenerationPipelineTest {
         assertEquals(ChatStage.CANCELLED, vm.chat.value.stage)
         assertTrue(store.entry!!.snapshot.replay.isEmpty()); assertTrue(root.walkTopDown().none { it.isFile })
         assertTrue(vm.chat.value.messages.none { it.generated != null }); assertEquals(1, p.images)
+    }
+    @Test fun leaseInvalidatedDuringPreparationCannotAcquireCompletionOwnership() = runTest {
+        var current = true
+        val root = folder.newFolder(); val files = files(root) { current = false; content }
+        val store = Store(); val p = Provider()
+        val vm = InferenceViewModel(access, InferenceSession({ lease }, p) { current }, conversationStore = store,
+            conversationIdentity = { "a".repeat(64) }, generatedImages = files).also { vms += it }
+        runCurrent(); vm.draft("draw"); vm.generateImage()
+        withContext(Dispatchers.Default) { withTimeout(5000) { vm.chat.first { it.stage in setOf(ChatStage.COMPLETED, ChatStage.FAILED) } } }
+        assertEquals(ChatStage.FAILED, vm.chat.value.stage)
+        assertEquals(ApiProblem.STALE_ACCOUNT, vm.chat.value.problem)
+        assertTrue(store.entry!!.snapshot.replay.isEmpty())
+        assertTrue(vm.chat.value.messages.none { it.generated != null })
+        assertTrue(root.walkTopDown().none { it.isFile }); assertEquals(1, p.images)
     }
     @Test fun ownedImageCommitWinsStopAndDuplicateTerminalCannotDuplicateCompletion() = runTest {
         val entered = CompletableDeferred<Unit>(); val release = CompletableDeferred<Unit>()
@@ -145,5 +174,51 @@ class ImageGenerationPipelineTest {
             assertTrue(store.entry!!.snapshot.replay.isEmpty()); assertTrue(vm.chat.value.messages.none { it.generated != null })
             assertEquals(1, p.images); vm.viewModelScope.cancel()
         }
+    }
+    @Test fun unreadableCanonicalStoragePreservesReservationsAndCleanupKeepsUnknownFiles() = runTest {
+        val root = folder.newFolder(); val files = files(root); val store = Store()
+        val chat = ChatConversation().apply { draft("synthetic"); begin() }
+        val entry = ConversationEntry(owner = store.scope, route = mode.name, model = "gpt-6.1-sol", title = "Synthetic",
+            updated = 0, snapshot = chat.snapshot())
+        val prepared = files.prepare(GeneratedOutput(byteArrayOf(1)))
+        try { files.commit(entry, prepared) { throw ConversationStorageException() }; fail("Expected failed save") }
+        catch (_: ConversationStorageException) { }
+        val directory = File(File(root, entry.owner), entry.id)
+        val unknown = File(directory, "unknown.keep").apply { writeText("synthetic sentinel") }
+        File(directory, "${prepared.reference.id}-image.jpg.part").writeBytes(byteArrayOf(1))
+        val owned = listOf("${prepared.reference.id}-image.jpg", "${prepared.reference.id}-thumb.jpg", "${prepared.reference.id}-image.jpg.part")
+            .map { File(directory, it) }
+        assertTrue(owned.all { it.exists() })
+        store.unreadable = true; files.recover(store)
+        assertTrue(owned.all { it.exists() })
+        store.unreadable = false; files.recover(store)
+        assertTrue(owned.none { it.exists() }); assertTrue(unknown.isFile)
+    }
+    @Test fun missingAndTamperedGeneratedFilesFailSafelyWithoutDroppingCanonicalOwnership() = runTest {
+        val root = folder.newFolder(); val files = files(root); val store = Store(); val p = Provider()
+        val vm = vm(store, p, files); runCurrent(); vm.draft("draw"); vm.generateImage(); vm.done()
+        val entry = checkNotNull(store.entry); val reference = checkNotNull(vm.chat.value.messages.last().generated)
+        val image = File(File(File(root, entry.owner), entry.id), "${reference.id}-image.jpg")
+        image.writeBytes(byteArrayOf(9, 9, 9))
+        for (missing in listOf(false, true)) {
+            if (missing) check(image.delete())
+            try { files.content(entry.owner, entry.id, reference); fail("Expected unavailable image") }
+            catch (failure: ApiFailure) { assertEquals(ApiProblem.IMAGE_UNAVAILABLE, failure.problem) }
+        }
+        files.recover(store)
+        assertNotNull(store.entry!!.snapshot.messages.last().parts.filterIsInstance<ContentPart.GeneratedImage>().single())
+        assertEquals(1, p.images); assertEquals(0, p.texts)
+    }
+    @Test fun generatedStorageQuotaFailsBeforeCanonicalSaveWithoutEvictingExistingFiles() = runTest {
+        val root = folder.newFolder(); val files = files(root); val store = Store()
+        val existing = File(root, "existing.keep")
+        java.io.RandomAccessFile(existing, "rw").use { it.setLength(GeneratedImages.MAX_TOTAL_BYTES) }
+        val chat = ChatConversation().apply { draft("synthetic"); begin() }
+        val entry = ConversationEntry(owner = store.scope, route = mode.name, model = "gpt-6.1-sol", title = "Synthetic",
+            updated = 0, snapshot = chat.snapshot())
+        var saved = false
+        try { files.commit(entry, files.prepare(GeneratedOutput(byteArrayOf(1)))) { saved = true }; fail("Expected capacity rejection") }
+        catch (_: ConversationStorageException) { }
+        assertFalse(saved); assertEquals(GeneratedImages.MAX_TOTAL_BYTES, existing.length())
     }
 }

@@ -25,4 +25,12 @@ class ImageViewportTest {
         assertEquals(anchored, anchored.move(Float.NaN))
         assertEquals(anchored, anchored.move(-1f))
     }
+    @Test fun anEdgeClampsOutwardPanButAlwaysAllowsMovementBackIntoTheImage() {
+        val edge = ImageViewport().move(3f, 1000f, -1000f)
+        assertEquals(100f, edge.x); assertEquals(-100f, edge.y)
+        assertEquals(edge, edge.move(1f, 40f, -40f))
+        val towardCenter = edge.move(1f, -40f, 40f)
+        assertEquals(60f, towardCenter.x); assertEquals(-60f, towardCenter.y)
+        assertEquals(ImageViewport(), towardCenter.move(0.01f))
+    }
 }

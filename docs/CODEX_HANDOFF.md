@@ -23,7 +23,7 @@ implemented; see [D7_D_IMAGE_INPUT.md](D7_D_IMAGE_INPUT.md) for exact-ID capabil
 contracts, limits and evidence. #9 remains open for live-route/physical acceptance
 deferred to #12. D7-E combined composer is implemented; see [D7_E_COMPOSER.md](D7_E_COMPOSER.md)
 for draft lifecycle policy and evidence. #10 stays open for physical acceptance
-deferred to #12. D7-F has a contract/capability checkpoint; implementation is BLOCKED on the Stop/completion commit boundary. See [D7_F_IMAGE_GENERATION.md](D7_F_IMAGE_GENERATION.md). No generation/viewer UI is enabled; #11 remains open. D7-G is outside that checkpoint.
+deferred to #12. D7-F generation and bounded Wear viewer are implemented on the continuation branch; automated/emulator acceptance is complete. See [D7_F_IMAGE_GENERATION.md](D7_F_IMAGE_GENERATION.md) for shared completion ownership, route limits and evidence. #11 remains open for intentionally deferred owner physical/live acceptance. PR #29, #1 and #12 are outside this continuation.
 Final owner Galaxy Watch 7 retest: R1–R5/R7–R10 PASS; R6 structured Markdown
 Wear table rendering FAIL / non-blocking known debt. TalkBack remains untested.
 

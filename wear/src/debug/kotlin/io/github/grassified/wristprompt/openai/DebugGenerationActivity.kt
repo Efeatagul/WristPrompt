@@ -85,7 +85,9 @@ internal class GenerationAcceptanceOwner(context: Context) : ViewModel() {
     val vm = InferenceViewModel(MutableStateFlow(InferenceAccessState(client = lease.clientId, usable = true, mode = mode)),
         InferenceSession({ lease }, provider) { true }, conversationStore = database,
         conversationIdentity = { "f".repeat(64) }, generatedImages = images)
-    private val children = ViewModelStore().also { it.put("generation", vm) }
+    private val children = ViewModelStore().also {
+        ViewModelProvider.create(it, viewModelFactory { initializer { vm } })[InferenceViewModel::class]
+    }
     init {
         viewModelScope.launch { images.recover(store) }
         viewModelScope.launch { combine(vm.chat, vm.state) { _, _ -> Unit }.collect { report() } }

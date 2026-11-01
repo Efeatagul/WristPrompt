@@ -375,7 +375,7 @@ emulator evidence in [docs/D7_C_PHOTO_LIBRARY.md](docs/D7_C_PHOTO_LIBRARY.md).
 durable attachment replay are implemented; see [docs/D7_D_IMAGE_INPUT.md](docs/D7_D_IMAGE_INPUT.md).
 #9 stays open for live-route/physical acceptance deferred to #12. D7-E combined composer implementation/automated acceptance is complete; see
 [docs/D7_E_COMPOSER.md](docs/D7_E_COMPOSER.md). #10 remains open for physical
-acceptance deferred to #12. D7-F has a contract/capability checkpoint; implementation is BLOCKED on the Stop/completion commit boundary. See [D7_F_IMAGE_GENERATION.md](docs/D7_F_IMAGE_GENERATION.md). No generation/viewer UI is enabled; #11 remains open. D7-G is outside that checkpoint.
+acceptance deferred to #12. D7-F generation and bounded Wear viewer are implemented on the continuation branch; automated/emulator acceptance is complete. See [D7_F_IMAGE_GENERATION.md](docs/D7_F_IMAGE_GENERATION.md) for shared completion ownership, route limits and evidence. #11 remains open for intentionally deferred owner physical/live acceptance. PR #29, #1 and #12 are outside this continuation.
 
 - [ ] D7-A: durable named custom USER prompt presets managed on phone (list,
   create/edit/rename/delete, multiline editor); no hidden always-on system prompt.

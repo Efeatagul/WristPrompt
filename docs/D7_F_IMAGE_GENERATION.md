@@ -1,64 +1,36 @@
-# D7-F image generation — implementation in progress
+# D7-F image generation and Wear viewer
 
-Issue #11 remains OPEN. Continuing checkpoint 7a66710 on the existing branch.
-The ownership analysis below resolves the original planning blocker; implementation
-and new acceptance evidence are recorded as they complete. PR #29 is out of scope.
+Progress toward #11. The existing published implementation is continued, not replaced.
+Physical/live API acceptance is intentionally deferred; issue #11 must stay OPEN.
+PR #29, #1 and #12 are outside this task.
 
-## Official contract audit — 2026-11-01
+## Official contract and supported routes — reviewed 2026-11-01
 
-The following official pages were opened and reviewed during this task:
+- [Responses image tool](https://developers.openai.com/api/docs/guides/tools-image-generation)
+  documents forced `image_generation`, separate tool/mainline models, `action: generate`,
+  JPEG/compression and continuation with the image-generation call ID.
+- [Image generation guide](https://developers.openai.com/api/docs/guides/image-generation)
+  documents completed base64 output and account/organization access requirements.
+- [SIWC preview limitations](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations)
+  explicitly exclude image generation. Image-input support is separate.
+- [Flare model](https://developers.openai.com/api/docs/models/gpt-image-2.5-flare)
+  documents the Responses image tool model. [API pricing](https://developers.openai.com/api/docs/pricing)
+  establishes separate API usage billing; the UI does not promise subscription coverage
+  or an inferred per-image price.
+- [Cancel response](https://developers.openai.com/api/reference/resources/responses/methods/cancel)
+  applies to background responses. Cancelling this foreground HTTP call is not proof
+  of provider cancellation, free usage or a refund.
 
-- [Image tool contract](https://developers.openai.com/api/docs/guides/tools-image-generation):
-  Responses supports `image_generation` with forced `tool_choice`. `action: generate`
-  prevents editing. The tool's `model` is distinct from the selected top-level
-  model. The documented support list includes the four reviewed IDs below.
-- [Image generation guide](https://developers.openai.com/api/docs/guides/image-generation):
-  Responses and Images API are available; Responses fits the existing session.
-  Completed `image_generation_call.result` carries base64. The guide also documents
-  continuation by image call ID and streaming final output. Organization verification
-  may be required. A privacy-preserving `safety_identifier` is recommended, optional.
-- [SIWC preview limitations](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations):
-  image generation is explicitly unsupported. Image **input** permission does not
-  authorize generation. No SIWC workaround or private endpoint is permitted.
-- [SIWC models/inference](https://developers.openai.com/siwc/token-sharing-open-source/models-and-inference):
-  use the selected account's current catalog/bearer and public Responses endpoint.
-  Catalog membership alone is not a generation capability declaration.
-- [GPT-6.1 Sol](https://developers.openai.com/api/docs/models/gpt-6.1-sol) and
-  [GPT Image 2.5 Flare](https://developers.openai.com/api/docs/models/gpt-image-2.5-flare)
-  establish separate mainline/tool models. The latter supports the Responses tool.
-- [API pricing](https://developers.openai.com/api/docs/pricing): mainline inference
-  and image generation have API usage costs. This is separate API billing; no
-  promise that a ChatGPT subscription pays for it. No exact per-image estimate is
-  presented or inferred from dimensions alone.
-- [Cancel response](https://developers.openai.com/api/reference/resources/responses/methods/cancel):
-  that endpoint applies only to responses created with `background: true`.
-  WristPrompt does not enable background generation. Cancelling a foreground HTTP
-  call must not be described as proof of provider-side cancellation or refunded usage.
+Only the explicit API-key route is enabled, intersected with the active catalog and
+this conservative reviewed exact-ID set: `gpt-6.1-sol`, `gpt-6-astra`, `gpt-5.5`,
+`gpt-5.4`. Unknown IDs, aliases, dated suffixes, case variants, mismatched provider/
+model/route/source capability and all ChatGPT-plan entries fail closed. This is not
+an exhaustive statement of provider support. No inferred model-name capability,
+model switch, credential/billing fallback or automatic retry is introduced.
 
-API-key generation is documented in principle; **no generation route is enabled in
-this checkpoint**. SIWC is contractually unavailable. This issue is blocked on the
-local cancellation/persistence integration, not on universal provider unavailability.
-
-## Retained capability and request plumbing
-
-`AiModel.imageGeneration` holds an optional provider/model/route-scoped capability
-using strings, independently of Thinking and image input. This is runtime catalog
-metadata; no provider-specific durable enum or schema migration is introduced.
-
-`OpenAiProvider.models` enriches only API-key catalog entries whose exact IDs are
-`gpt-6.1-sol`, `gpt-6-astra`, `gpt-5.5`, or `gpt-5.4`. Unknown IDs, case variants,
-snapshot suffixes, descriptive display names, unreviewed aliases and plan entries
-have no generation capability. This is a conservative reviewed subset, not the
-entire provider-supported catalog. Future additions need another official audit.
-The eventual session must still enforce active catalog membership and ownership.
-
-`OpenAiGeneration.request` is an undispatched request builder. It requires matching
-reviewed capability identity and nonblank user text of at most 8,192 characters.
-Input photos are rejected rather than repurposed. Validation has no network,
-credential selection, route selection or model selection side effects.
-
-Its reviewed representation is `POST /v1/responses` with the selected top-level
-model, explicit input, `store=false`, `stream=true`, and:
+Explicit Generate image uses the existing ViewModel/session/provider/HTTP stack.
+It preserves the selected supported top-level model and sends `POST /v1/responses`,
+`store=false`, `stream=true`, explicit input and no `previous_response_id`:
 
 ```json
 {
@@ -75,132 +47,198 @@ model, explicit input, `store=false`, `stream=true`, and:
 }
 ```
 
-The builder omits reasoning effort and `previous_response_id`. Stored Thinking is
-not accepted or changed by this operation. The whole request retains the existing
-262,144-byte text body bound. Static unsupported/prompt errors are available to a
-future caller. No composer, navigation, gesture or provider stream calls the builder.
+Generation requires nonblank text up to 8,192 characters and rejects input-photo
+attachments, including historical image-input replay. It is generation, not editing.
+Thinking is omitted for this operation while its stored selection remains intact for
+ordinary text. Drafting, navigation, restart, viewer gestures and file recovery do
+not dispatch inference. The existing 262,144-byte text-request cap still applies.
 
-## Completion / Stop ownership conclusion — 2026-11-01
+## Shared completion / Stop ownership
 
-The original inverse race expectation was an over-strong planning requirement,
-not an image provider requirement. #11's published scope requires safe cancellation;
-it does not require rolling back an owned or committed completion. Text and image
-operations use ONE ownership rule. The writer's NonCancellable transaction,
-shorter-replay guard, revision checks and tombstones remain authoritative.
+RUNNING and image PREPARING are cancellable. A terminal provider event alone does
+not own completion. Preparation validates/normalizes an unowned candidate; Stop can
+still win. Session Job/lease checks reject late/duplicate callbacks. After preparation,
+the existing session lease validator runs again, followed by current Job, account/
+route and epoch checks. A deterministic test found and now covers invalidation
+while normalization suspends; it cannot acquire ownership or promote a file.
 
-The Main-confined state machine is:
+On Main, with no suspension between final validation and acquisition,
+`ChatConversation.complete` installs the canonical candidate and `completionOwner`
+marks that run. This is the linearization point. A later Stop is a no-op: it cannot
+advance the epoch, truncate replay or cancel the owned atomic save. Durable success
+is published only after file promotion and SQLite commit succeed.
 
-- RUNNING: pending display exchange, no replay; Stop invalidates epoch and cancels HTTP.
-- TERMINAL_RECEIVED: session has received `response.completed`, but must finish
-  terminal validation, provider exit, lease and owning-Job checks. Stop can still win.
-- PREPARING (images only): validate/normalize and stage an unowned file candidate.
-  Stop still wins; no completed attachment or replay exists.
-- COMMIT_OWNED: on Main, after the last epoch/owner validation, synchronous
-  `ChatConversation.complete` validates and installs the canonical candidate and
-  `completionOwner = run` is set with no intervening suspension. **This is the
-  completion-versus-Stop linearization point.** Stop is now a no-op. It cannot cancel
-  the commit or advance its epoch. Receiving/validating a provider event alone,
-  entering SQLite, and SQLite success are different events.
-- COMPLETED: atomic durable save succeeded; only now publish completed display.
-- FAILED: save failed; restore pre-completion replay, preserve visible partial as
-  unsaved/excluded, expose CHAT_STORAGE; no automatic retry.
-- STOPPED: Stop acquired ownership before COMMIT_OWNED; late callbacks cannot
-  acquire commit ownership, and the excluded checkpoint has no new replay.
+The shared text/image fix ignores Stop for the current completion owner. Previously
+Stop could advance the epoch while a completion-owned save was blocked; a subsequent
+failure could then suppress required in-memory rollback. On save failure the prior
+replay/state is restored and CHAT_STORAGE is shown, with no false completed exchange
+or automatic retry. Account/New Chat invalidation cannot revive old UI.
 
-Commit ownership is irrevocable **against Stop**, conditional on successful storage.
-Durable success becomes a fact only when the transaction atomically succeeds. These
-are two distinct boundaries. No fully committed transaction is ever undone.
+ConversationWriter and SQLite semantics are UNCHANGED: non-cancellable atomic
+checkpoints, shorter-replay guard, revisions and tombstones remain authoritative.
+There is no generation-only compensating deletion or rollback of committed data.
 
-Existing text already installed its completion synchronously before a protected save,
-and its writer rejects the later shorter stopped snapshot. A deterministic test
-preserves this characterization. The original six-step blocked-save/inverse-replay
-test crosses the ownership point before cancelling, so its correct expectation is
-completion wins. Making Stop win there would change text semantics, permit replay
-regression and undermine completion-save guarantees; compensation is prohibited.
-The generated-image provider lifecycle does not require such a rollback.
+## Untrusted output, files and replay
 
-Focused inspection did find a real UI/failure race: Stop could see unpublished busy
-UI while the canonical candidate was already completed, cancel the operation and
-advance epoch; a subsequent save failure would then skip in-memory rollback. The
-small shared ViewModel correction ignores Stop for its current completion owner.
-It preserves the existing durable winner, and ensures a later storage failure
-cannot leave failed completion in replay. ConversationWriter and SQLite semantics
-are unchanged. Account/New Chat destruction still invalidates publication and never
-revives old UI. Session Job, lease and ViewModel epoch checks reject stale callbacks;
-duplicate terminals are ignored; actual HTTP cancellation before ownership remains.
+- Bound generation SSE lines/frames to 3 MiB, cumulative bytes to 12 MiB and JSON
+  depth to 32 before parsing. Ordinary text stream limits remain unchanged.
+- Require exactly one completed image call in `response.completed`. Tool-completed
+  signals alone, missing/duplicate results, unknown tools, editing/PNG metadata,
+  malformed/canonical-invalid base64 and unsupported call IDs fail closed.
+- Provider output is at most 2 MiB decoded JPEG / 2,796,204 base64 characters.
+  Verify JPEG markers, decoder-detected MIME, dimensions up to 1280 per edge and
+  1,638,400 pixels, then actual decode/normalization through D7-C AndroidImages.
+- Canonical JPEG is at most 768 KiB/1280 edge; thumbnail at most 24 KiB/160 edge.
+  Normalization strips original metadata. Native decoding is defensive validation,
+  not a claim to detect every possible codec defect.
+- Conversation-owned generated files live in `noBackupFilesDir/generated_images_v1`
+  under opaque owner/chat/image IDs, separate from imported-photo ownership.
+  Bound generated storage to 64 MiB. Fsync recognized temporary files, atomically
+  promote immutable files and sync directories BEFORE SQLite can reference them.
+  No fallback to non-atomic promotion; failures expose CHAT_STORAGE.
+- Snapshot v4 adds a typed generated-image reference with dimensions, bounded byte
+  counts and internal integrity digests. Versions 1–3 remain readable and cannot
+  contain the new generated part. No schema reset or destructive migration.
+- SQLite is the only ownership manifest. Failed pre-commit saves may leave unowned
+  reservations; startup recovery serializes with promotion/save and consults canonical
+  storage before removing recognized temp/orphan files. Unreadable/unknown storage
+  preserves files. Unknown filenames are untouched. Canonical deletion precedes file
+  cleanup; imported library deletion cannot reach generated files.
+- Read verifies bounded bytes and digests. Missing/tampered content is unavailable,
+  never an instruction to regenerate. No image bytes/base64 enter SQLite, DataStore,
+  ordinary conversation JSON, logs or diagnostic string forms.
+- Replay retains only validated `{type:"image_generation_call", id:"ig_..."}` metadata,
+  not the base64 result. Generated display is a typed attachment, not fake textual
+  tool output. Ordinary continuation does not re-upload the local generated image.
+  The provider documents call-ID continuation, but indefinite ID availability with
+  `store=false` is NOT guaranteed; provider rejection is surfaced without substitution.
 
-Deterministic tests use deferred barriers, not sleeps: terminal received before
-session return → Stop wins; owned save blocked → completion wins; owned save fails
-after Stop → CHAT_STORAGE and prior replay; cancelled writer rejects shorter replay.
-Existing text late/duplicate callback and real transport-cancellation tests remain
-part of the gate. Generation will use the same finalization path and tests.
+## Viewer and acceptance diagnosis
 
-## Unimplemented boundaries and proposed limits
+The native fullscreen dialog shows the full aspect-fit image inside an inscribed
+round-screen area. Pinch zoom is 1–5x. Pan clamps to the actual scaled aspect-fit
+bounds, returns to zero on non-scrollable axes and cannot lose the image offscreen.
+Close/system Back dismiss it; reopen starts at fit. Activity recreation keeps the
+selected image but resets ephemeral viewport state. Missing images show Image
+unavailable. Viewer math/gestures have no inference authority.
 
-The following are requirements/design candidates, **not implemented acceptance**:
+The reported prior pan failure did not reproduce in the initial fresh 450x450
+Wear API-36 lab run: fit, real pinch and pan all passed before changing math.
+Production pan mathematics therefore remain unchanged. The old assertion used a
+fixed positive screen-centered drag and only compared a formatted string; it did
+not establish available motion, actual viewport bounds or clipping.
 
-- Output: one completed image result; at most 2 MiB decoded provider JPEG, at most
-  1280 pixels per edge/1,638,400 pixels. Bound SSE frames and cumulative response
-  before buffering; strict base64, actual format/dimensions/full decode, reject
-  corruption/truncation and unsupported formats before promotion.
-- Storage: reuse D7-C normalization to canonical JPEG at most 768 KiB/1280 edge
-  plus a 160-edge/24 KiB thumbnail. Write recognized temporary files, fsync and
-  atomically promote validated files. Keep them conversation-owned, outside the
-  imported library; use opaque typed references and bounded integrity metadata.
-  Library deletion must never reach generated files. No binaries/base64 in SQLite,
-  DataStore or conversation JSON. Deletion/orphan policy must follow the resolved
-  commit boundary; conservative reservations alone do not establish Stop acceptance.
-- Replay: official image-call-ID continuation exists, but the checkpoint does not
-  add it to canonical replay. Durable `store=false` continuation/reasoning semantics
-  still need implementation and tests. No fake textual tool result or automatic
-  local-image re-upload is substituted. Existing completed-only replay is unchanged.
-- Viewer: fullscreen aspect fit, 1–5x bounded pinch zoom/pan, Close/system Back,
-  predictable reopen, safe recreation, ephemeral viewport state, round-screen and
-  normal/max-font checks. Viewer/gestures must have zero inference authority.
-- Errors: output corruption/size/dimensions, missing result, write/save failure,
-  stale callbacks, cancellation, restart/reopen and cleanup still need acceptance.
+Acceptance now measures scale, pan, viewport/image dimensions, actual pan bounds,
+gesture endpoints and direction. It moves toward available space, verifies a real
+delta, reaches/clamps at an edge, and moves back inward. The pure unit edge test
+likewise verifies outward clamping and inward movement. A separately reproduced
+real-touch failure was in the harness: lazy row semantics extended under the fixed
+composer footer; scrolling could also remain in a fling. Taps now intersect
+all ancestor clips and require stable bounds across rendered frames. Scroll gestures end
+with zero release velocity. Native system taps wait for the dialog window event;
+accessibility viewport state is refreshed after render-frame barriers. A reproduced
+pinch failure was an old cached 1x value: the failure tree already showed 2.72x.
+Gestures use actual viewer bounds. At font 2.0 the composer footer leaves only
+197 pixels for the list: scroll injection now uses that actual scrollable area,
+not display-centered coordinates in the footer. Navigation waits for its lazy
+list to exist. Rotary acceptance compares all visible reader geometry, since the
+image can be offscreen at both ends of a valid scroll. No production clamp is loosened.
 
-## Security and evidence
+## Evidence
 
-All fixtures use synthetic identities/tokens and a fake store. No live API calls,
-owner credential access, physical device operation or data clearing occurred.
-Capability diagnostics are redacted; errors use static categories. No new
-credential/authentication, billing fallback, storage schema, dependencies, manifest
-permissions or mobile/shared production changes are retained.
+VERIFIED AUTOMATICALLY — 2026-11-01:
 
-VERIFIED AUTOMATICALLY, final checkpoint:
+- One broad affected run: **400 tests / 47 suites**, zero failures/errors/skips.
+  Covers generation contracts/output, shared completion/Stop ownership, file/replay
+  lifecycle, text cancellation, image input, composer, Thinking, account/billing and
+  credential isolation, viewport/projection/error/model UI regressions.
+- Wear debug, Android test and unsigned/unminified release assemblies pass.
+- Final debug lint: **0 errors / 10 warnings**. The initial broad run found one
+  RestrictedApi error in the WIP debug fixture's ViewModelStore.put. It now uses the
+  existing project's public ViewModelProvider factory pattern; final focused
+  debug/test builds and lint pass. No suppression/baseline or dependency change.
+- Python host tools: **40 tests pass**; 36 changed-document local links checked with no broken targets. Source/manifest/debug/release DEX isolation
+  passes, including absence of ImageGenerationInstrumentation from both app APKs
+  and absence of generation debug fixtures from release. Whitespace checks pass.
+- No full Wear/mobile test claim: shared/mobile production, dependencies, credential
+  records and SQLite transaction/schema owners are unchanged by #11.
 
-```sh
-./gradlew :wear:testDebugUnitTest --tests 'io.github.grassified.wristprompt.openai.*' --tests '*ErrorPresentationTest' --tests '*ModelItemsTest' :wear:assembleDebug :wear:assembleRelease :wear:lintDebug --no-daemon --console=plain
-python3 tools/check_scenario_isolation.py
+Broad command actually run (documented JDK 17 / SDK 37; PowerShell):
+
+```powershell
+.\gradlew.bat :wear:testDebugUnitTest --tests 'io.github.grassified.wristprompt.openai.*' --tests '*ImageViewportTest' --tests '*GeneratedImageProjectionTest' --tests '*ComposerInteractionTest' --tests '*ChatPresentationTest' --tests '*ErrorPresentationTest' --tests '*ModelItemsTest' :wear:assembleDebug :wear:assembleDebugAndroidTest :wear:assembleRelease :wear:lintDebug '-Pwristprompt.generationAcceptance=true' --max-workers=2 --console=plain --no-daemon
+```
+
+After the debug-only lint/native acceptance fixes:
+
+```powershell
+.\gradlew.bat :wear:assembleDebug :wear:assembleDebugAndroidTest :wear:lintDebug '-Pwristprompt.generationAcceptance=true' --max-workers=2 --console=plain --no-daemon
+& $env:CONDA_PYTHON_EXE -X utf8 tools/check_scenario_isolation.py
 git diff --check
 ```
 
-Using the documented JDK 17/Android SDK: PASS, **347 tests / 41 suites**, zero
-failures/errors/skips; Wear debug/release assemblies; debug lint zero errors /
-10 warnings. Includes seven new contract/capability tests and one commit-policy
-characterization. Existing affected text, D7-D/E composer/image-input, Thinking,
-completed replay, transport cancellation and account/billing/credential isolation
-tests passed. The full Wear suite and mobile tasks were not run: shared/mobile
-production, dependency and durable-storage owners remain unchanged.
+Host unittest discovery ran with UTF-8, bytecode writes disabled and a writable
+throwaway temp directory, as documented for Windows in TESTING.md. A new lease
+invalidation test first deterministically failed (COMPLETED instead of FAILED),
+then passed after the final session validation was added. The entire 400-test
+production gate ran after that correction. Later fixes affect only debug/native
+acceptance; the 400 tests were not repeatedly rerun for them.
 
-Scenario source/manifest/DEX isolation, 36 changed-document local links, XML parsing,
-focused added-source logging/privacy inspection and whitespace checks passed.
-The initial generated-image Stop requirement failed as documented; checkpoint
-contracts/characterization passing does not establish generation acceptance.
+VERIFIED ON EMULATOR — disposable WristPrompt_Watch7, round 450x450, API 36:
 
-Changed production files are limited to `ImageGeneration.kt`, the `AiModel` runtime
-capability field, API catalog enrichment and static error categories/presentation.
-No generation endpoint is dispatched. Suggested/used commit message:
-`feat(wear): checkpoint image generation contracts and document Stop commit blocker`.
+| Font setting | Seed / explicit generation + Stop barriers | Force-stop / new-PID history reopen |
+| --- | --- | --- |
+| 1.0 | PASS | PASS |
+| 2.0 | PASS | PASS |
 
-VERIFIED ON EMULATOR: **NOT RUN for this checkpoint**. No generation row, viewer,
-pinch/pan, rotary, max-font, restart/reopen or live-provider result is claimed.
-The incomplete production path was removed before emulator acceptance.
+Both fonts exercised actual JPEG decode/normalization, immutable promotion, real
+SQLite completion, generated conversation display, native system-touch viewer open,
+real two-pointer pinch, horizontal pan, edge clamp/outward no-op/inward recovery,
+Close/system Back, reopen-at-fit, Activity recreation retaining the owner while
+resetting viewport, and rotary movement in the surrounding reader. Viewer captures
+wait for the decoded bitmap to appear, not just the dialog's semantics. Initial
+capture attempts caught loading frames; those are not treated as rendering evidence.
 
-VERIFIED PHYSICALLY: **NOT TESTED; intentionally deferred**. Remaining consolidated
-owner/live acceptance: actual supported API-key generation, Galaxy Watch 7 pinch/
-pan and round ergonomics, Stop, restart/reopen, account/billing/model correctness,
-and zero automatic generation. Keep #11 open with #1/#5/#7/#8/#9/#10/#18/#12 for
-that eventual pass; this checkpoint also has nonphysical implementation remaining.
-Do not refresh/merge PR #29, start #1 or resume #12 from this checkpoint.
+The normal measured viewport is 315x288 for the 256x192 synthetic image. Recorded
+pinch is approximately 2.72x; pan moves about 92 pixels toward available space and
+clamps at the computed edge (approximately 271 pixels). Unit math separately checks
+the 1–5x zoom limit, vertical bounds, anchor and reset behavior. Screenshots were
+visually inspected; emulator evidence does not establish Galaxy Watch ergonomics.
+
+Force-stop was issued only after verifying the named disposable AVD. Verify checks
+a different PID from seed, restored generated ownership/title/history, resolved local
+files and unchanged persistent mock request count. It opens history without sending.
+This is a force-stop/cold-restart check; unplanned OS process death was not separately
+induced here. Failed/stopped/interrupted replay exclusion, exact typed persistence,
+no durable base64/re-upload, corrupt/missing file reads, temporary/orphan cleanup,
+unreadable-store preservation, unknown-file preservation, quotas and imported-library
+isolation have the focused automated coverage above. No unrelated destructive D6
+instrumentation was rerun.
+
+Executed native commands (each font 1.0 and 2.0):
+
+```powershell
+& $env:CONDA_PYTHON_EXE -X utf8 tools/wear_generation_acceptance.py --checkpoint seed --font-scale 1.0 --install --artifacts ../d7f-acceptance
+# Verify AVD name WristPrompt_Watch7 before this test-only force-stop:
+adb -s emulator-5564 shell am force-stop io.github.grassified.wristprompt
+& $env:CONDA_PYTHON_EXE -X utf8 tools/wear_generation_acceptance.py --checkpoint verify --font-scale 1.0 --artifacts ../d7f-acceptance
+```
+
+Repeat with 2.0, without reinstalling. The runner restores the prior font setting in
+finally. Every case requires explicit native PASS, not merely an instrumentation
+exit code. Mock generation is explicit; viewer/navigation/recreation/restart/rotary
+add **zero** inference requests. The seed's two extra generation attempts deliberately
+exercise Stop before and after commit ownership. No live OpenAI request occurred.
+
+Windows JVM tests inject only directory-sync behavior because Windows JDK directory
+FileChannel open throws AccessDeniedException; production Android fsync remains the
+default and is exercised natively. The fake provider explicitly supports the retained
+Thinking value, and disk-backed waits use a real-time dispatcher. Cleanup assertions
+check recognized owned files while preserving unknown files.
+
+VERIFIED PHYSICALLY: NOT TESTED / intentionally deferred. Remaining consolidated
+owner/live checks: actual supported API-key generation and billing/model/account,
+Galaxy Watch rendering, pinch/pan/round ergonomics/large text/rotary, Stop before and
+after completion ownership, restart/history reopen, and zero automatic generation.
+No owner credentials, paid calls, owner installations, app data, Keystore or real
+sessions were accessed or cleared. Keep #11 OPEN for that later evidence.

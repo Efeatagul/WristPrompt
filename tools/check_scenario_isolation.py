@@ -24,7 +24,7 @@ def check_dependencies():
 def check():
     check_dependencies()
     from wear_scenarios import scenarios
-    markers = ('DebugGenerationActivity', 'GenerationAcceptanceOwner', 'DEBUG_GENERATION', 'debug-generation.txt', 'DebugScenario', 'StreamingPreviewActivity', 'DEBUG_LIFECYCLE',
+    markers = ('ImageGenerationInstrumentation', 'DebugGenerationActivity', 'GenerationAcceptanceOwner', 'DEBUG_GENERATION', 'debug-generation.txt', 'DebugScenario', 'StreamingPreviewActivity', 'DEBUG_LIFECYCLE',
                'debug-scenario-ready.txt', 'BuildConfig.DEBUG', *scenarios())
     for source in ('wear/src/main', 'mobile/src/main', 'shared/src/main'):
         for p in (ROOT / source).rglob('*'):
@@ -36,11 +36,14 @@ def check():
         tree = ET.parse(manifest)
         names = [node.attrib.get('{http://schemas.android.com/apk/res/android}name', '') for node in tree.iter()]
         assert any('DebugScenarioActivity' in name for name in names) == (variant == 'debug')
+        assert any('DebugGenerationActivity' in name for name in names) == (variant == 'debug')
+        assert not any('ImageGenerationInstrumentation' in name for name in names)
         assert not any('StreamingPreviewActivity' in name for name in names)
         folder = ROOT / f'wear/build/outputs/apk/{variant}'
         apk, = folder.glob('*.apk')
         with zipfile.ZipFile(apk) as archive:
             dex = b''.join(archive.read(name) for name in archive.namelist() if name.endswith('.dex'))
+        assert b'ImageGenerationInstrumentation' not in dex, (variant, 'test runner leaked into app')
         for marker in (b'DebugGenerationActivity', b'GenerationAcceptanceOwner', b'DEBUG_GENERATION', b'debug-generation.txt', b'DebugScenarioActivity', b'DebugScenarios;', b'DebugScenario;', b'ScenarioOwner;',
                        b'debug-scenario-ready.txt', b'DEBUG_LIFECYCLE'):
             assert (marker in dex) == (variant == 'debug'), (variant, marker)
