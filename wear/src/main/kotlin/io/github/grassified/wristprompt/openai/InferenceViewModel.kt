@@ -77,7 +77,15 @@ class InferenceViewModel(
                 if (run == epoch) {
                     val previous = conversation.configuration.controls.singleOrNull()
                     val changed = state.value.selectedSlug != slug
-                    if (changed) clearChat()
+                    if (changed) {
+                        // Explicit model changes start fresh replay, but keep the unsent review.
+                        val draft = conversation.state.draft
+                        val images = imageSelection.selected.value.toList()
+                        clearChat()
+                        if (draft.isNotEmpty()) conversation.draft(draft)
+                        imageSelection.replace(emptyList(), images, images.toSet())
+                        publishChat()
+                    }
                     val capability = catalog.models.first { it.slug == slug }.thinking
                     val retained = previous?.let { old -> capability?.takeIf {
                         old.key == it.key && old.provider == it.provider && old.route == it.route && old.value in it.values
@@ -232,6 +240,20 @@ class InferenceViewModel(
         if (cleared || token != inputRevision || accounts.value != observedAccess) return
         draft(text, token)
         inputRevision++ // Consume once even if an external result is delivered again.
+    }
+    /** Review actions never touch files, completed chat, model, billing or inference. */
+    fun removeDraftImage(id: String) {
+        if (inputToken() == null) return
+        val previous = imageSelection.selected.value
+        if (id !in previous) return
+        if (imageSelection.replace(previous, previous - id, previous.toSet())) inputRevision++
+    }
+    fun discardDraft() {
+        if (inputToken() == null) return
+        conversation.draft("")
+        imageSelection.clear()
+        inputRevision++
+        publishChat()
     }
     fun newChat() {
         restoreOnStartup = false

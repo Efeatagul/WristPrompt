@@ -21,7 +21,9 @@ See [D7_C_PHOTO_LIBRARY.md](D7_C_PHOTO_LIBRARY.md) for limits, evidence and the
 original #9 boundary. D7-D text + multiple image input and durable replay are
 implemented; see [D7_D_IMAGE_INPUT.md](D7_D_IMAGE_INPUT.md) for exact-ID capability
 contracts, limits and evidence. #9 remains open for live-route/physical acceptance
-deferred to #12. D7-E and other remaining implementation work are not started.
+deferred to #12. D7-E combined composer is implemented; see [D7_E_COMPOSER.md](D7_E_COMPOSER.md)
+for draft lifecycle policy and evidence. #10 stays open for physical acceptance
+deferred to #12. D7-F/G implementation has not started.
 Final owner Galaxy Watch 7 retest: R1–R5/R7–R10 PASS; R6 structured Markdown
 Wear table rendering FAIL / non-blocking known debt. TalkBack remains untested.
 
