@@ -36,10 +36,10 @@ class ImageInferenceInstrumentation : Instrumentation() {
         try {
             check(context.packageName.endsWith(".test"))
             runBlocking { verify() }
-            outcome.putString("stream", "PASS: D7-D $checkpoint native JPEG, isolated SQLite, image Send/replay ownership, errors/Stop, zero automatic inference; synthetic provider only\n")
+            outcome.putString("stream", "PASS: D7-D/E $checkpoint native JPEG, isolated SQLite, image Send/replay ownership, errors/Stop, zero automatic inference; synthetic provider only\n")
             finish(Activity.RESULT_OK, outcome)
         } catch (failure: Exception) {
-            outcome.putString("stream", "FAIL: D7-D $checkpoint $phase (${failure.javaClass.simpleName}); payloads redacted\n")
+            outcome.putString("stream", "FAIL: D7-D/E $checkpoint $phase (${failure.javaClass.simpleName}); payloads redacted\n")
             finish(Activity.RESULT_CANCELED, outcome)
         }
     }
@@ -92,6 +92,7 @@ class ImageInferenceInstrumentation : Instrumentation() {
             if (checkpoint == "verify") {
                 phase = "restart-reopen"
                 check(vm.chat.value.messages.first().attachments.size == 2)
+                check(vm.chat.value.draft.isEmpty() && vm.imageSelection.selected.value.isEmpty())
                 val saved = store.list(owner).single()
                 open(saved.id); check(provider.count == 0)
                 check(library.load().records.all { it.deleted })
@@ -135,7 +136,23 @@ class ImageInferenceInstrumentation : Instrumentation() {
             check(vm.chat.value.messages.single().status == ChatMessageStatus.EXCLUDED)
             main { vm.newChat() }; provider.stop = false
             phase = "multi-image-send-and-ownership"
-            select(ids.take(2)); main { vm.draft("two images"); vm.send(); vm.send() }; done()
+            // D7-E combined review uses the same canonical owner with native files.
+            main {
+                check(vm.applyPreset("Synthetic preset", false, "", vm.inputToken()!!))
+                vm.draft("Synthetic preset edited\nAdditional text  ")
+            }
+            select(ids)
+            val picker = WatchImagesViewModel(library) { true }
+            try {
+                main {
+                    check(picker.begin(vm)); picker.toggle(ids.first()); picker.cancel()
+                    check(vm.imageSelection.selected.value == ids)
+                    vm.removeDraftImage(ids.last())
+                }
+                check(provider.count == 2 && vm.imageSelection.selected.value == ids.take(2))
+                main { vm.send(); vm.send() }; done()
+            } finally { main { picker.viewModelScope.cancel() } }
+            check(vm.chat.value.messages.first().text == "Synthetic preset edited\nAdditional text  ")
             check(provider.count == 3 && provider.inputs.last().single()["content"]!!.jsonArray.size == 3)
             val latest = store.list(owner).first()
             // Keep only the successful multi-image chat in this isolated namespace.
@@ -143,6 +160,8 @@ class ImageInferenceInstrumentation : Instrumentation() {
             ids.forEach { library.delete(it) }
             open(latest.id); check(provider.count == 3)
             check(vm.chat.value.messages.first().attachments == ids.take(2))
+            main { vm.draft("unsaved process-boundary draft") }
+            select(ids.take(2))
         } finally {
             withContext(Dispatchers.Main) { vm.viewModelScope.coroutineContext[Job]!!.cancelAndJoin() }
             store.close()

@@ -373,7 +373,9 @@ Asset synchronization and multi-selection are implemented with automated/synthet
 emulator evidence in [docs/D7_C_PHOTO_LIBRARY.md](docs/D7_C_PHOTO_LIBRARY.md).
 #8 remains open for paired physical acceptance deferred to #12. D7-D image input and
 durable attachment replay are implemented; see [docs/D7_D_IMAGE_INPUT.md](docs/D7_D_IMAGE_INPUT.md).
-#9 stays open for live-route/physical acceptance deferred to #12. D7-E onward is not started.
+#9 stays open for live-route/physical acceptance deferred to #12. D7-E combined composer implementation/automated acceptance is complete; see
+[docs/D7_E_COMPOSER.md](docs/D7_E_COMPOSER.md). #10 remains open for physical
+acceptance deferred to #12. D7-F/G implementation has not started.
 
 - [ ] D7-A: durable named custom USER prompt presets managed on phone (list,
   create/edit/rename/delete, multiline editor); no hidden always-on system prompt.

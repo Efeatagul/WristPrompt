@@ -131,7 +131,7 @@ internal fun WearShellContent(
                     }
                     surface == Surface.CHAT -> ChatScreen(proof, state, ui, navigation, supplementalGuidance, presentationMetrics)
                     surface == Surface.COMPOSER -> ComposerScreen(proof, state, ui, navigation,
-                        interruptedInput, inputUnavailable, write, photos?.let { { if (it.begin(proof)) navigation.open(Surface.IMAGES) } })
+                        interruptedInput, inputUnavailable, write, photos)
                     surface == Surface.IMAGES && photos != null -> ImagesScreen(photos, proof, navigation)
                     surface == Surface.PROMPTS && presets != null -> PromptsScreen(presets, proof, navigation)
                     surface == Surface.HISTORY -> HistoryScreen(proof, navigation)

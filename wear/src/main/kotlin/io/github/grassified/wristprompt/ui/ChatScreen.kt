@@ -8,6 +8,7 @@ import androidx.compose.ui.Alignment
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.runtime.*
 import androidx.lifecycle.Lifecycle
@@ -147,38 +148,54 @@ private fun BillingText(ui: ShellPresentation) {
 internal fun ComposerScreen(
     proof: InferenceViewModel, state: ProofState, ui: ShellPresentation,
     navigation: ShellNavigationViewModel, interruptedInput: Boolean, inputUnavailable: Boolean,
-    write: () -> Unit, photos: (() -> Unit)? = null,
+    write: () -> Unit, photos: io.github.grassified.wristprompt.images.WatchImagesViewModel? = null,
 ) {
     val chat by proof.chat.collectAsStateWithLifecycle()
     val selectedPhotos by proof.imageSelection.selected.collectAsStateWithLifecycle()
+    val availablePhotos = photos?.store?.images?.collectAsStateWithLifecycle()?.value.orEmpty()
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     ShellList(Modifier.fillMaxSize(), rememberShellScroll(navigation, Surface.COMPOSER)) {
         item { ShellText("Review message", heading = true) }
         chat.readOnlyReason?.let { reason -> item { ShellText(reason) } }
         chatError(chat)?.let { error -> item { ShellText(error.text) } }
-        item { ShellText("Model: ${ui.model}", compact = true) }
+        item { ModelAffordance(ui, navigation, false) }
         if (!ui.proofAvailable || state.selectedSlug == null) item { ShellText(ui.status) }
-        photos?.let { action("Photos (${selectedPhotos.size}/6)", !chat.busy && !state.busy, it) }
+        photos?.let { library ->
+            action("Photos (${selectedPhotos.size}/6)", !chat.busy && !state.busy) {
+                if (library.begin(proof)) navigation.open(Surface.IMAGES)
+            }
+        }
         if (selectedPhotos.isNotEmpty()) item { ShellText("Selected photos accompany this message when you press Send. Text is required.") }
+        if (selectedPhotos.isNotEmpty() && chat.draft.isBlank())
+            item { ShellText("Text required. Add a question before Send; your photos stay selected.") }
+        photos?.let { library ->
+            selectedPhotos.forEachIndexed { index, id ->
+                item(key = "draft-photo-$id") {
+                    val image = availablePhotos.firstOrNull { it.id == id }
+                    if (image == null) ShellText("Photo ${index + 1} unavailable. Remove it or restore it before Send.")
+                    else io.github.grassified.wristprompt.images.LibraryThumbnail(library.store, image,
+                        Modifier.fillMaxWidth().height(80.dp))
+                }
+                action("Remove photo ${index + 1}", !chat.busy && !state.busy) { proof.removeDraftImage(id) }
+            }
+        }
         action("Prompts", !chat.busy && !state.busy) { navigation.open(Surface.PROMPTS) }
         action(if (chat.draft.isEmpty()) "Write message" else "Replace draft", !chat.busy && !state.busy, write)
         if (interruptedInput) item { ShellText("Text input was interrupted. Write your message again.") }
         if (inputUnavailable) item { ShellText("System text input unavailable. Return and try again.") }
         if (chat.draft.isEmpty()) item { ShellText("Enter text, review it here, then Send.") }
-        else {
-            item { ShellText("Edit draft", heading = true) }
-            item {
-                androidx.compose.foundation.text.BasicTextField(
-                    value = chat.draft, onValueChange = { proof.draft(it) },
-                    enabled = !chat.busy && !state.busy, maxLines = 6,
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
-                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { focusManager.clearFocus() }),
-                    cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary),
-                    textStyle = androidx.wear.compose.material3.MaterialTheme.typography.bodyMedium.copy(color = androidx.wear.compose.material3.MaterialTheme.colorScheme.onSurface),
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                        .semantics { contentDescription = "Edit message draft" },
-                )
-            }
+        item { ShellText("Edit draft", heading = true) }
+        item {
+            androidx.compose.foundation.text.BasicTextField(
+                value = chat.draft, onValueChange = { proof.draft(it) },
+                enabled = !chat.busy && !state.busy, maxLines = 6,
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+                keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { focusManager.clearFocus() }),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary),
+                textStyle = androidx.wear.compose.material3.MaterialTheme.typography.bodyMedium.copy(color = androidx.wear.compose.material3.MaterialTheme.colorScheme.onSurface),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                    .semantics { contentDescription = "Edit message draft" },
+            )
         }
         if (chat.draft.length > ChatConversation.MAX_PROMPT_CHARS)
             item { ShellText("Message too long. Limit: ${ChatConversation.MAX_PROMPT_CHARS} characters. Replace the draft with a shorter message.") }
@@ -187,6 +204,7 @@ internal fun ComposerScreen(
             action("New Chat") { proof.newChat(); navigation.open(Surface.CHAT) }
         }
         action("Back to chat") { navigation.open(Surface.CHAT) }
-        action("Discard draft") { proof.draft(""); navigation.open(Surface.CHAT) }
+        item { ShellText("Unsent drafts are discarded when the app process ends.") }
+        action("Discard draft and photos") { proof.discardDraft(); navigation.open(Surface.CHAT) }
     }
 }

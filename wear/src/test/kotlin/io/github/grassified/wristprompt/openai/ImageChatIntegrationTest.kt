@@ -1,6 +1,7 @@
 package io.github.grassified.wristprompt.openai
 
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
 import io.github.grassified.wristprompt.auth.CredentialMode
 import io.github.grassified.wristprompt.images.*
 import io.github.grassified.wristprompt.storage.*
@@ -78,6 +79,117 @@ class ImageChatIntegrationTest {
     private suspend fun completed(vm: InferenceViewModel) = withTimeout(5000) { vm.chat.first { it.stage == ChatStage.COMPLETED } }
     private suspend fun problem(vm: InferenceViewModel, problem: ApiProblem) = withTimeout(5000) { vm.chat.first { it.problem == problem } }
 
+    @Test fun combinedReviewSendsExactEditedTextAndOrderedRemainingImagesExactlyOnce() = runBlocking {
+        for (count in listOf(0, 1, 3)) for (preset in listOf(false, true)) {
+            val store = Store(); val provider = Provider(); val vm = create(store, provider)
+            val selected = if (count == 0) emptyList() else ids(count)
+            withContext(main) {
+                vm.draft("  ordinary\n")
+                if (preset) check(vm.applyPreset("Preset", false, vm.chat.value.draft, vm.inputToken()!!))
+            }
+            select(vm, selected)
+            val finalIds = if (count == 3) selected.filterIndexed { index, _ -> index != 1 } else selected
+            val exact = "  ordinary\n" + (if (preset) "\n\nPreset edited" else "") + "\nAdditional text  "
+            withContext(main) {
+                if (count == 3) vm.removeDraftImage(selected[1])
+                vm.draft(exact)
+            }
+            assertEquals(finalIds, vm.imageSelection.selected.value)
+            assertTrue(provider.inputs.isEmpty())
+            withContext(main) { vm.send(); vm.send() }
+            completed(vm)
+            assertEquals(1, provider.inputs.size)
+            val message = store.entries.values.single().snapshot.messages.first()
+            assertTrue("Exact reviewed text is canonical", message.parts.filterIsInstance<ContentPart.Text>().single().text == exact)
+            assertEquals(finalIds, message.parts.filterIsInstance<ContentPart.ImageAttachment>().map { it.attachmentId })
+            val content = provider.inputs.single().single().getValue("content")
+            assertTrue("Exact reviewed text reaches provider", if (finalIds.isEmpty()) content.jsonPrimitive.content == exact
+                else content.jsonArray.first().jsonObject.getValue("text").jsonPrimitive.content == exact)
+            if (finalIds.isNotEmpty()) assertTrue("Committed order reaches D7-D serializer", content.jsonArray.drop(1).map {
+                it.jsonObject.getValue("image_url").jsonPrimitive.content
+            } == finalIds.map { id -> "data:image/jpeg;base64," + java.util.Base64.getEncoder().encodeToString(library.content(id).image) })
+            assertEquals("", vm.chat.value.draft); assertTrue(vm.imageSelection.selected.value.isEmpty())
+        }
+    }
+    @Test fun directRemovalInvalidatesPendingPickerAndDiscardClearsBothWithoutTouchingCompletedChat() = runBlocking {
+        val store = Store(); val provider = Provider(); val vm = create(store, provider)
+        send(vm); completed(vm)
+        val completed = vm.chat.value.messages
+        val selected = ids(2); select(vm, selected)
+        val picker = WatchImagesViewModel(library) { true }
+        try {
+            withContext(main) {
+                vm.draft("keep exact"); check(picker.begin(vm))
+                vm.removeDraftImage(selected.first())
+                picker.apply(vm) { error("Stale picker must not apply") }
+            }
+            withTimeout(5000) { picker.error.first { it == "Draft or library changed. Cancel and select again." } }
+            assertEquals(selected.drop(1), vm.imageSelection.selected.value)
+            assertEquals("keep exact", vm.chat.value.draft)
+            withContext(main) { picker.cancel(); vm.discardDraft() }
+            assertEquals("", vm.chat.value.draft); assertTrue(vm.imageSelection.selected.value.isEmpty())
+            assertEquals(completed, vm.chat.value.messages); assertEquals(1, provider.inputs.size)
+        } finally { picker.viewModelScope.coroutineContext[Job]!!.cancelAndJoin() }
+    }
+    @Test fun retainedActivityOwnerKeepsCombinedDraftButFreshProcessRestoresOnlyCanonicalChat() = runBlocking {
+        val store = Store(); val provider = Provider(); val vm = create(store, provider)
+        send(vm); completed(vm)
+        val completed = vm.chat.value.messages
+        val selected = ids(2); select(vm, selected)
+        val retained = androidx.lifecycle.ViewModelStore()
+        try {
+            withContext(main) { vm.draft("unsent review"); retained.put("composer", vm) }
+            val factory = androidx.lifecycle.viewmodel.viewModelFactory {
+                initializer<InferenceViewModel> { error("Recreation must reuse retained owner") }
+            }
+            val recreated = androidx.lifecycle.ViewModelProvider.create(retained, factory)["composer", InferenceViewModel::class]
+            assertSame(vm, recreated)
+            assertEquals("unsent review", recreated.chat.value.draft); assertEquals(selected, recreated.imageSelection.selected.value)
+            assertEquals(completed, recreated.chat.value.messages); assertEquals(1, provider.inputs.size)
+            withContext(main) { retained.clear() }
+            val fresh = create(store, provider)
+            assertEquals("", fresh.chat.value.draft); assertTrue(fresh.imageSelection.selected.value.isEmpty())
+            assertEquals(completed, fresh.chat.value.messages); assertEquals(1, provider.inputs.size)
+        } finally { withContext(main) { retained.clear() } }
+    }
+    @Test fun navigationAndPickerVisitsKeepCombinedReviewCompletedChatAndReaderPositionInert() = runBlocking {
+        val store = Store(); val provider = Provider(); val vm = create(store, provider)
+        send(vm); completed(vm)
+        val completed = vm.chat.value.messages
+        val selected = ids(2); select(vm, selected)
+        val nav = io.github.grassified.wristprompt.ui.ShellNavigationViewModel()
+        withContext(main) {
+            vm.draft("  exact pending review\n")
+            nav.rememberPosition(io.github.grassified.wristprompt.ui.Surface.CHAT, 8, -12)
+            nav.open(io.github.grassified.wristprompt.ui.Surface.COMPOSER)
+            for (surface in listOf(io.github.grassified.wristprompt.ui.Surface.MODELS,
+                io.github.grassified.wristprompt.ui.Surface.PROMPTS, io.github.grassified.wristprompt.ui.Surface.IMAGES,
+                io.github.grassified.wristprompt.ui.Surface.HISTORY)) {
+                nav.open(surface); nav.back()
+                assertEquals(io.github.grassified.wristprompt.ui.Surface.COMPOSER, nav.surface.value)
+                assertEquals("  exact pending review\n", vm.chat.value.draft)
+                assertEquals(selected, vm.imageSelection.selected.value)
+            }
+            nav.back()
+            assertEquals(io.github.grassified.wristprompt.ui.Surface.CHAT, nav.surface.value)
+            assertEquals(io.github.grassified.wristprompt.ui.ReadingPosition(8, -12), nav.position(nav.surface.value))
+        }
+        assertEquals(completed, vm.chat.value.messages); assertEquals(1, provider.inputs.size)
+    }
+    @Test fun explicitModelChangeRetainsReviewButInvalidatesOldInputWithoutSending() = runBlocking {
+        val store = Store(); val provider = Provider(); val vm = create(store, provider)
+        val selected = ids(2); select(vm, selected)
+        val token = withContext(main) { vm.draft("exact unsent"); vm.inputToken()!! }
+        withContext(main) { vm.select("unknown-vision") }
+        withTimeout(5000) { vm.state.first { it.selectedSlug == "unknown-vision" } }
+        withContext(main) { vm.inputResult("stale keyboard", token) }
+        assertEquals("exact unsent", vm.chat.value.draft); assertEquals(selected, vm.imageSelection.selected.value)
+        assertTrue(provider.inputs.isEmpty())
+        withContext(main) { vm.send() }
+        problem(vm, ApiProblem.IMAGES_UNSUPPORTED)
+        assertEquals("exact unsent", vm.chat.value.draft); assertEquals(selected, vm.imageSelection.selected.value)
+        assertTrue(provider.inputs.isEmpty())
+    }
     @Test fun explicitOneAndMultipleSendRestartReopenAndContinueOnBothBillingRoutes() = runBlocking {
         for (mode in CredentialMode.entries) for (count in listOf(1, 3)) {
             val store = Store(); val provider = Provider(); val selected = ids(count)
