@@ -13,6 +13,12 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
 interface AiProvider {
+    suspend fun stream(credential: CredentialLease, model: AiModel, input: List<JsonObject>,
+        configuration: InferenceConfiguration, onEvent: suspend (ResponseEvent) -> Unit) {
+        InferenceControls.validate(configuration, model, credential.mode)
+        if (configuration.controls.isNotEmpty()) throw ApiFailure(ApiProblem.CONFIGURATION)
+        stream(credential, model.slug, input, onEvent)
+    }
     suspend fun models(credential: CredentialLease): List<AiModel>
     suspend fun stream(credential: CredentialLease, model: String, onEvent: suspend (ResponseEvent) -> Unit)
     suspend fun stream(credential: CredentialLease, model: String, input: List<JsonObject>, onEvent: suspend (ResponseEvent) -> Unit) {
@@ -29,7 +35,9 @@ class OpenAiProvider(private val http: OpenAiHttp) : AiProvider {
         val context = currentCoroutineContext()
         when (credential.mode) {
             CredentialMode.CHATGPT_PLAN -> ModelCatalog.read(response.body.byteStream()) { context.ensureActive() }
-            CredentialMode.OPENAI_API_KEY -> ApiModelCatalog.read(http.body(response))
+            CredentialMode.OPENAI_API_KEY -> ApiModelCatalog.read(http.body(response)).map {
+                it.copy(thinking = OpenAiThinkingCapabilities.forModel(it.slug, credential.mode))
+            }
         }
     }
 
@@ -38,6 +46,11 @@ class OpenAiProvider(private val http: OpenAiHttp) : AiProvider {
 
     override suspend fun stream(credential: CredentialLease, model: String, input: List<JsonObject>, onEvent: suspend (ResponseEvent) -> Unit) =
         streamRequest(credential, ResponsesProtocol.request(model, input), onEvent)
+
+    override suspend fun stream(credential: CredentialLease, model: AiModel, input: List<JsonObject>,
+        configuration: InferenceConfiguration, onEvent: suspend (ResponseEvent) -> Unit) =
+        streamRequest(credential, ResponsesProtocol.request(model.slug, input, configuration,
+            OpenAiThinkingCapabilities.forModel(model.slug, credential.mode), credential.mode), onEvent)
 
     private suspend fun streamRequest(credential: CredentialLease, body: String, onEvent: suspend (ResponseEvent) -> Unit) {
         var started = false

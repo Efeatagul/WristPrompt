@@ -33,3 +33,19 @@ internal fun ShellListScope.modelItems(
                 maxLines = 3, overflow = TextOverflow.Ellipsis) })
     }
 }
+
+internal fun ShellListScope.thinkingItems(
+    state: io.github.grassified.wristprompt.openai.ProofState, enabled: Boolean, onSelect: (String?) -> Unit,
+) {
+    val current = state.configuration.controls.firstOrNull { it.key == io.github.grassified.wristprompt.openai.InferenceControls.THINKING }
+    val capability = state.models.firstOrNull { it.slug == state.selectedSlug }?.thinking
+    item { ShellText("Thinking level", heading = true) }
+    item { ShellText("Current: " + (current?.value ?: "Default"), compact = true) }
+    state.thinkingNotice?.let { notice -> item { ShellText(notice) } }
+    action((if (current == null) "✓ " else "") + "Default", enabled = enabled && !state.thinkingSaving) { onSelect(null) }
+    item { ShellText("Default omits the parameter.", compact = true) }
+    capability?.values?.forEach { value ->
+        action((if (current?.value == value) "✓ " else "") + value, enabled = enabled && !state.thinkingSaving) { onSelect(value) }
+    }
+    if (capability == null) item { ShellText("Native levels unavailable for this model and route.", compact = true) }
+}

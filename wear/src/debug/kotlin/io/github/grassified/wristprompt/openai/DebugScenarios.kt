@@ -10,7 +10,7 @@ import kotlinx.serialization.json.JsonObject
 
 internal enum class DebugScenario {
     SIGNED_OUT, CHATGPT_AUTHENTICATED, API_KEY_CONFIGURED, MODELS_LOADING, MODELS_LOADED,
-    MANY_MODELS, THOUSAND_MODELS, SINGLE_MODEL, LONG_MODEL_NAMES, MODEL_UNAVAILABLE, EMPTY_CHAT, LONG_USER_PROMPT, ONE_TURN_COMPLETED,
+    THINKING_LEVELS, THINKING_LONG_LIST, MANY_MODELS, THOUSAND_MODELS, SINGLE_MODEL, LONG_MODEL_NAMES, MODEL_UNAVAILABLE, EMPTY_CHAT, LONG_USER_PROMPT, ONE_TURN_COMPLETED,
     MULTI_TURN_CHAT, LONG_ASSISTANT_OUTPUT, STREAMING_SHORT, STREAMING_LONG, STOPPED_PARTIAL,
     ERROR_401_REAUTH, ERROR_401_API_KEY, ERROR_429, ERROR_503, ERROR_OFFLINE, LONG_ERROR_MESSAGE,
     RECREATED_COMPLETED_STATE, RECREATED_CANCELLED_STATE,
@@ -47,6 +47,7 @@ internal class DebugScenarios(val scenario: DebugScenario) {
         DebugScenario.PROMPT_PRESETS -> Surface.COMPOSER
         DebugScenario.SAVED_CHATS_HISTORY -> Surface.HISTORY
         DebugScenario.DIAGNOSTIC_PROOF_CURRENT_ATTEMPT -> Surface.PROOF
+        DebugScenario.THINKING_LEVELS, DebugScenario.THINKING_LONG_LIST,
         DebugScenario.MANY_MODELS, DebugScenario.THOUSAND_MODELS, DebugScenario.SINGLE_MODEL, DebugScenario.LONG_MODEL_NAMES, DebugScenario.MODELS_LOADED, DebugScenario.MODEL_UNAVAILABLE,
         DebugScenario.MODEL_DISCOVERY_OFFLINE, DebugScenario.MODEL_DISCOVERY_RECOVERED -> Surface.MODELS
         DebugScenario.LONG_USER_PROMPT, DebugScenario.COMPOSER_RECREATION -> Surface.COMPOSER
@@ -115,13 +116,22 @@ internal class DebugScenarios(val scenario: DebugScenario) {
             if (loading) awaitCancellation()
             if (unavailable) { unavailable = false; throw ApiFailure(ApiProblem.NO_MODELS) }
             val count = when (scenario) {
-                DebugScenario.MANY_MODELS -> 40
+                DebugScenario.MANY_MODELS, DebugScenario.THINKING_LONG_LIST -> 40
                 DebugScenario.THOUSAND_MODELS -> 1000
                 DebugScenario.SINGLE_MODEL -> 1
                 else -> 3
             }
             return (1..count).map { AiModel("debug-$it", if (scenario == DebugScenario.LONG_MODEL_NAMES)
-                "Synthetic authoritative model name with a long service supplied label $it" else "Synthetic model $it") }
+                "Synthetic authoritative model name with a long service supplied label $it" else "Synthetic model $it",
+                if (scenario in setOf(DebugScenario.THINKING_LEVELS, DebugScenario.THINKING_LONG_LIST))
+                    ControlCapability("thinking", "openai", "debug-$it", mode.name,
+                        if (it == 2) listOf("high") else listOf("none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra-Future"),
+                        "Synthetic fixture only; not provider evidence") else null) }
+        }
+        override suspend fun stream(credential: CredentialLease, model: AiModel, input: List<JsonObject>,
+            configuration: InferenceConfiguration, onEvent: suspend (ResponseEvent) -> Unit) {
+            InferenceControls.validate(configuration, model, credential.mode)
+            stream(credential, model.slug, input, onEvent)
         }
         override suspend fun stream(credential: CredentialLease, model: String, onEvent: suspend (ResponseEvent) -> Unit) {
             check(scenario == DebugScenario.DIAGNOSTIC_PROOF_CURRENT_ATTEMPT)

@@ -14,7 +14,7 @@ class DebugScenariosTest {
     @After fun cleanup() { fixtures.forEach { it.vm.viewModelScope.cancel() }; Dispatchers.resetMain() }
     private fun fixture(s: DebugScenario) = DebugScenarios(s).also { fixtures += it }
     @Test fun namesAreUniqueAndRoundTrip() {
-        assertEquals(84, DebugScenario.entries.size)
+        assertEquals(87, DebugScenario.entries.size)
         DebugScenario.entries.forEach { assertSame(it, DebugScenario.parse(it.name)) }
     }
     @Test fun historyFixtureSupportsLocalActionsWithoutGenerating(): Unit = runTest {
@@ -38,6 +38,18 @@ class DebugScenariosTest {
             assertEquals("debug-1", state.selectedSlug)
             assertEquals(1, f.discoveries)
             if (scenario == DebugScenario.LONG_MODEL_NAMES) assertTrue(state.models.all { it.displayName.length > 60 })
+        }
+    }
+    @Test fun thinkingFixturesAllowNativeChoicesAndModelResetWithoutGenerating(): Unit = runTest {
+        for (scenario in listOf(DebugScenario.THINKING_LEVELS, DebugScenario.THINKING_LONG_LIST)) {
+            val f = fixture(scenario); launch { f.prepare() }; runCurrent()
+            assertEquals(io.github.grassified.wristprompt.ui.Surface.MODELS, f.surface)
+            f.vm.selectThinking("ultra-Future"); runCurrent()
+            assertEquals("ultra-Future", f.vm.state.value.configuration.controls.single().value)
+            f.vm.select("debug-2"); runCurrent()
+            assertTrue(f.vm.state.value.configuration.controls.isEmpty())
+            assertTrue(f.vm.state.value.thinkingNotice!!.contains("reset to Default"))
+            assertEquals(0, f.generations)
         }
     }
     @Test fun unknownFailsClosed() { listOf(null, "", "streaming_long", "../SIGNED_OUT").forEach { assertNull(DebugScenario.parse(it)) } }

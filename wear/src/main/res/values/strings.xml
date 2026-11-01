@@ -45,4 +45,5 @@
     <string name="api_key_invalid">OpenAI rejected API authentication (401). Check the key and API account access. ChatGPT was not used.</string>
     <string name="api_limit">OpenAI API rate, credit or quota limit. Review your API billing account; ChatGPT was not used.</string>
     <string name="api_model_warning">Listed model IDs do not guarantee Responses text support. Choose a compatible model.</string>
+    <string name="thinking_unsupported">Thinking level is no longer supported. Choose Default or a supported value in Models.</string>
 </resources>
