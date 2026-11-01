@@ -6,7 +6,7 @@ import kotlinx.serialization.json.*
 enum class ChatRole { USER, ASSISTANT }
 enum class ChatMessageStatus { PENDING, COMPLETED, EXCLUDED }
 enum class ChatStage { EMPTY, COMPOSING, STARTING, RECEIVING, COMPLETED, FAILED, CANCELLED }
-data class ChatMessage(val id: Long, val role: ChatRole, val text: String, val status: ChatMessageStatus = ChatMessageStatus.COMPLETED) {
+data class ChatMessage(val id: Long, val role: ChatRole, val text: String, val status: ChatMessageStatus = ChatMessageStatus.COMPLETED, val attachments: List<String> = emptyList()) {
     override fun toString() = SafeDiagnostics.REDACTED
 }
 data class ChatState(
@@ -38,7 +38,7 @@ class ChatConversation {
     fun reset() { configuration = InferenceConfiguration(); history = emptyList(); pending = null; pendingUserId = null; attempts = 0; state = ChatState() }
     fun readOnly(reason: String?) { state = state.copy(readOnlyReason = reason) }
     fun snapshot(): ConversationSnapshot = ConversationSnapshot(
-        messages = state.messages.map { StoredMessage(it.id, it.role.name, it.status.name, listOf(ContentPart.Text(it.text))) },
+        messages = state.messages.map { StoredMessage(it.id, it.role.name, it.status.name, listOf(ContentPart.Text(it.text)) + it.attachments.map(ContentPart::ImageAttachment)) },
         replay = history.toList(), attempts = attempts, nextId = nextId,
         partial = if (state.busy) "" else state.partial, terminal = state.stage.name, configuration = configuration,
     ).also { it.validate() }
@@ -47,11 +47,10 @@ class ChatConversation {
     /** Process restoration is inert: pending work becomes excluded, never resumed. */
     fun restore(snapshot: ConversationSnapshot) {
         snapshot.validate()
-        require(snapshot.messages.all { it.parts.all { part -> part is ContentPart.Text } })
         val interrupted = snapshot.messages.any { it.status == "PENDING" }
         val restored = snapshot.messages.map { m -> ChatMessage(m.id, ChatRole.valueOf(m.role),
-            m.parts.joinToString("") { (it as ContentPart.Text).text },
-            if (m.status == "PENDING") ChatMessageStatus.EXCLUDED else ChatMessageStatus.valueOf(m.status)) }
+            m.parts.filterIsInstance<ContentPart.Text>().joinToString("") { it.text },
+            if (m.status == "PENDING") ChatMessageStatus.EXCLUDED else ChatMessageStatus.valueOf(m.status), m.parts.filterIsInstance<ContentPart.ImageAttachment>().map { it.attachmentId }) }
         configuration = snapshot.configuration
         history = snapshot.replay.toList(); attempts = snapshot.attempts; nextId = snapshot.nextId
         pending = null; pendingUserId = null
@@ -64,9 +63,10 @@ class ChatConversation {
     fun draft(text: String) {
         if (!state.busy) state = state.copy(draft = text, stage = ChatStage.COMPOSING, problem = null)
     }
-    fun begin(): List<JsonObject>? {
+    fun preview(attachments: List<String> = emptyList()): List<JsonObject> = history + ImageInput.user(state.draft, attachments)
+    fun begin(attachments: List<String> = emptyList()): List<JsonObject>? {
         if (!state.canSend) return null
-        val user = message("user", state.draft)
+        val user = ImageInput.user(state.draft, attachments)
         val input = history + user
         if (attempts >= MAX_ATTEMPTS || size(input) > MAX_CONTEXT_BYTES) {
             state = state.copy(limitReached = true); return null
@@ -74,7 +74,7 @@ class ChatConversation {
         attempts++
         pending = user
         pendingUserId = ++nextId
-        state = state.copy(messages = state.messages + ChatMessage(nextId, ChatRole.USER, state.draft, ChatMessageStatus.PENDING),
+        state = state.copy(messages = state.messages + ChatMessage(nextId, ChatRole.USER, state.draft, ChatMessageStatus.PENDING, attachments.toList()),
             draft = "", stage = ChatStage.STARTING, partial = "", problem = null)
         return input
     }

@@ -371,7 +371,9 @@ remain pending in [docs/D7_A_PRESETS.md](docs/D7_A_PRESETS.md). D7-B sync/insert
 [docs/D7_B_PRESET_SYNC.md](docs/D7_B_PRESET_SYNC.md). D7-C imported photo library,
 Asset synchronization and multi-selection are implemented with automated/synthetic
 emulator evidence in [docs/D7_C_PHOTO_LIBRARY.md](docs/D7_C_PHOTO_LIBRARY.md).
-#8 remains open for paired physical acceptance deferred to #12. D7-D onward is not started.
+#8 remains open for paired physical acceptance deferred to #12. D7-D image input and
+durable attachment replay are implemented; see [docs/D7_D_IMAGE_INPUT.md](docs/D7_D_IMAGE_INPUT.md).
+#9 stays open for live-route/physical acceptance deferred to #12. D7-E onward is not started.
 
 - [ ] D7-A: durable named custom USER prompt presets managed on phone (list,
   create/edit/rename/delete, multiline editor); no hidden always-on system prompt.

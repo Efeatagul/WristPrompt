@@ -23,13 +23,18 @@ object ResponsesProtocol {
         InferenceControls.validate(configuration, AiModel(model, model, capability), mode)
         require(model.isNotBlank() && model.length <= 256 && model.none(Char::isISOControl))
         require(input.isNotEmpty())
+        OpenAiImageCapabilities.validate(model, mode, input)
+        require(input.none { ImageInput.ids(it).isNotEmpty() }) // Local references must never reach HTTP.
+        val images = ImageInput.validateWire(input)
         val body = buildJsonObject {
             put("model", model); put("input", JsonArray(input)); put("store", false); put("stream", true)
             configuration.controls.singleOrNull()?.let { control ->
                 put("reasoning", buildJsonObject { put("effort", control.value) })
             }
         }.toString()
-        require(body.encodeToByteArray().size <= MAX_BODY_BYTES)
+        if (images == 0) require(body.encodeToByteArray().size <= MAX_BODY_BYTES)
+        else if (body.encodeToByteArray().size > ImageInput.MAX_REQUEST_BYTES)
+            throw ApiFailure(ApiProblem.IMAGE_LIMIT, requestNotSent = true)
         return body
     }
 

@@ -29,6 +29,10 @@ internal fun errorPresentation(problem: ApiProblem): ErrorPresentation = when (p
     ApiProblem.PERMISSION -> ErrorPresentation("Account access unavailable", "Check the selected account's access.", RecoveryAction.ACCOUNT)
     ApiProblem.TEMPORARY -> ErrorPresentation("Service unavailable", "Try again with a new message later.")
     ApiProblem.NETWORK -> ErrorPresentation("Couldn't connect", "Check the watch's internet connection.")
+    ApiProblem.IMAGE_TEXT_REQUIRED -> ErrorPresentation("Text required", "Add text to describe what you want to ask about these photos.", action = null)
+    ApiProblem.IMAGES_UNSUPPORTED -> ErrorPresentation("Photos unsupported", "Image capability is unavailable for this model and billing route. Choose a supported model or remove photos explicitly.", action = null)
+    ApiProblem.IMAGE_UNAVAILABLE -> ErrorPresentation("Photo unavailable", "A selected or saved photo is missing or damaged. Restore it, remove the selection, or start a new chat.", action = null)
+    ApiProblem.IMAGE_LIMIT -> ErrorPresentation("Photo limit reached", "Use at most 6 photos across this request and its history. Check storage or start a new chat.", action = null)
     ApiProblem.THINKING_UNSUPPORTED -> ErrorPresentation("Thinking level unsupported", "Choose Default or a supported value in Models.", action = null)
     ApiProblem.NO_MODELS -> ErrorPresentation("Model unavailable", action = RecoveryAction.MODELS)
     ApiProblem.STALE_ACCOUNT -> ErrorPresentation("Account changed", "Reload models to continue.", RecoveryAction.MODELS)
@@ -43,6 +47,7 @@ internal fun errorPresentation(problem: ApiProblem): ErrorPresentation = when (p
 }
 
 internal fun chatError(chat: ChatState): ErrorPresentation? = when {
+    chat.problem in setOf(ApiProblem.IMAGES_UNSUPPORTED, ApiProblem.IMAGE_UNAVAILABLE, ApiProblem.IMAGE_LIMIT, ApiProblem.IMAGE_TEXT_REQUIRED) -> errorPresentation(chat.problem!!)
     chat.problem == ApiProblem.THINKING_UNSUPPORTED -> errorPresentation(ApiProblem.THINKING_UNSUPPORTED)
     chat.problem == ApiProblem.CHAT_STORAGE -> errorPresentation(ApiProblem.CHAT_STORAGE)
     chat.limitReached && chat.stage !in setOf(ChatStage.FAILED, ChatStage.CANCELLED) -> ErrorPresentation("Start a new chat to continue", action = RecoveryAction.NEW_CHAT)

@@ -28,7 +28,7 @@ class MainActivity : ComponentActivity() {
                 initializer {
                     val app = application as WristPromptApplication
                     InferenceViewModel(app.credentials.state, app.inference, app.credentials::selectedModel, app.credentials::selectModel,
-                        app.conversations, app.credentials::conversationIdentity, app.credentials::localConversationIdentity)
+                        app.conversations, app.credentials::conversationIdentity, app.credentials::localConversationIdentity, app.conversationImages)
                 }
             })
             WristPromptTheme {

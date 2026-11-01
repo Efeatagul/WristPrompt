@@ -22,6 +22,10 @@ internal fun problemText(problem: ApiProblem?): Int = when (problem) {
     ApiProblem.INTERRUPTED -> R.string.proof_interrupted
     ApiProblem.INCOMPLETE -> R.string.proof_incomplete
     ApiProblem.STORAGE -> R.string.setup_storage_error
+    ApiProblem.IMAGE_TEXT_REQUIRED -> R.string.image_text_required
+    ApiProblem.IMAGES_UNSUPPORTED -> R.string.images_unsupported
+    ApiProblem.IMAGE_UNAVAILABLE -> R.string.image_unavailable
+    ApiProblem.IMAGE_LIMIT -> R.string.image_limit
     ApiProblem.THINKING_UNSUPPORTED -> R.string.thinking_unsupported
     ApiProblem.CHAT_STORAGE -> R.string.chat_storage_error
     ApiProblem.STALE_ACCOUNT -> R.string.proof_stale_account

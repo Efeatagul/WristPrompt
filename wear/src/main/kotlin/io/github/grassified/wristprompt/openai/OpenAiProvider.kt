@@ -45,7 +45,7 @@ class OpenAiProvider(private val http: OpenAiHttp) : AiProvider {
         streamRequest(credential, ResponsesProtocol.request(model, credential.mode), onEvent)
 
     override suspend fun stream(credential: CredentialLease, model: String, input: List<JsonObject>, onEvent: suspend (ResponseEvent) -> Unit) =
-        streamRequest(credential, ResponsesProtocol.request(model, input), onEvent)
+        streamRequest(credential, ResponsesProtocol.request(model, input, mode = credential.mode), onEvent)
 
     override suspend fun stream(credential: CredentialLease, model: AiModel, input: List<JsonObject>,
         configuration: InferenceConfiguration, onEvent: suspend (ResponseEvent) -> Unit) =

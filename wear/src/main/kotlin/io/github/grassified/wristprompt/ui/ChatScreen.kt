@@ -155,10 +155,11 @@ internal fun ComposerScreen(
     ShellList(Modifier.fillMaxSize(), rememberShellScroll(navigation, Surface.COMPOSER)) {
         item { ShellText("Review message", heading = true) }
         chat.readOnlyReason?.let { reason -> item { ShellText(reason) } }
+        chatError(chat)?.let { error -> item { ShellText(error.text) } }
         item { ShellText("Model: ${ui.model}", compact = true) }
         if (!ui.proofAvailable || state.selectedSlug == null) item { ShellText(ui.status) }
         photos?.let { action("Photos (${selectedPhotos.size}/6)", !chat.busy && !state.busy, it) }
-        if (selectedPhotos.isNotEmpty()) item { ShellText("Photos selected. Sending photos arrives in the next image-input task. Remove selections to send text now.") }
+        if (selectedPhotos.isNotEmpty()) item { ShellText("Selected photos accompany this message when you press Send. Text is required.") }
         action("Prompts", !chat.busy && !state.busy) { navigation.open(Surface.PROMPTS) }
         action(if (chat.draft.isEmpty()) "Write message" else "Replace draft", !chat.busy && !state.busy, write)
         if (interruptedInput) item { ShellText("Text input was interrupted. Write your message again.") }

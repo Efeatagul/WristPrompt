@@ -26,6 +26,7 @@ class WristPromptApplication : Application() {
     val presets by lazy { io.github.grassified.wristprompt.presets.SyncedPresetStore(syncedPresetStore) }
     val presetSync by lazy { io.github.grassified.wristprompt.presets.WatchPresetSync(connectivity, presets) }
     val images by lazy { io.github.grassified.wristprompt.images.ImageFileStore(java.io.File(noBackupFilesDir, "image_library_v1")) }
+    val conversationImages by lazy { ConversationImages(java.io.File(noBackupFilesDir, "conversation_images_v1"), images) }
     val imageSync by lazy { io.github.grassified.wristprompt.images.ImageDataSync(this, connectivity, images) }
     override fun onCreate() {
         super.onCreate()
