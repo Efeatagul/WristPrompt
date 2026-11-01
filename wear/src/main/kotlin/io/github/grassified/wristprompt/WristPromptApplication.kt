@@ -25,7 +25,13 @@ private val Context.syncedPresetStore by preferencesDataStore(name = "synced_pro
 class WristPromptApplication : Application() {
     val presets by lazy { io.github.grassified.wristprompt.presets.SyncedPresetStore(syncedPresetStore) }
     val presetSync by lazy { io.github.grassified.wristprompt.presets.WatchPresetSync(connectivity, presets) }
-    override fun onCreate() { super.onCreate(); appScope.launch { presetSync.refresh() } }
+    val images by lazy { io.github.grassified.wristprompt.images.ImageFileStore(java.io.File(noBackupFilesDir, "image_library_v1")) }
+    val imageSync by lazy { io.github.grassified.wristprompt.images.ImageDataSync(this, connectivity, images) }
+    override fun onCreate() {
+        super.onCreate()
+        appScope.launch { presetSync.refresh() }
+        appScope.launch { imageSync.refresh() }
+    }
     private val connectivity by lazy { WearConnectivity(this, BridgeProtocol.MOBILE_CAPABILITY) }
     private val hostIds by lazy { HostIdRepository(installationStore) }
     private val sessionClock = SessionClock.SYSTEM

@@ -368,7 +368,10 @@ No image-input implementation in D6-A; no database selected in this handoff.
 
 D7-A phone presets are merged via PR #22 and VERIFIED AUTOMATICALLY; manual phone checks
 remain pending in [docs/D7_A_PRESETS.md](docs/D7_A_PRESETS.md). D7-B sync/insertion is merged via PR #23; #7 remains open for paired/physical checks in
-[docs/D7_B_PRESET_SYNC.md](docs/D7_B_PRESET_SYNC.md). D7-C onward is not started.
+[docs/D7_B_PRESET_SYNC.md](docs/D7_B_PRESET_SYNC.md). D7-C imported photo library,
+Asset synchronization and multi-selection are implemented with automated/synthetic
+emulator evidence in [docs/D7_C_PHOTO_LIBRARY.md](docs/D7_C_PHOTO_LIBRARY.md).
+#8 remains open for paired physical acceptance deferred to #12. D7-D onward is not started.
 
 - [ ] D7-A: durable named custom USER prompt presets managed on phone (list,
   create/edit/rename/delete, multiline editor); no hidden always-on system prompt.

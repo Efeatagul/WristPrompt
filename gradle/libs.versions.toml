@@ -15,8 +15,10 @@ okhttp = "5.5.1"
 nimbus = "10.10"
 
 commonmark = "0.31.0"
+exifinterface = "1.4.2"
 
 [libraries]
+exifinterface = { module = "androidx.exifinterface:exifinterface", version.ref = "exifinterface" }
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity" }
 compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose" }

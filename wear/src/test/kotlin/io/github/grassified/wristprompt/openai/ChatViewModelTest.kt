@@ -3,6 +3,7 @@ package io.github.grassified.wristprompt.openai
 import androidx.lifecycle.viewModelScope
 import io.github.grassified.wristprompt.auth.CredentialMode
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.*
 import kotlinx.serialization.json.*
@@ -39,6 +40,48 @@ class ChatViewModelTest {
     private fun lease() = CredentialLease(access.value.client!!, access.value.generation, "synthetic", Long.MAX_VALUE,
         access.value.mode, access.value.modeRevision)
     private fun send(model: InferenceViewModel, prompt: String = "User question") { model.draft(prompt); model.send() }
+    @Test fun photoPickerCancelAndApplyPreserveTextAndNeverSend(): Unit = runTest {
+        val directory = java.nio.file.Files.createTempDirectory("synthetic-images").toFile()
+        val provider = Provider(); val model = create(provider); runCurrent()
+        val store = io.github.grassified.wristprompt.images.ImageFileStore(directory)
+        val catalog = store.importBatch(2) {
+            io.github.grassified.wristprompt.images.ImageContent(byteArrayOf(it.toByte()), byteArrayOf(it.toByte()), 1, 1)
+        }
+        val picker = io.github.grassified.wristprompt.images.WatchImagesViewModel(store) { false }
+        try {
+            model.draft("Exact text draft")
+            assertTrue(picker.begin(model))
+            picker.toggle(catalog.records[0].id); picker.toggle(catalog.records[1].id)
+            picker.cancel()
+            assertTrue(model.imageSelection.selected.value.isEmpty())
+            assertEquals("Exact text draft", model.chat.value.draft)
+            assertTrue(picker.begin(model))
+            picker.toggle(catalog.records[0].id); picker.toggle(catalog.records[1].id)
+            picker.apply(model) { }
+            withContext(Dispatchers.Default) { withTimeout(5000) { picker.edit.first { it == null } } }
+            assertEquals(2, model.imageSelection.selected.value.size)
+            assertEquals("Exact text draft", model.chat.value.draft)
+            assertTrue(picker.begin(model)); picker.toggle(catalog.records[0].id)
+            picker.cancel()
+            assertEquals(2, model.imageSelection.selected.value.size)
+            assertTrue(provider.inputs.isEmpty())
+        } finally { picker.viewModelScope.cancel(); directory.deleteRecursively() }
+    }
+    @Test fun photoSelectionNeverDispatchesAndCannotBeSilentlySentAsText(): Unit = runTest {
+        val provider = Provider(); val model = create(provider); runCurrent()
+        model.draft("Text draft stays")
+        val ids = List(2) { io.github.grassified.wristprompt.images.ImageLimits.newId() }
+        assertTrue(model.imageSelection.replace(emptyList(), ids, ids.toSet()))
+        model.send(); runCurrent()
+        assertTrue(provider.inputs.isEmpty())
+        assertEquals("Text draft stays", model.chat.value.draft)
+        model.imageSelection.prune(setOf(ids[1]))
+        model.send(); runCurrent()
+        assertTrue(provider.inputs.isEmpty())
+        model.newChat(); runCurrent()
+        assertTrue(model.imageSelection.selected.value.isEmpty())
+        assertTrue(provider.inputs.isEmpty())
+    }
     @Test fun presetsOnlyMutateDraftUntilExplicitSendAndKeepOwnership(): Unit = runTest {
         val provider = Provider(); val model = create(provider); runCurrent()
         val mode = access.value.mode

@@ -35,7 +35,10 @@ class AuthBridgeListenerService : WearableListenerService() {
     }
 
     override fun onCapabilityChanged(info: com.google.android.gms.wearable.CapabilityInfo) {
-        if (info.name == BridgeProtocol.WEAR_CAPABILITY) (application as WristPromptApplication).queuePresets()
+        if (info.name == BridgeProtocol.WEAR_CAPABILITY) {
+            (application as WristPromptApplication).queuePresets()
+            (application as WristPromptApplication).queueImages()
+        }
     }
 
     override fun onDestroy() {

@@ -1398,3 +1398,20 @@ visibly reset invalid values; restored stale values require explicit re-selectio
 See [D7_H_THINKING.md](docs/D7_H_THINKING.md) for sources, serialization, migration,
 validation and evidence. Owner physical acceptance remains deferred to #12; #18
 stays open. No #8/#9/#10/#11 work is included.
+
+## D7-C managed photo library — 2026-11-01
+
+Use app-private JPEG/thumbnail files with a bounded canonical JSON manifest,
+fsynced revision staging and atomic manifest replacement as the commit point.
+Phone import batches are atomic; independent persistent DataItems with separate
+Assets synchronize incrementally. Pin reachable capability-validated phone/source,
+retain terminal tombstones and reject conflicting/stale/resurrecting updates.
+Data Layer queue acceptance is explicitly not a watch-storage ACK; finite
+startup/event/manual pulls repair interrupted transfers without inference.
+AndroidX EXIF 1.4.2 (official stable, Apache-2.0) replaces the older platform
+metadata reader flagged by lint for known security bugs; bitmap APIs handle
+bounded decode/resize/JPEG compression. Existing dependency pins and the narrow
+Google linking exception are unchanged. See [docs/D7_C_PHOTO_LIBRARY.md](docs/D7_C_PHOTO_LIBRARY.md)
+for limits, cleanup, evidence, pairing limitations and physical acceptance deferred
+to #12. Selected UUIDs are retained draft state only; #9 inference serialization
+and #10 process-death combined draft persistence remain outside this change.
