@@ -147,15 +147,18 @@ private fun BillingText(ui: ShellPresentation) {
 internal fun ComposerScreen(
     proof: InferenceViewModel, state: ProofState, ui: ShellPresentation,
     navigation: ShellNavigationViewModel, interruptedInput: Boolean, inputUnavailable: Boolean,
-    write: () -> Unit,
+    write: () -> Unit, photos: (() -> Unit)? = null,
 ) {
     val chat by proof.chat.collectAsStateWithLifecycle()
+    val selectedPhotos by proof.imageSelection.selected.collectAsStateWithLifecycle()
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     ShellList(Modifier.fillMaxSize(), rememberShellScroll(navigation, Surface.COMPOSER)) {
         item { ShellText("Review message", heading = true) }
         chat.readOnlyReason?.let { reason -> item { ShellText(reason) } }
         item { ShellText("Model: ${ui.model}", compact = true) }
         if (!ui.proofAvailable || state.selectedSlug == null) item { ShellText(ui.status) }
+        photos?.let { action("Photos (${selectedPhotos.size}/6)", !chat.busy && !state.busy, it) }
+        if (selectedPhotos.isNotEmpty()) item { ShellText("Photos selected. Sending photos arrives in the next image-input task. Remove selections to send text now.") }
         action("Prompts", !chat.busy && !state.busy) { navigation.open(Surface.PROMPTS) }
         action(if (chat.draft.isEmpty()) "Write message" else "Replace draft", !chat.busy && !state.busy, write)
         if (interruptedInput) item { ShellText("Text input was interrupted. Write your message again.") }

@@ -14,6 +14,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+        testInstrumentationRunner = "io.github.grassified.wristprompt.images.ImageImportInstrumentation"
     }
 
     buildFeatures {
@@ -34,6 +35,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.exifinterface)
     implementation(libs.okhttp)
     implementation(libs.nimbus.jose.jwt)
     implementation(libs.activity.compose)

@@ -37,6 +37,7 @@ class InferenceViewModel(
     private val mutableState = MutableStateFlow(ProofState())
     val state = mutableState.asStateFlow()
     private val conversation = ChatConversation()
+    val imageSelection = io.github.grassified.wristprompt.images.ImageSelection()
     private var inputRevision = 0L
     private var observedAccess = accounts.value
     private var contextModel: String? = null
@@ -280,6 +281,7 @@ class InferenceViewModel(
                 writer?.awaitIdle()
                 val entry = store.load(id, owner) ?: throw ConversationStorageException()
                 if (run != epoch || ownerScope != owner || accounts.value != observedAccess) return@launchOperation
+                imageSelection.clear()
                 conversation.restore(entry.snapshot)
                 val current = prepared?.takeIf(::compatible)
                 val canContinue = current != null && entry.route == current.credential.mode.name && entry.model == state.value.selectedSlug
@@ -320,6 +322,7 @@ class InferenceViewModel(
         }
     }
     fun send() {
+        if (imageSelection.selected.value.isNotEmpty()) return // Image inference belongs to #9.
         if (operation?.isActive == true || state.value.busy) return
         val catalog = prepared?.takeIf(::compatible) ?: return
         val selected = state.value.selectedSlug?.takeIf { slug -> catalog.models.any { it.slug == slug } } ?: return
@@ -405,6 +408,7 @@ class InferenceViewModel(
     }
     private fun publishChat() { mutableChat.value = conversation.state }
     private fun clearChat() {
+        imageSelection.clear()
         inputRevision++; contextModel = null; writer = null; conversation.reset()
         mutableState.value = state.value.copy(configuration = conversation.configuration, thinkingNotice = null, thinkingSaving = false)
         publishChat()

@@ -48,7 +48,14 @@ class MainActivity : ComponentActivity() {
             val presets: PresetsViewModel = viewModel(factory = viewModelFactory {
                 initializer { PresetsViewModel((application as WristPromptApplication).presets) }
             })
+            val photos: io.github.grassified.wristprompt.images.PhoneImagesViewModel = viewModel(factory = viewModelFactory {
+                initializer {
+                    val app = application as WristPromptApplication
+                    io.github.grassified.wristprompt.images.PhoneImagesViewModel(app.images, contentResolver, app::queueImages)
+                }
+            })
             val presetApp = application as WristPromptApplication
+            val photoSync by presetApp.imageSync.status.collectAsStateWithLifecycle()
             val presetSync by presetApp.presetPublisher.status.collectAsStateWithLifecycle()
             val state by auth.state.collectAsStateWithLifecycle()
             var usageBrowserUnavailable by remember { mutableStateOf(false) }
@@ -97,6 +104,8 @@ class MainActivity : ComponentActivity() {
                         ApiKeySetupUi(api)
                         HorizontalDivider()
                         PresetsUi(presets, presetSync, presetApp::queuePresets)
+                        HorizontalDivider()
+                        io.github.grassified.wristprompt.images.PhoneImagesUi(photos, photoSync, presetApp::queueImages)
                     }
                 }
             }
