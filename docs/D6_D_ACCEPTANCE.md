@@ -1,7 +1,12 @@
 # D6-D persistence acceptance — 2026-11-01
 
-Issue #5; automated/emulator acceptance complete on main baseline `7beb72f`. No production behavior,
-credential, route, dependency or schema change. D6-D remains open for owner physical acceptance only; D7 was not started.
+Issue #5; implementation/nonphysical acceptance and automated/emulator evidence
+are complete. The original evidence below used main baseline `7beb72f`; the
+compatibility refresh onto `62592c7` is recorded separately. This PR changes no
+production behavior, credentials, routes, dependencies or schema. Issue #5 stays
+open only for owner physical restart/reopen/continuation/UX acceptance, intentionally
+deferred to the consolidated end-of-D7 physical pass before/as part of #12.
+No physical PASS is claimed.
 
 ## Evidence matrix
 
@@ -141,8 +146,43 @@ continuation, Stop/interruption, model/account/billing isolation, normal/max-fon
 history/rename/rotary and recovery UX. Never clear owner data, corrupt Keystore,
 revoke a session or intentionally exhaust real storage/usage to complete this gate.
 
-All requested nonphysical limits/recovery acceptance is now complete. PR #21 is
-ready for owner physical acceptance and remains unmerged; #5 stays open pending
-that evidence. No production startup/navigation, actual provider transport, device
+All requested implementation/nonphysical limits/recovery acceptance and
+automated/emulator evidence are complete. PR #21 is eligible for review/merge
+independently of the intentionally deferred physical acceptance. Issue #5 must
+remain open for that owner evidence in the consolidated end-of-D7/#12 pass. No production startup/navigation, actual provider transport, device
 power-loss or physical storage-exhaustion result is inferred from these fixtures.
-No further issue was started. Suggested commit: `test: complete D6 storage limits and crash recovery acceptance`.
+This refresh starts no further issue and changes no production persistence behavior.
+
+## Merge-readiness compatibility refresh — 2026-11-01
+
+Refreshed PR #21 onto latest main `62592c7` with a normal merge into its published
+branch. The two original acceptance commits and all newer main changes are
+preserved; no history rewrite or force-push is needed. The resulting PR diff is
+strictly this document and `ConversationStorageInstrumentation.kt`; production
+files are identical to main. Main's newer snapshot codec is covered by this pass.
+
+VERIFIED AUTOMATICALLY, using the documented JDK/Android environment:
+
+```sh
+./gradlew :wear:assembleDebugAndroidTest :wear:lintDebug :wear:testDebugUnitTest --tests '*openai.ConversationPersistenceTest' --tests '*openai.DurableChatViewModelTest' --tests '*openai.ConversationHistoryTest' --console=plain
+git diff --check
+```
+
+PASS: 26 tests / 3 suites, zero failures/errors; instrumentation APK built; lint
+0 errors / 8 warnings. No unrelated D7 suites were run. Local document links and
+the final two-file scope were checked.
+
+VERIFIED ON EMULATOR: dynamically selected, named disposable `WristPrompt_Watch7`;
+matched debug and test APKs installed without clearing/uninstalling the app.
+The default SQLite gate and `checkpoint limits`, `seed`, and `verify` each returned
+an explicit PASS. These rerun real SQLite lifecycle/isolation/corruption/limits,
+SQLITE_FULL rollback/recovery and independently reopened completed/interrupted/
+cancelled snapshots against current main. External SIGKILL and separate process
+termination evidence above remain historical and are not claimed as rerun here.
+Only the separate synthetic device-protected test database was changed.
+
+Implementation/nonphysical acceptance and automated/emulator evidence are complete.
+PR #21 need not remain draft waiting for physical evidence. Issue #5 must remain
+open after merge: only owner physical restart/reopen/continuation/UX acceptance
+remains, intentionally deferred to the consolidated end-of-D7 pass before/as part
+of #12. No physical tests were performed and no physical PASS is claimed.
