@@ -56,8 +56,6 @@ internal fun WearShell(auth: WatchAuthViewModel, settings: ApiKeySettingsViewMod
             io.github.grassified.wristprompt.images.WatchImagesViewModel(app.images, app.imageSync::refresh)
         }
     })
-    val photoItems by photos.store.images.collectAsStateWithLifecycle()
-    LaunchedEffect(photoItems) { proof.imageSelection.prune(photoItems.map { it.id }.toSet()) }
     WearShellContent(accounts, bridge, key, setup, changing, proof,
         ConnectionActions(auth::start, auth::select, auth::signOut, auth::confirmPlanNotice,
             settings::selectMode, settings::request, settings::remove), presets = presets, photos = photos)
@@ -276,8 +274,7 @@ private fun PrimaryControl(
     val canSend = if (action == PrimaryAction.SEND) {
         val sendSource = remember(proof) { proof.chat.map { it.canSend }.distinctUntilChanged() to proof.chat.value.canSend }
         val ready by sendSource.first.collectAsStateWithLifecycle(initialValue = sendSource.second)
-        val selectedPhotos by proof.imageSelection.selected.collectAsStateWithLifecycle()
-        ready && ui.proofAvailable && state.selectedSlug != null && selectedPhotos.isEmpty()
+        ready && ui.proofAvailable && state.selectedSlug != null
     } else true
     if (action == PrimaryAction.SEND) Text(billingDisclosure(ui.billing),
         modifier = Modifier.fillMaxWidth().padding(horizontal = 36.dp),

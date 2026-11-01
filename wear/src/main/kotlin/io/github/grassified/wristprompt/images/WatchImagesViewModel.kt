@@ -31,6 +31,7 @@ class WatchImagesViewModel(val store: ImageFileStore, private val sync: suspend 
         if (next.size > ImageLimits.MAX_BATCH) { failure.value = "Select up to 6 photos."; return }
         mutable.value = ImagePickerEdit(old.original, next, old.draft, old.token)
     }
+    fun clearSelection() { mutable.value?.let { mutable.value = ImagePickerEdit(it.original, emptyList(), it.draft, it.token) } }
     fun cancel() { mutable.value = null; failure.value = null }
     fun apply(proof: InferenceViewModel, applied: () -> Unit) {
         val old = mutable.value ?: return

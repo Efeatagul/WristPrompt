@@ -15,7 +15,7 @@ import kotlinx.serialization.json.*
 ) { override fun toString() = SafeDiagnostics.REDACTED }
 
 @Serializable data class ConversationSnapshot(
-    val version: Int = 2,
+    val version: Int = 3,
     val messages: List<StoredMessage>,
     val replay: List<JsonObject>,
     val attempts: Int,
@@ -26,7 +26,7 @@ import kotlinx.serialization.json.*
 ) {
     override fun toString() = SafeDiagnostics.REDACTED
     fun validate() {
-        require(version in 1..2 && attempts in 0..ChatConversation.MAX_ATTEMPTS && nextId in 0..(Long.MAX_VALUE - 48))
+        require(version in 1..3 && attempts in 0..ChatConversation.MAX_ATTEMPTS && nextId in 0..(Long.MAX_VALUE - 48))
         configuration.validate()
         require(version != 1 || configuration.controls.isEmpty())
         require(messages.size <= ChatConversation.MAX_ATTEMPTS * 2)
@@ -36,8 +36,15 @@ import kotlinx.serialization.json.*
             it.status in setOf("PENDING", "COMPLETED", "EXCLUDED") && it.parts.isNotEmpty() && it.parts.size <= 9 })
         require(messages.all { m -> m.parts.all { part -> when (part) {
             is ContentPart.Text -> part.text.length <= ResponsesProtocol.MAX_TEXT_CHARS
-            is ContentPart.ImageAttachment -> part.attachmentId.matches(Regex("[a-f0-9-]{36}"))
+            is ContentPart.ImageAttachment -> io.github.grassified.wristprompt.images.ImageLimits.validId(part.attachmentId)
         } } })
+        messages.forEach { message ->
+            val images = message.parts.filterIsInstance<ContentPart.ImageAttachment>()
+            require(images.size <= io.github.grassified.wristprompt.images.ImageLimits.MAX_BATCH)
+            require(images.map { it.attachmentId }.distinct().size == images.size)
+            require(images.isEmpty() || (version == 3 && message.role == "USER" && message.parts.first() is ContentPart.Text &&
+                message.parts.size == images.size + 1 && (message.parts.first() as ContentPart.Text).text.isNotBlank()))
+        }
         require(terminal in ChatStage.entries.map { it.name })
         require(partial.length <= ResponsesProtocol.MAX_TEXT_CHARS)
         require(JsonArray(replay).toString().encodeToByteArray().size <= MAX_REPLAY_BYTES)
@@ -52,11 +59,14 @@ import kotlinx.serialization.json.*
         replay.forEach { item ->
             if (item["role"]?.jsonPrimitive?.content == "user") {
                 require(users == 0 || hasAssistant)
-                require(item["content"] is JsonPrimitive && item["content"]!!.jsonPrimitive.isString)
-                require(item.keys == setOf("role", "content"))
                 val display = completed.getOrNull(users * 2) ?: error("Invalid replay")
-                require(display.parts.all { it is ContentPart.Text })
-                require(item["content"]!!.jsonPrimitive.content == display.parts.joinToString("") { (it as ContentPart.Text).text })
+                val text = display.parts.filterIsInstance<ContentPart.Text>().joinToString("") { it.text }
+                val ids = display.parts.filterIsInstance<ContentPart.ImageAttachment>().map { it.attachmentId }
+                if (ids.isEmpty()) {
+                    require(item.keys == setOf("role", "content"))
+                    require(item["content"] is JsonPrimitive && item["content"]!!.jsonPrimitive.isString)
+                    require(item["content"]!!.jsonPrimitive.content == text)
+                } else require(item == ImageInput.user(text, ids))
                 users++; hasAssistant = false
             } else {
                 require(users > 0)

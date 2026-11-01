@@ -15,8 +15,7 @@ internal class ShellInteraction(
         if (model.chat.value.draft.isEmpty()) write()
     }
     fun send() {
-        model.send()
-        if (model.chat.value.draft.isEmpty()) navigation.open(Surface.CHAT)
+        model.send { navigation.open(Surface.CHAT) }
     }
     fun newChat() { model.newChat(); navigation.open(Surface.CHAT) }
     fun stop() { model.stop() }

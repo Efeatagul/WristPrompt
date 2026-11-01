@@ -25,6 +25,7 @@ internal fun ImagesScreen(model: WatchImagesViewModel, proof: InferenceViewModel
             item { LibraryThumbnail(model.store, image, Modifier.fillMaxWidth().height(96.dp)) }
             action(if (image.id in (edit?.pending ?: emptyList())) "Remove photo ${index + 1}" else "Select photo ${index + 1}") { model.toggle(image.id) }
         }
+        action("Clear selection", enabled = edit?.pending?.isNotEmpty() == true, onClick = model::clearSelection)
         action("Use selection", enabled = edit != null) { model.apply(proof) { navigation.back() } }
         action("Cancel", onClick = cancel)
         action("Refresh sync", onClick = model::refresh)

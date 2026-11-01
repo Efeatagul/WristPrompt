@@ -90,6 +90,7 @@ class InferenceSession(
             }
             val model = prepared.models.first { it.slug == selected }
             InferenceControls.validate(configuration, model, prepared.credential.mode)
+            if (input != null) OpenAiImageCapabilities.validate(selected, prepared.credential.mode, input)
             if (input == null) provider.stream(prepared.credential, selected, receive)
             else provider.stream(prepared.credential, model, input, configuration, receive)
             job.ensureActive()

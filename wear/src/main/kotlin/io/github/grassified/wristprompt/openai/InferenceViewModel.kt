@@ -33,6 +33,7 @@ class InferenceViewModel(
     private val conversationStore: ConversationStore? = null,
     private val conversationIdentity: suspend (CredentialLease) -> String = { throw SecureStorageException() },
     private val localConversationIdentity: (suspend (InferenceAccessState) -> String)? = null,
+    private val conversationImages: ConversationImages? = null,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ProofState())
     val state = mutableState.asStateFlow()
@@ -203,10 +204,12 @@ class InferenceViewModel(
     }
     fun stop() {
         val wasChatBusy = conversation.state.busy
-        if (!wasChatBusy && !state.value.busy) return
+        val wasPreparing = !wasChatBusy && chat.value.busy
+        if (!wasChatBusy && !wasPreparing && !state.value.busy) return
         cancelOperation()
         if (wasChatBusy) { conversation.fail(null, cancelled = true); publishChat() }
         if (wasChatBusy) persistTerminal()
+        if (wasPreparing) mutableChat.value = conversation.state.copy(stage = ChatStage.CANCELLED)
         if (state.value.busy) mutableState.value = state.value.copy(stage = ProofStage.CANCELLED)
     }
     // Input results are accepted only for the context that launched the platform composer.
@@ -309,6 +312,7 @@ class InferenceViewModel(
                 if (run != epoch || ownerScope != owner || accounts.value != observedAccess) return@launchOperation
                 if (title == null) {
                     store.delete(id, owner, entry.revision)
+                    conversationImages?.delete(id)
                     if (run == epoch && writer?.entry?.id == id) { clearChat(); restoreOnStartup = false }
                 } else {
                     require(title.isNotBlank() && title.length <= 120)
@@ -321,12 +325,14 @@ class InferenceViewModel(
                     else "Name could not be saved. Use a non-empty name up to 120 characters, or try again.") }
         }
     }
-    fun send() {
-        if (imageSelection.selected.value.isNotEmpty()) return // Image inference belongs to #9.
+    fun send(onStarted: () -> Unit = {}) {
         if (operation?.isActive == true || state.value.busy) return
         val catalog = prepared?.takeIf(::compatible) ?: return
         val selected = state.value.selectedSlug?.takeIf { slug -> catalog.models.any { it.slug == slug } } ?: return
         contextModel = selected
+        if (imageSelection.selected.value.isNotEmpty() && conversation.state.draft.isBlank()) {
+            mutableChat.value = conversation.state.copy(problem = ApiProblem.IMAGE_TEXT_REQUIRED); return
+        }
         if (!conversation.state.canSend) return
         val configuration = conversation.configuration
         try { InferenceControls.validate(configuration, catalog.models.first { it.slug == selected }, catalog.credential.mode) }
@@ -341,16 +347,50 @@ class InferenceViewModel(
             writer = ConversationWriter(conversationStore, ConversationEntry(owner = owner, route = catalog.credential.mode.name,
                 model = selected, title = title, updated = System.currentTimeMillis(), snapshot = conversation.snapshot()))
         }
-        val input = conversation.begin()
-        publishChat()
-        if (input == null) return
+        val selectedImages = imageSelection.selected.value.toList()
+        val draft = conversation.state.draft
+        val token = inputRevision
+        val canonical = conversation.preview(selectedImages)
+        val hasImages = ImageInput.hasImages(canonical)
+        val plainInput = try {
+            OpenAiImageCapabilities.validate(selected, catalog.credential.mode, canonical)
+            if (hasImages) null else canonical.also {
+                ResponsesProtocol.request(selected, it, configuration, catalog.models.first { model -> model.slug == selected }.thinking, catalog.credential.mode)
+            }
+        } catch (failure: ApiFailure) {
+            mutableChat.value = conversation.state.copy(problem = failure.problem); return
+        }
         val run = ++epoch
         val activeWriter = writer
-        val started = conversation.snapshot()
-        inputRevision++
+        var began = false
+        fun beginValidated(): ConversationSnapshot? {
+            if (conversation.begin(selectedImages) == null) { publishChat(); return null }
+            began = true
+            imageSelection.clear()
+            publishChat()
+            onStarted()
+            inputRevision++
+            return conversation.snapshot()
+        }
+        // Preserve synchronous text-only start/Stop ownership. Images require off-Main preflight.
+        val started = if (plainInput != null) beginValidated() ?: return else null
+        if (hasImages) mutableChat.value = conversation.state.copy(stage = ChatStage.STARTING, problem = null)
         launchOperation {
             try {
-                activeWriter?.write(started)
+                val input = plainInput ?: run {
+                    val images = conversationImages ?: throw ApiFailure(ApiProblem.IMAGE_UNAVAILABLE, requestNotSent = true)
+                    val chatId = activeWriter?.entry?.id ?: throw ApiFailure(ApiProblem.CHAT_STORAGE, requestNotSent = true)
+                    images.prepare(chatId, selectedImages, canonical)
+                }
+                val checkpoint = started ?: run {
+                    // Bound the full encoded request before consuming the draft or dispatching HTTP.
+                    ResponsesProtocol.request(selected, input, configuration, catalog.models.first { it.slug == selected }.thinking, catalog.credential.mode)
+                    currentCoroutineContext().ensureActive()
+                    if (run != epoch || !compatible(catalog) || inputRevision != token || conversation.state.draft != draft ||
+                        imageSelection.selected.value != selectedImages) { publishChat(); return@launchOperation }
+                    beginValidated() ?: return@launchOperation
+                }
+                activeWriter?.write(checkpoint)
                 currentCoroutineContext().ensureActive()
                 if (run != epoch || !compatible(catalog)) return@launchOperation
                 val result = session.chat(catalog, selected, input, configuration) { progress ->
@@ -371,7 +411,7 @@ class InferenceViewModel(
                     if (run == epoch) publishChat()
                 }
             } catch (cancelled: CancellationException) {
-                if (run == epoch) { conversation.fail(null, cancelled = true); publishChat(); persistTerminal() }
+                if (run == epoch && began) { conversation.fail(null, cancelled = true); publishChat(); persistTerminal() }
                 throw cancelled
             } catch (failure: Exception) {
                 if (run == epoch) {
@@ -382,9 +422,11 @@ class InferenceViewModel(
                         else -> ApiProblem.PROTOCOL
                     }
                     invalidateModel(problem)
-                    conversation.fail(problem)
-                    publishChat()
-                    if (problem != ApiProblem.CHAT_STORAGE) persistTerminal()
+                    if (began) {
+                        conversation.fail(problem)
+                        publishChat()
+                        if (problem != ApiProblem.CHAT_STORAGE) persistTerminal()
+                    } else mutableChat.value = conversation.state.copy(problem = problem)
                 }
             }
         }
@@ -429,6 +471,7 @@ class InferenceViewModel(
         cancelOperation()
         inputRevision++
         if (conversation.state.busy) { conversation.fail(null, cancelled = true); publishChat(); persistTerminal() }
+        else if (chat.value.busy) mutableChat.value = conversation.state.copy(stage = ChatStage.CANCELLED)
         if (state.value.busy) mutableState.value = state.value.copy(stage = ProofStage.CANCELLED)
     }
     // Future phone-browser hook; never substitute an API-key billing path.
