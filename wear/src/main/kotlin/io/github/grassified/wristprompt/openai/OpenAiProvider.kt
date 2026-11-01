@@ -36,7 +36,8 @@ class OpenAiProvider(private val http: OpenAiHttp) : AiProvider {
         when (credential.mode) {
             CredentialMode.CHATGPT_PLAN -> ModelCatalog.read(response.body.byteStream()) { context.ensureActive() }
             CredentialMode.OPENAI_API_KEY -> ApiModelCatalog.read(http.body(response)).map {
-                it.copy(thinking = OpenAiThinkingCapabilities.forModel(it.slug, credential.mode))
+                it.copy(thinking = OpenAiThinkingCapabilities.forModel(it.slug, credential.mode),
+                    imageGeneration = OpenAiGeneration.capability(it.slug, credential.mode))
             }
         }
     }

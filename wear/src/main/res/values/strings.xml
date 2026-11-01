@@ -50,4 +50,6 @@
     <string name="image_unavailable">A selected or saved photo is missing or damaged.</string>
     <string name="image_limit">Photo count or storage limit reached.</string>
     <string name="image_text_required">Add text to ask about the selected photos.</string>
+    <string name="generation_unsupported">Image generation requires a reviewed model and OpenAI API billing. No request sent.</string>
+    <string name="generation_prompt">Enter text up to 8192 characters and remove input photos before generating.</string>
 </resources>

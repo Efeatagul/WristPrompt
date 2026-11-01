@@ -44,7 +44,7 @@ object ResponsesProtocol {
     }
 }
 
-data class AiModel(val slug: String, val displayName: String, val thinking: ControlCapability? = null)
+data class AiModel(val slug: String, val displayName: String, val thinking: ControlCapability? = null, val imageGeneration: GenerationCapability? = null)
 @Serializable private data class ResponsesRequest(val model: String, val input: List<InputMessage>, val store: Boolean = false, val stream: Boolean = true)
 @Serializable private data class InputMessage(val role: String, val content: String)
 

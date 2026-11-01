@@ -29,6 +29,8 @@ internal fun errorPresentation(problem: ApiProblem): ErrorPresentation = when (p
     ApiProblem.PERMISSION -> ErrorPresentation("Account access unavailable", "Check the selected account's access.", RecoveryAction.ACCOUNT)
     ApiProblem.TEMPORARY -> ErrorPresentation("Service unavailable", "Try again with a new message later.")
     ApiProblem.NETWORK -> ErrorPresentation("Couldn't connect", "Check the watch's internet connection.")
+    ApiProblem.GENERATION_UNSUPPORTED -> ErrorPresentation("Image generation unsupported", "Requires a reviewed model on the OpenAI API billing route. No request sent.", action = null)
+    ApiProblem.GENERATION_PROMPT -> ErrorPresentation("Review image prompt", "Use non-empty text up to 8192 characters and remove input photos. No request sent.", action = null)
     ApiProblem.IMAGE_TEXT_REQUIRED -> ErrorPresentation("Text required", "Add text to describe what you want to ask about these photos.", action = null)
     ApiProblem.IMAGES_UNSUPPORTED -> ErrorPresentation("Photos unsupported", "Image capability is unavailable for this model and billing route. Choose a supported model or remove photos explicitly.", action = null)
     ApiProblem.IMAGE_UNAVAILABLE -> ErrorPresentation("Photo unavailable", "A selected or saved photo is missing or damaged. Restore it, remove the selection, or start a new chat.", action = null)
@@ -47,7 +49,7 @@ internal fun errorPresentation(problem: ApiProblem): ErrorPresentation = when (p
 }
 
 internal fun chatError(chat: ChatState): ErrorPresentation? = when {
-    chat.problem in setOf(ApiProblem.IMAGES_UNSUPPORTED, ApiProblem.IMAGE_UNAVAILABLE, ApiProblem.IMAGE_LIMIT, ApiProblem.IMAGE_TEXT_REQUIRED) -> errorPresentation(chat.problem!!)
+    chat.problem in setOf(ApiProblem.GENERATION_UNSUPPORTED, ApiProblem.GENERATION_PROMPT, ApiProblem.IMAGES_UNSUPPORTED, ApiProblem.IMAGE_UNAVAILABLE, ApiProblem.IMAGE_LIMIT, ApiProblem.IMAGE_TEXT_REQUIRED) -> errorPresentation(chat.problem!!)
     chat.problem == ApiProblem.THINKING_UNSUPPORTED -> errorPresentation(ApiProblem.THINKING_UNSUPPORTED)
     chat.problem == ApiProblem.CHAT_STORAGE -> errorPresentation(ApiProblem.CHAT_STORAGE)
     chat.limitReached && chat.stage !in setOf(ChatStage.FAILED, ChatStage.CANCELLED) -> ErrorPresentation("Start a new chat to continue", action = RecoveryAction.NEW_CHAT)
