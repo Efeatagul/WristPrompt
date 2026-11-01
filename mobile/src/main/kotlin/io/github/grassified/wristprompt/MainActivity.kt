@@ -27,6 +27,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.grassified.wristprompt.auth.*
+import io.github.grassified.wristprompt.presets.PresetsViewModel
+import io.github.grassified.wristprompt.presets.PresetsUi
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,6 +44,9 @@ class MainActivity : ComponentActivity() {
             })
             val api: PhoneApiKeyViewModel = viewModel(factory = viewModelFactory {
                 initializer { val app = application as WristPromptApplication; PhoneApiKeyViewModel(app.apiKeyInbox, app.connectivity::request) }
+            })
+            val presets: PresetsViewModel = viewModel(factory = viewModelFactory {
+                initializer { PresetsViewModel((application as WristPromptApplication).presets) }
             })
             val state by auth.state.collectAsStateWithLifecycle()
             var usageBrowserUnavailable by remember { mutableStateOf(false) }
@@ -88,6 +93,8 @@ class MainActivity : ComponentActivity() {
                         Text(stringResource(R.string.no_inference))
                         HorizontalDivider()
                         ApiKeySetupUi(api)
+                        HorizontalDivider()
+                        PresetsUi(presets)
                     }
                 }
             }

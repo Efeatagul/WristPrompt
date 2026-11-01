@@ -4,6 +4,7 @@ import io.github.grassified.wristprompt.auth.IssuedRegistrationStore
 import io.github.grassified.wristprompt.auth.ApiKeyInbox
 import io.github.grassified.wristprompt.auth.OpenAiAuthorization
 import io.github.grassified.wristprompt.storage.EncryptedRecord
+import io.github.grassified.wristprompt.presets.PresetRepository
 import android.app.Application
 import android.content.Context
 import androidx.datastore.preferences.preferencesDataStore
@@ -14,7 +15,10 @@ import io.github.grassified.wristprompt.bridge.WearConnectivity
 
 private val Context.bridgeStore by preferencesDataStore(name = "bridge_receipt")
 
+private val Context.presetStore by preferencesDataStore(name = "prompt_presets")
+
 class WristPromptApplication : Application() {
+    val presets by lazy { PresetRepository(presetStore) }
     val connectivity by lazy { WearConnectivity(this, BridgeProtocol.WEAR_CAPABILITY) }
     val issuedRegistrations by lazy { IssuedRegistrationStore(EncryptedRecord(this, "issued_registrations")) }
     val authorization by lazy { OpenAiAuthorization() }
