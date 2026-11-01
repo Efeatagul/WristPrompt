@@ -43,9 +43,16 @@ internal fun WearShell(auth: WatchAuthViewModel, settings: ApiKeySettingsViewMod
     val key by settings.state.collectAsStateWithLifecycle()
     val setup by settings.setup.collectAsStateWithLifecycle()
     val changing by settings.busy.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val presets: io.github.grassified.wristprompt.presets.WatchPresetsViewModel = viewModel(factory = viewModelFactory {
+        initializer {
+            val app = context.applicationContext as io.github.grassified.wristprompt.WristPromptApplication
+            io.github.grassified.wristprompt.presets.WatchPresetsViewModel(app.presets, app.presetSync::refresh)
+        }
+    })
     WearShellContent(accounts, bridge, key, setup, changing, proof,
         ConnectionActions(auth::start, auth::select, auth::signOut, auth::confirmPlanNotice,
-            settings::selectMode, settings::request, settings::remove))
+            settings::selectMode, settings::request, settings::remove), presets = presets)
 }
 
 internal data class ConnectionActions(
@@ -60,6 +67,7 @@ internal fun WearShellContent(
     setup: KeySetupStatus, changing: Boolean, proof: InferenceViewModel,
     actions: ConnectionActions, initialSurface: Surface = Surface.CHAT,
     supplementalGuidance: String? = null, presentationMetrics: PresentationMetrics? = null,
+    presets: io.github.grassified.wristprompt.presets.WatchPresetsViewModel? = null,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val appVersion = remember(context) { context.packageManager.getPackageInfo(context.packageName, 0).versionName }
@@ -117,11 +125,13 @@ internal fun WearShellContent(
                     surface == Surface.CHAT -> ChatScreen(proof, state, ui, navigation, supplementalGuidance, presentationMetrics)
                     surface == Surface.COMPOSER -> ComposerScreen(proof, state, ui, navigation,
                         interruptedInput, inputUnavailable, write)
+                    surface == Surface.PROMPTS && presets != null -> PromptsScreen(presets, proof, navigation)
                     surface == Surface.HISTORY -> HistoryScreen(proof, navigation)
                     else -> ShellList(Modifier.fillMaxSize(), rememberShellScroll(navigation, surface)) {
                         action("Back", onClick = back)
 
                         when (surface) {
+                            Surface.PROMPTS -> item { ShellText("Prompts unavailable.") }
                             Surface.MENU -> {
                                 item { ShellText("Menu", heading = true) }
                                 action("New Chat", onClick = interaction::newChat)

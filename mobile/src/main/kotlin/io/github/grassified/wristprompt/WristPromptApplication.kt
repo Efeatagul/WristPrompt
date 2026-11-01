@@ -5,6 +5,7 @@ import io.github.grassified.wristprompt.auth.ApiKeyInbox
 import io.github.grassified.wristprompt.auth.OpenAiAuthorization
 import io.github.grassified.wristprompt.storage.EncryptedRecord
 import io.github.grassified.wristprompt.presets.PresetRepository
+import kotlinx.coroutines.launch
 import android.app.Application
 import android.content.Context
 import androidx.datastore.preferences.preferencesDataStore
@@ -18,7 +19,12 @@ private val Context.bridgeStore by preferencesDataStore(name = "bridge_receipt")
 private val Context.presetStore by preferencesDataStore(name = "prompt_presets")
 
 class WristPromptApplication : Application() {
-    val presets by lazy { PresetRepository(presetStore) }
+    private val presetScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    val presets by lazy { PresetRepository(presetStore) { queuePresets() } }
+    val presetPublisher by lazy { io.github.grassified.wristprompt.presets.PresetPublisher(presets::load, presets::source,
+        { connectivity.reachablePeers().isNotEmpty() }, connectivity::putPreset) }
+    fun queuePresets() { presetScope.launch { presetPublisher.publish() } }
+    override fun onCreate() { super.onCreate(); queuePresets() }
     val connectivity by lazy { WearConnectivity(this, BridgeProtocol.WEAR_CAPABILITY) }
     val issuedRegistrations by lazy { IssuedRegistrationStore(EncryptedRecord(this, "issued_registrations")) }
     val authorization by lazy { OpenAiAuthorization() }

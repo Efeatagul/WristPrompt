@@ -30,7 +30,7 @@ internal enum class DebugScenario {
     MARKDOWN_MALFORMED, MARKDOWN_LONG_URL, ERROR_API_LIMIT, INCOMPLETE_PARTIAL,
     CONVERSATION_LIMIT, SECURE_STORAGE_FAILURE, STREAM_TO_COMPLETED_PLAIN,
     STREAM_TO_COMPLETED_MARKDOWN, STREAM_TO_COMPLETED_LONG, SINGLE_LONG_PARAGRAPH,
-    REAL_MULTI_PARAGRAPH, DIAGNOSTIC_PROOF_CURRENT_ATTEMPT, SAVED_CHATS_HISTORY;
+    REAL_MULTI_PARAGRAPH, DIAGNOSTIC_PROOF_CURRENT_ATTEMPT, SAVED_CHATS_HISTORY, PROMPT_PRESETS;
     companion object { fun parse(name: String?): DebugScenario? = entries.singleOrNull { it.name == name } }
 }
 
@@ -44,6 +44,7 @@ internal class DebugScenarios(val scenario: DebugScenario) {
         activeClientId = "debug".takeUnless { scenario == DebugScenario.SIGNED_OUT })
     val key = ApiKeyState(storageError = scenario == DebugScenario.SECURE_STORAGE_FAILURE, loaded = true, mode = mode, configured = mode == CredentialMode.OPENAI_API_KEY)
     val surface = when (scenario) {
+        DebugScenario.PROMPT_PRESETS -> Surface.COMPOSER
         DebugScenario.SAVED_CHATS_HISTORY -> Surface.HISTORY
         DebugScenario.DIAGNOSTIC_PROOF_CURRENT_ATTEMPT -> Surface.PROOF
         DebugScenario.MANY_MODELS, DebugScenario.THOUSAND_MODELS, DebugScenario.SINGLE_MODEL, DebugScenario.LONG_MODEL_NAMES, DebugScenario.MODELS_LOADED, DebugScenario.MODEL_UNAVAILABLE,

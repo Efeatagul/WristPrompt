@@ -1377,3 +1377,14 @@ The shared version-1 codec defines UUID identity, expected per-record revisions,
 terminal text-free tombstones and strict bounded serialization. No transport or
 inference hook is wired. Limits, ordering, privacy, evidence and pending phone
 checks are in [docs/D7_A_PRESETS.md](docs/D7_A_PRESETS.md).
+
+## D7-B preset delivery — 2026-11-01
+
+Use persistent, per-record DataItems through existing WearConnectivity (64 KiB
+packet cap), with independent capability validation and pinned phone node/source.
+Keep terminal tombstones and compare revisions in a separate atomic watch
+DataStore. No implicit deletion or automatic rebind. The composer captures an
+input token and exact draft, then explicitly inserts with two LF separators or
+replaces; Cancel and oversize preserve content. No inference is dispatched.
+See [docs/D7_B_PRESET_SYNC.md](docs/D7_B_PRESET_SYNC.md) for protocol, evidence and
+pending paired/physical checks.

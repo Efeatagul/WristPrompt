@@ -156,6 +156,15 @@ class InferenceViewModel(
         if (contextModel == null) contextModel = state.value.selectedSlug
         conversation.draft(text); publishChat()
     }
+    // Presets only change ordinary draft text. They never dispatch or alter replay/model/route.
+    fun applyPreset(text: String, replace: Boolean, expectedDraft: String, token: Long): Boolean {
+        if (inputToken() != token || chat.value.draft != expectedDraft) return false
+        val result = if (replace || expectedDraft.isEmpty()) text else expectedDraft + "\n\n" + text
+        if (result.length > ChatConversation.MAX_PROMPT_CHARS) return false
+        draft(result, token)
+        inputRevision++ // Invalidate a late platform result which could overwrite this insertion.
+        return true
+    }
     fun inputResult(text: String, token: Long) {
         if (cleared || token != inputRevision || accounts.value != observedAccess) return
         draft(text, token)
