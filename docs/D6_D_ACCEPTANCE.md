@@ -1,7 +1,7 @@
 # D6-D persistence acceptance — 2026-11-01
 
-Issue #5; partial acceptance on main baseline `7beb72f`. No production behavior,
-credential, route, dependency or schema change. D6-D remains open; D7 was not started.
+Issue #5; automated/emulator acceptance complete on main baseline `7beb72f`. No production behavior,
+credential, route, dependency or schema change. D6-D remains open for owner physical acceptance only; D7 was not started.
 
 ## Evidence matrix
 
@@ -15,11 +15,13 @@ credential, route, dependency or schema change. D6-D remains open; D7 was not st
 | Failure/exclusion/write ownership | VERIFIED AUTOMATICALLY: persistence and durable ViewModel suites cover failed begin/completion, Stop, revision rollback, late Stop and no per-token writes | Physical interruption is pending |
 | Schema/migration | VERIFIED ON EMULATOR: clean v1 creation/reopen; future SQLite schema rejected and preserved. Codec unknown-version rejection passes automatically | No predecessor conversation DB exists; no fictitious v0 migration claimed. Real future migrations need versioned fixtures |
 | Delete/no resurrection | VERIFIED ON EMULATOR: tombstone rejects stale save; SQL confirms live display/replay cleared and byte accounting released | No secure-erasure claim for SQLite free pages/WAL; owner confirmation UX |
-| Limits/recovery | VERIFIED ON EMULATOR: 100 live rows accepted, 101st rejected without eviction, existing row update works at capacity, deletion permits another save | 32 MiB total, 1 MiB entry boundary, 1,000 owners, 10,000 total IDs and actual disk-full recovery not consolidated here |
-| Corruption | VERIFIED ON EMULATOR: malformed row rejected without rewrite, healthy row remains readable; corrupt database and newer schema preserved without destructive fallback | Full UI recovery and interrupted disk-write acceptance |
+| Limits | VERIFIED ON EMULATOR: exact 1 MiB UTF-8 entry accepted, +1 byte rejected without changing saved data; exact 32 MiB accepted, additional entry rejected, deletion releases capacity; 1,000 owners accepted, next rejected, existing owner stable; 10,000 total UUIDs including tombstones accepted, next rejected, update/delete still work at cap, deletion does not release UUID or permit resurrection | No silent eviction or tombstone pruning; physical storage UX pending |
+| Disk-full recovery | VERIFIED ON EMULATOR: actual SQLiteFullException under SQLite page cap; store save rejects, previous canonical entry/revision remains unchanged; lifting cap permits same-revision retry and successful reload | SQLite page-cap fault injection, not physical filesystem exhaustion |
+| Interrupted-write recovery | VERIFIED ON EMULATOR: external SIGKILL while dirty transaction/journal exists; reopen restores original display/replay/revisions, uncommitted table absent, integrity_check returns ok | Physical power loss/filesystem faults not claimed |
+| Corruption | VERIFIED ON EMULATOR: malformed row rejected without rewrite, healthy row remains readable; corrupt database and newer schema preserved without destructive fallback | Owner recovery UX |
 | Cleanup/orphans | VERIFIED ON EMULATOR: deletion removes live canonical content/accounting but retains required tombstone | No attachment files exist in D6; binary orphan cleanup belongs to D7-C/D |
 
-## Commands and outcomes
+## Earlier PR checkpoint — commands and outcomes
 
 VERIFIED AUTOMATICALLY:
 
@@ -73,6 +75,65 @@ processes; it does not prove production startup navigation, live HTTP continuati
 Wear rename/rotary/font behavior, physical process death or physical force-stop.
 No claim of opaque replay in the emulator checkpoint fixture: that remains unit evidence.
 
+## Remaining-scope acceptance run
+
+Only androidTest and this report changed in this continuation. No production fix
+was needed. The earlier 503-unit-test/debug-build evidence above remains applicable;
+it was not rerun or presented as a new run.
+
+VERIFIED AUTOMATICALLY: final focused gate passed:
+
+```sh
+./gradlew :wear:assembleDebugAndroidTest :wear:lintDebug --console=plain
+git diff --check
+```
+
+Lint remains 0 errors / 6 warnings. The matched updated test APK was installed on
+the same separate temporary API 36 Wear image described above. VERIFIED ON EMULATOR:
+
+```sh
+adb -s "$serial" shell am instrument -w -e checkpoint limits "$runner"
+```
+
+Explicit `PASS: restart checkpoint limits` covers the byte/owner/UUID boundaries
+and SQLite-full recovery in the matrix. The 9,999-row pre-boundary fixture uses a
+single test-only SQLite transaction to insert valid minimal tombstones efficiently;
+the final insert, rejection, update, deletion and resurrection checks use production
+store APIs. Total-byte fixtures contain actual bounded canonical UTF-8 content,
+not spoofed byte counters. A test-only reflection helper obtains the SQLite helper
+connection without adding a production fault-injection API.
+
+Disk-full injection caps the database at its current page count. A direct probe
+first confirms SQLiteFullException; the production store then rejects a large
+update without changing the prior entry/revision. Raising the cap allows the same
+update to commit exactly one revision. No device filesystem was filled.
+
+Interrupted-write host sequence (verified disposable emulator only):
+
+```sh
+# Terminal A: intentionally waits after emitting READY.
+adb -s "$serial" shell am instrument -w -e checkpoint interrupt-write "$runner"
+# Terminal B: after READY: uncommitted synthetic transaction
+pid=$(adb -s "$serial" shell pidof io.github.grassified.wristprompt)
+adb -s "$serial" shell run-as io.github.grassified.wristprompt kill -9 "$pid"
+# Verify the old process has terminated before reopening.
+adb -s "$serial" shell am instrument -w -e checkpoint verify-interrupted-write "$runner"
+```
+
+The executed host driver validated the named emulator/debug package, waited at most
+45 seconds for READY, required a single live PID, sent SIGKILL, waited at most 20
+seconds for termination and required explicit verification PASS. The fixture
+writes both display/replay and revision in an uncommitted transaction, adds a 4 MiB
+probe to dirty/spill pages, and checks that its rollback journal exists before
+READY. Reopen confirms all three seeded records/revisions, excluded-attempt replay,
+absence of the uncommitted table and `PRAGMA integrity_check = ok`.
+
+Initial harness-only attempts failed because ContextWrapper did not capture the
+platform helper connection and a capacity fixture reused an already-deleted UUID.
+Those fixtures were corrected; final focused limits/full and interrupted-write
+runs passed. These were not production storage bugs. Failed initial runs are not
+counted as acceptance evidence. No full Wear-suite repeat was needed.
+
 ## Handoff / remaining gate
 
 No owner physical result was supplied. Batch Galaxy Watch restart/reopen/explicit
@@ -80,6 +141,8 @@ continuation, Stop/interruption, model/account/billing isolation, normal/max-fon
 history/rename/rotary and recovery UX. Never clear owner data, corrupt Keystore,
 revoke a session or intentionally exhaust real storage/usage to complete this gate.
 
-Complete the outstanding nonphysical limits and recovery matrix before declaring
-#5 blocked only on owner evidence. This PR deliberately does not close #5 and does
-not authorize another phase. Suggested commit: `test: expand D6 persistence recovery acceptance`.
+All requested nonphysical limits/recovery acceptance is now complete. PR #21 is
+ready for owner physical acceptance and remains unmerged; #5 stays open pending
+that evidence. No production startup/navigation, actual provider transport, device
+power-loss or physical storage-exhaustion result is inferred from these fixtures.
+No further issue was started. Suggested commit: `test: complete D6 storage limits and crash recovery acceptance`.
