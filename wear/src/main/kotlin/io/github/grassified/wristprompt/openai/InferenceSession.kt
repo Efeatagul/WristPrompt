@@ -51,13 +51,17 @@ class InferenceSession(
         catalog: PreparedCatalog, selected: String,
         onCatalog: (PreparedCatalog) -> Unit,
         onProgress: (StreamResult) -> Unit,
-    ): StreamResult = generate(catalog, selected, null, InferenceConfiguration(), onCatalog) { onProgress(it) }
+    ): StreamResult = generate(catalog, selected, null, InferenceConfiguration(), onCatalog, { onProgress(it) })
 
     suspend fun chat(catalog: PreparedCatalog, selected: String, input: List<JsonObject>,
         configuration: InferenceConfiguration = InferenceConfiguration(), onProgress: suspend (StreamResult) -> Unit): StreamResult = generate(catalog, selected, input, configuration, {}, onProgress)
 
+    suspend fun image(catalog: PreparedCatalog, selected: String, input: List<JsonObject>,
+        onProgress: suspend (StreamResult) -> Unit): StreamResult =
+        generate(catalog, selected, input, InferenceConfiguration(), {}, onProgress, image = true)
+
     private suspend fun generate(catalog: PreparedCatalog, selected: String, input: List<JsonObject>?, configuration: InferenceConfiguration,
-        onCatalog: (PreparedCatalog) -> Unit, onProgress: suspend (StreamResult) -> Unit): StreamResult = coroutineScope {
+        onCatalog: (PreparedCatalog) -> Unit, onProgress: suspend (StreamResult) -> Unit, image: Boolean = false): StreamResult = coroutineScope {
         val job = currentCoroutineContext().job
         // Track queued work too, so account/mode cancellation cannot miss a waiting generation.
         active[job] = catalog.credential.clientId
@@ -89,12 +93,15 @@ class InferenceSession(
                 job.ensureActive()
             }
             val model = prepared.models.first { it.slug == selected }
+            if (image) OpenAiGeneration.request(model, prepared.credential.mode, checkNotNull(input))
             InferenceControls.validate(configuration, model, prepared.credential.mode)
             if (input != null) OpenAiImageCapabilities.validate(selected, prepared.credential.mode, input)
-            if (input == null) provider.stream(prepared.credential, selected, receive)
+            if (image) provider.generateImage(prepared.credential, model, checkNotNull(input), receive)
+            else if (input == null) provider.stream(prepared.credential, selected, receive)
             else provider.stream(prepared.credential, model, input, configuration, receive)
             job.ensureActive()
             result.end()
+            if (image && result.generated == null) GenerationOutput.invalid()
             if (!isCurrent(prepared.credential)) throw ApiFailure(ApiProblem.STALE_ACCOUNT)
             job.ensureActive()
             result

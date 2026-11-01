@@ -21,8 +21,10 @@ class DurableChatViewModelTest {
         val owner = UUID.randomUUID().toString()
         val writes = mutableListOf<ConversationEntry>()
         var failAt = -1
+        var completing: (suspend () -> Unit)? = null
         override suspend fun owner(identityHash: String) = owner
         override suspend fun save(entry: ConversationEntry): ConversationEntry {
+            if (entry.snapshot.terminal == "COMPLETED") completing?.invoke()
             if (writes.size == failAt) throw ConversationStorageException()
             return entry.copy(revision = entry.revision + 1).also { writes += it }
         }
@@ -107,5 +109,42 @@ class DurableChatViewModelTest {
         assertEquals("partial", store.writes.last().snapshot.partial)
         assertTrue(store.writes.last().snapshot.replay.isEmpty())
         assertEquals("EXCLUDED", store.writes.last().snapshot.messages.single().status)
+    }
+    @Test fun terminalReceivedButSessionNotReturnedStopStillWins() = runTest {
+        val terminal = CompletableDeferred<Unit>(); val release = CompletableDeferred<Unit>()
+        val store = Store(); val provider = Provider().apply { action = { emit ->
+            emit(ResponseEvent.Completed("candidate")); terminal.complete(Unit)
+            withContext(NonCancellable) { release.await() }
+        } }
+        val model = create(store, provider); runCurrent(); model.draft("question"); model.send()
+        terminal.await(); model.stop(); release.complete(Unit); runCurrent()
+        assertEquals(ChatStage.CANCELLED, model.chat.value.stage)
+        assertTrue(store.writes.all { it.snapshot.replay.isEmpty() })
+        assertEquals("EXCLUDED", store.writes.last().snapshot.messages.single().status)
+    }
+    @Test fun stopAfterCompletionOwnershipCannotEraseCompletionOrItsPublication() = runTest {
+        val entered = CompletableDeferred<Unit>(); val release = CompletableDeferred<Unit>()
+        val store = Store().apply { completing = { entered.complete(Unit); release.await() } }
+        val provider = Provider(); val model = create(store, provider); runCurrent()
+        model.draft("question"); model.send(); entered.await(); model.stop()
+        release.complete(Unit); runCurrent()
+        assertEquals(ChatStage.COMPLETED, model.chat.value.stage)
+        assertEquals(2, store.writes.last().snapshot.replay.size)
+        assertEquals(2, store.writes.size); assertEquals(1, provider.requests)
+    }
+    @Test fun stopDuringOwnedCommitCannotSuppressSaveFailureRollback() = runTest {
+        val entered = CompletableDeferred<Unit>(); val release = CompletableDeferred<Unit>()
+        val store = Store().apply { completing = { entered.complete(Unit); release.await(); throw ConversationStorageException() } }
+        val provider = Provider(); val model = create(store, provider); runCurrent()
+        model.draft("question"); model.send(); entered.await(); model.stop()
+        release.complete(Unit); runCurrent()
+        assertEquals(ChatStage.FAILED, model.chat.value.stage)
+        assertEquals(ApiProblem.CHAT_STORAGE, model.chat.value.problem)
+        assertTrue(store.writes.single().snapshot.replay.isEmpty())
+        assertEquals(ChatMessageStatus.EXCLUDED, model.chat.value.messages.single().status)
+        store.completing = null
+        model.draft("explicit next"); model.send(); runCurrent()
+        assertEquals(1, provider.inputs.last().size)
+        assertEquals(2, provider.requests)
     }
 }

@@ -8,8 +8,7 @@ import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Test
 
-/** Blocker characterization, NOT generation acceptance. See docs/D7_F_IMAGE_GENERATION.md.
- * Use text-only canonical state to exercise the same writer without shipping an unsafe schema. */
+/** Shared durable policy: commit ownership wins over later cancellation. No compensating rollback. */
 class ImageGenerationCommitBoundaryTest {
     @Test fun existingWriterCommitsCancelledCompletionAndRejectsStoppedSnapshot() = runTest {
         val conversation = ChatConversation()
@@ -41,8 +40,7 @@ class ImageGenerationCommitBoundaryTest {
         val stop = launch { writer.write(stopped) }
         release.complete(Unit)
         completion.join(); stop.join()
-        // Characterize current policy, not the desired D7-F requirement.
-        // The attempted generated-image integration failed the inverse assertion.
+        // The inverse assertion from the original #11 plan was over-strong.
         assertTrue("Existing non-cancellable commit wins over Stop", checkNotNull(saved).snapshot.replay.isNotEmpty())
         assertEquals("COMPLETED", checkNotNull(saved).snapshot.terminal)
         assertTrue("Writer discards the shorter stopped checkpoint", writer.entry.snapshot == completed)

@@ -53,6 +53,9 @@ internal fun ChatScreen(
     val presentation by owner.state.collectAsStateWithLifecycle()
     val readOnlyReason by remember(proof) { proof.chat.map { it.readOnlyReason }.distinctUntilChanged() }
         .collectAsStateWithLifecycle(initialValue = null)
+    var imageId by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
+    val image = presentation.rows.mapNotNull { it.generated }.firstOrNull { it.id == imageId }
+    if (image != null) GeneratedImageViewer(proof, image) { imageId = null }
     var inspected by remember { mutableStateOf<List<MarkdownLink>?>(null) }
     // A reset invalidates displayed destinations along with the conversation.
     LaunchedEffect(presentation.rows.isEmpty()) { if (presentation.rows.isEmpty()) inspected = null }
@@ -102,7 +105,7 @@ internal fun ChatScreen(
         readOnlyReason?.let { reason -> item(key = "chat-readonly", contentType = "status") { ShellText(reason) } }
         if (presentation.rows.isEmpty()) {
             item(key = "chat-empty", contentType = "status") { ShellText("Ask anything") }
-        } else chatItems(presentation) { inspected = it }
+        } else chatItems(presentation, proof, { inspected = it }, { imageId = it.id })
         supplementalGuidance?.let { text ->
             item(key = "chat-guidance", contentType = "recovery") { ShellText(text) }
         }
@@ -202,6 +205,16 @@ internal fun ComposerScreen(
         if (chat.limitReached) {
             item { ShellText("Start a new chat to continue") }
             action("New Chat") { proof.newChat(); navigation.open(Surface.CHAT) }
+        }
+        val generationSupported = state.models.firstOrNull { it.slug == state.selectedSlug }?.let {
+            it.imageGeneration != null && it.imageGeneration == OpenAiGeneration.capability(it.slug, state.mode)
+        } == true
+        if (!generationSupported) item { ShellText("Image generation unavailable for this route/model. Requires a reviewed OpenAI API model.") }
+        else {
+            item { ShellText("Generate a new image from this text. Uses separate OpenAI API billing. Input photos are not supported.") }
+            action("Generate image", chat.canSend && !state.busy && selectedPhotos.isEmpty()) {
+                proof.generateImage { navigation.open(Surface.CHAT) }
+            }
         }
         action("Back to chat") { navigation.open(Surface.CHAT) }
         item { ShellText("Unsent drafts are discarded when the app process ends.") }

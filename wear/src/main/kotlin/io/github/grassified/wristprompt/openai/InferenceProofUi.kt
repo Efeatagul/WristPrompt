@@ -23,6 +23,7 @@ internal fun problemText(problem: ApiProblem?): Int = when (problem) {
     ApiProblem.INCOMPLETE -> R.string.proof_incomplete
     ApiProblem.STORAGE -> R.string.setup_storage_error
     ApiProblem.GENERATION_UNSUPPORTED -> R.string.generation_unsupported
+    ApiProblem.GENERATION_OUTPUT -> R.string.generation_output
     ApiProblem.GENERATION_PROMPT -> R.string.generation_prompt
     ApiProblem.IMAGE_TEXT_REQUIRED -> R.string.image_text_required
     ApiProblem.IMAGES_UNSUPPORTED -> R.string.images_unsupported

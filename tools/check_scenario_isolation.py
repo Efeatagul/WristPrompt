@@ -24,7 +24,7 @@ def check_dependencies():
 def check():
     check_dependencies()
     from wear_scenarios import scenarios
-    markers = ('DebugScenario', 'StreamingPreviewActivity', 'DEBUG_LIFECYCLE',
+    markers = ('DebugGenerationActivity', 'GenerationAcceptanceOwner', 'DEBUG_GENERATION', 'debug-generation.txt', 'DebugScenario', 'StreamingPreviewActivity', 'DEBUG_LIFECYCLE',
                'debug-scenario-ready.txt', 'BuildConfig.DEBUG', *scenarios())
     for source in ('wear/src/main', 'mobile/src/main', 'shared/src/main'):
         for p in (ROOT / source).rglob('*'):
@@ -41,7 +41,7 @@ def check():
         apk, = folder.glob('*.apk')
         with zipfile.ZipFile(apk) as archive:
             dex = b''.join(archive.read(name) for name in archive.namelist() if name.endswith('.dex'))
-        for marker in (b'DebugScenarioActivity', b'DebugScenarios;', b'DebugScenario;', b'ScenarioOwner;',
+        for marker in (b'DebugGenerationActivity', b'GenerationAcceptanceOwner', b'DEBUG_GENERATION', b'debug-generation.txt', b'DebugScenarioActivity', b'DebugScenarios;', b'DebugScenario;', b'ScenarioOwner;',
                        b'debug-scenario-ready.txt', b'DEBUG_LIFECYCLE'):
             assert (marker in dex) == (variant == 'debug'), (variant, marker)
     for name in scenarios():

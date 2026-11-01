@@ -6,7 +6,7 @@ import kotlinx.serialization.json.*
 enum class ChatRole { USER, ASSISTANT }
 enum class ChatMessageStatus { PENDING, COMPLETED, EXCLUDED }
 enum class ChatStage { EMPTY, COMPOSING, STARTING, RECEIVING, COMPLETED, FAILED, CANCELLED }
-data class ChatMessage(val id: Long, val role: ChatRole, val text: String, val status: ChatMessageStatus = ChatMessageStatus.COMPLETED, val attachments: List<String> = emptyList()) {
+data class ChatMessage(val id: Long, val role: ChatRole, val text: String, val status: ChatMessageStatus = ChatMessageStatus.COMPLETED, val attachments: List<String> = emptyList(), val generated: GeneratedAttachment? = null) {
     override fun toString() = SafeDiagnostics.REDACTED
 }
 data class ChatState(
@@ -38,7 +38,7 @@ class ChatConversation {
     fun reset() { configuration = InferenceConfiguration(); history = emptyList(); pending = null; pendingUserId = null; attempts = 0; state = ChatState() }
     fun readOnly(reason: String?) { state = state.copy(readOnlyReason = reason) }
     fun snapshot(): ConversationSnapshot = ConversationSnapshot(
-        messages = state.messages.map { StoredMessage(it.id, it.role.name, it.status.name, listOf(ContentPart.Text(it.text)) + it.attachments.map(ContentPart::ImageAttachment)) },
+        messages = state.messages.map { StoredMessage(it.id, it.role.name, it.status.name, listOf(ContentPart.Text(it.text)) + it.attachments.map(ContentPart::ImageAttachment) + listOfNotNull(it.generated?.let(ContentPart::GeneratedImage))) },
         replay = history.toList(), attempts = attempts, nextId = nextId,
         partial = if (state.busy) "" else state.partial, terminal = state.stage.name, configuration = configuration,
     ).also { it.validate() }
@@ -50,7 +50,7 @@ class ChatConversation {
         val interrupted = snapshot.messages.any { it.status == "PENDING" }
         val restored = snapshot.messages.map { m -> ChatMessage(m.id, ChatRole.valueOf(m.role),
             m.parts.filterIsInstance<ContentPart.Text>().joinToString("") { it.text },
-            if (m.status == "PENDING") ChatMessageStatus.EXCLUDED else ChatMessageStatus.valueOf(m.status), m.parts.filterIsInstance<ContentPart.ImageAttachment>().map { it.attachmentId }) }
+            if (m.status == "PENDING") ChatMessageStatus.EXCLUDED else ChatMessageStatus.valueOf(m.status), m.parts.filterIsInstance<ContentPart.ImageAttachment>().map { it.attachmentId }, m.parts.filterIsInstance<ContentPart.GeneratedImage>().singleOrNull()?.reference) }
         configuration = snapshot.configuration
         history = snapshot.replay.toList(); attempts = snapshot.attempts; nextId = snapshot.nextId
         pending = null; pendingUserId = null
@@ -81,20 +81,22 @@ class ChatConversation {
     fun progress(text: String) {
         if (state.busy) state = state.copy(stage = ChatStage.RECEIVING, partial = text)
     }
-    fun complete(result: StreamResult) {
+    fun complete(result: StreamResult, generated: GeneratedAttachment? = null) {
         check(state.busy && result.completed)
         val user = checkNotNull(pending)
         val output = result.outputItems ?: listOf(message("assistant", result.output))
         // Unsupported/tool output must never become an implicit tool or be silently discarded.
         validateReplayOutput(output)
         require(size(output) <= ResponsesProtocol.MAX_BODY_BYTES)
+        require(output.count { it["type"]?.jsonPrimitive?.content == "image_generation_call" } == if (generated == null) 0 else 1)
+        generated?.validate()
         val next = history + user + output
         val full = size(next) > MAX_CONTEXT_BYTES || attempts >= MAX_ATTEMPTS
         history = next
         pending = null
         val messages = state.messages.map { if (it.id == pendingUserId) it.copy(status = ChatMessageStatus.COMPLETED) else it }
         pendingUserId = null
-        state = state.copy(messages = messages + ChatMessage(++nextId, ChatRole.ASSISTANT, result.output),
+        state = state.copy(messages = messages + ChatMessage(++nextId, ChatRole.ASSISTANT, result.output, generated = generated),
             stage = ChatStage.COMPLETED, partial = "", limitReached = full)
     }
     fun fail(problem: ApiProblem?, cancelled: Boolean = false) {

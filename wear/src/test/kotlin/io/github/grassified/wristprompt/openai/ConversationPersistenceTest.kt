@@ -49,7 +49,7 @@ class ConversationPersistenceTest {
     }
     @Test fun unknownVersionMalformedReplayAndMismatchedUserAreRejected() {
         val c = completed(); val (body, replay) = ConversationCodec.encode(entry(c.snapshot()))
-        assertThrows(Exception::class.java) { ConversationCodec.decode(body.replace("\"version\":3", "\"version\":99"), replay) }
+        assertThrows(Exception::class.java) { ConversationCodec.decode(body.replace("\"version\":4", "\"version\":99"), replay) }
         assertThrows(Exception::class.java) { ConversationCodec.decode(body, "[]") }
         assertThrows(Exception::class.java) { ConversationCodec.decode(body, replay.replace("user text", "wrong user")) }
         assertThrows(Exception::class.java) { ConversationCodec.decode("{broken", replay) }

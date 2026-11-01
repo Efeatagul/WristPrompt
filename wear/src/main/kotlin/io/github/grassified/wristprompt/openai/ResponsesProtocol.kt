@@ -50,7 +50,7 @@ data class AiModel(val slug: String, val displayName: String, val thinking: Cont
 
 sealed interface ResponseEvent {
     data class Delta(val text: String) : ResponseEvent
-    data class Completed(val finalText: String?, val outputItems: List<JsonObject>? = null) : ResponseEvent {
+    data class Completed(val finalText: String?, val outputItems: List<JsonObject>? = null, val generated: GeneratedOutput? = null) : ResponseEvent {
         override fun toString() = io.github.grassified.wristprompt.bridge.SafeDiagnostics.REDACTED
     }
     data class Failed(val failure: ApiFailure) : ResponseEvent
@@ -59,9 +59,10 @@ sealed interface ResponseEvent {
 }
 
 object ResponseEvents {
-    fun decode(eventName: String?, data: String): ResponseEvent {
+    fun decode(eventName: String?, data: String, generation: Boolean = false): ResponseEvent {
         var detail = ProtocolDetail.SSE_EVENT_JSON
         return try {
+            if (generation) GenerationOutput.checkFrame(data)
             val root = Json.parseToJsonElement(data).jsonObject
             detail = ProtocolDetail.SSE_EVENT_TYPE
             val typeValue = root["type"]?.jsonPrimitive
@@ -86,7 +87,16 @@ object ResponseEvents {
                     require(text == null || text.length <= ResponsesProtocol.MAX_TEXT_CHARS)
                     // A summary without output items is not an explicit empty replacement.
                     // Match the existing omitted-output contract: retain validated deltas.
-                    ResponseEvent.Completed(text, items?.takeIf { it.isNotEmpty() })
+                    if (generation) {
+                        val call = items?.singleOrNull { it["type"]?.jsonPrimitive?.content == "image_generation_call" }
+                            ?: GenerationOutput.invalid()
+                        val reference = GenerationOutput.callReference(call)
+                        val encoded = call["result"]?.jsonPrimitive?.takeIf { it.isString }?.content ?: GenerationOutput.invalid()
+                        val output = items.map { if (it === call) reference else it }
+                        validateReplayOutput(output)
+                        require(JsonArray(output).toString().encodeToByteArray().size <= ResponsesProtocol.MAX_BODY_BYTES)
+                        ResponseEvent.Completed(text, output, GenerationOutput.decode(encoded))
+                    } else ResponseEvent.Completed(text, items?.takeIf { it.isNotEmpty() })
                 }
                 "response.failed" -> ResponseEvent.Failed(ApiErrors.parse(null, root.getValue("response").toString()))
                 "response.incomplete" -> ResponseEvent.Incomplete

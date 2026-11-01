@@ -307,4 +307,47 @@ class StreamingHttpCancellationTest {
         }
     }
 
+    @Test fun imageGenerationCancelsActualCallAndClosesBodyBeforeCommitOwnership(): Unit = runBlocking {
+        val blocked = CompletableDeferred<Unit>(); val closed = CompletableDeferred<Unit>(); val cancelled = CountDownLatch(1)
+        val actual = AtomicReference<Call>()
+        val lease = CredentialLease("synthetic", 0, "synthetic", Long.MAX_VALUE, CredentialMode.OPENAI_API_KEY)
+        val client = OkHttpClient.Builder().eventListener(object : EventListener() {
+            override fun canceled(call: Call) { cancelled.countDown() }
+        }).addInterceptor { chain ->
+            actual.set(chain.call())
+            val request = Json.parseToJsonElement(Buffer().also { chain.request().body!!.writeTo(it) }.readUtf8()).jsonObject
+            check(request["store"]!!.jsonPrimitive.boolean == false && request["stream"]!!.jsonPrimitive.boolean)
+            check("reasoning" !in request && "previous_response_id" !in request)
+            check(request["tools"]!!.jsonArray.single().jsonObject["type"]!!.jsonPrimitive.content == "image_generation")
+            val source = object : Source {
+                override fun timeout() = Timeout.NONE
+                override fun close() { closed.complete(Unit) }
+                override fun read(sink: Buffer, byteCount: Long): Long {
+                    blocked.complete(Unit)
+                    check(cancelled.await(3, TimeUnit.SECONDS)); throw IOException("Synthetic cancellation")
+                }
+            }.buffer()
+            response(chain, object : ResponseBody() {
+                override fun contentType() = "text/event-stream".toMediaType()
+                override fun contentLength() = -1L
+                override fun source() = source
+            })
+        }.build()
+        val http = OpenAiProvider(OpenAiHttp(client))
+        val provider = object : AiProvider {
+            override suspend fun models(credential: CredentialLease) = listOf(AiModel("gpt-6.1-sol", "Synthetic",
+                imageGeneration = OpenAiGeneration.capability("gpt-6.1-sol", credential.mode)))
+            override suspend fun stream(credential: CredentialLease, model: String, onEvent: suspend (ResponseEvent) -> Unit) = error("unused")
+            override suspend fun generateImage(credential: CredentialLease, model: AiModel, input: List<JsonObject>, onEvent: suspend (ResponseEvent) -> Unit) =
+                http.generateImage(credential, model, input, onEvent)
+        }
+        try {
+            val session = InferenceSession({ lease }, provider) { true }; val catalog = session.catalog()
+            val job = launch { session.image(catalog, "gpt-6.1-sol", listOf(ImageInput.user("draw"))) {} }
+            withTimeout(3000) { blocked.await() }; session.cancelAll(); job.join()
+            withTimeout(3000) { closed.await() }
+            assertTrue(job.isCancelled); assertTrue(actual.get().isCanceled())
+        } finally { client.dispatcher.executorService.shutdown(); client.connectionPool.evictAll() }
+    }
+
 }

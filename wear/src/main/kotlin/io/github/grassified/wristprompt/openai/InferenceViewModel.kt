@@ -34,6 +34,7 @@ class InferenceViewModel(
     private val conversationIdentity: suspend (CredentialLease) -> String = { throw SecureStorageException() },
     private val localConversationIdentity: (suspend (InferenceAccessState) -> String)? = null,
     private val conversationImages: ConversationImages? = null,
+    private val generatedImages: GeneratedImages? = null,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ProofState())
     val state = mutableState.asStateFlow()
@@ -47,6 +48,8 @@ class InferenceViewModel(
     private var prepared: PreparedCatalog? = null
     private var operation: Job? = null
     @Volatile private var epoch = 0L
+    // Main-confined ownership: Stop may cancel preparation/streaming, never an owned commit.
+    private var completionOwner: Long? = null
     private var cleared = false
     private var ownerScope: String? = null
     private var writer: ConversationWriter? = null
@@ -211,6 +214,7 @@ class InferenceViewModel(
         }
     }
     fun stop() {
+        if (completionOwner == epoch) return
         val wasChatBusy = conversation.state.busy
         val wasPreparing = !wasChatBusy && chat.value.busy
         if (!wasChatBusy && !wasPreparing && !state.value.busy) return
@@ -334,7 +338,7 @@ class InferenceViewModel(
                 if (run != epoch || ownerScope != owner || accounts.value != observedAccess) return@launchOperation
                 if (title == null) {
                     store.delete(id, owner, entry.revision)
-                    conversationImages?.delete(id)
+                    conversationImages?.delete(id); generatedImages?.delete(owner, id)
                     if (run == epoch && writer?.entry?.id == id) { clearChat(); restoreOnStartup = false }
                 } else {
                     require(title.isNotBlank() && title.length <= 120)
@@ -347,7 +351,16 @@ class InferenceViewModel(
                     else "Name could not be saved. Use a non-empty name up to 120 characters, or try again.") }
         }
     }
-    fun send(onStarted: () -> Unit = {}) {
+    fun send(onStarted: () -> Unit = {}) = send(false, onStarted)
+    fun generateImage(onStarted: () -> Unit = {}) = send(true, onStarted)
+    suspend fun generatedContent(reference: GeneratedAttachment): io.github.grassified.wristprompt.images.ImageContent {
+        val entry = withContext(Dispatchers.Main.immediate) {
+            require(conversation.state.messages.any { it.generated == reference })
+            writer?.entry ?: throw ApiFailure(ApiProblem.IMAGE_UNAVAILABLE)
+        }
+        return (generatedImages ?: throw ApiFailure(ApiProblem.IMAGE_UNAVAILABLE)).content(entry.owner, entry.id, reference)
+    }
+    private fun send(imageGeneration: Boolean, onStarted: () -> Unit) {
         if (operation?.isActive == true || state.value.busy) return
         val catalog = prepared?.takeIf(::compatible) ?: return
         val selected = state.value.selectedSlug?.takeIf { slug -> catalog.models.any { it.slug == slug } } ?: return
@@ -357,7 +370,13 @@ class InferenceViewModel(
         }
         if (!conversation.state.canSend) return
         val configuration = conversation.configuration
-        try { InferenceControls.validate(configuration, catalog.models.first { it.slug == selected }, catalog.credential.mode) }
+        if (imageGeneration) {
+            try {
+                OpenAiGeneration.request(catalog.models.first { it.slug == selected }, catalog.credential.mode, conversation.preview(imageSelection.selected.value))
+                if (conversationStore == null || generatedImages == null) throw ApiFailure(ApiProblem.CHAT_STORAGE, requestNotSent = true)
+            } catch (failure: ApiFailure) { mutableChat.value = conversation.state.copy(problem = failure.problem); return }
+        }
+        try { if (!imageGeneration) InferenceControls.validate(configuration, catalog.models.first { it.slug == selected }, catalog.credential.mode) }
         catch (_: ApiFailure) {
             mutableState.value = state.value.copy(thinkingNotice = "Thinking level is unsupported. Choose Default or a supported value.")
             mutableChat.value = chat.value.copy(problem = ApiProblem.THINKING_UNSUPPORTED)
@@ -377,7 +396,8 @@ class InferenceViewModel(
         val plainInput = try {
             OpenAiImageCapabilities.validate(selected, catalog.credential.mode, canonical)
             if (hasImages) null else canonical.also {
-                ResponsesProtocol.request(selected, it, configuration, catalog.models.first { model -> model.slug == selected }.thinking, catalog.credential.mode)
+                if (imageGeneration) OpenAiGeneration.request(catalog.models.first { model -> model.slug == selected }, catalog.credential.mode, it)
+                else ResponsesProtocol.request(selected, it, configuration, catalog.models.first { model -> model.slug == selected }.thinking, catalog.credential.mode)
             }
         } catch (failure: ApiFailure) {
             mutableChat.value = conversation.state.copy(problem = failure.problem); return
@@ -415,21 +435,33 @@ class InferenceViewModel(
                 activeWriter?.write(checkpoint)
                 currentCoroutineContext().ensureActive()
                 if (run != epoch || !compatible(catalog)) return@launchOperation
-                val result = session.chat(catalog, selected, input, configuration) { progress ->
+                val progress: suspend (StreamResult) -> Unit = { progress ->
                     withContext(Dispatchers.Main.immediate) {
                         if (run == epoch) { conversation.progress(progress.output); publishChat() }
                     }
                 }
+                val result = if (imageGeneration) session.image(catalog, selected, input, progress)
+                    else session.chat(catalog, selected, input, configuration, progress)
+                val generated = if (imageGeneration) checkNotNull(generatedImages).prepare(checkNotNull(result.generated)) else null
+                currentCoroutineContext().ensureActive()
+                if (!compatible(catalog)) throw ApiFailure(ApiProblem.STALE_ACCOUNT)
                 if (run == epoch) {
                     // Keep visible streaming text for in-memory rollback only; busy durable snapshots omit it.
                     val beforeCompletion = conversation.snapshot().copy(partial = conversation.state.partial)
-                    // The completed-event boundary wins over a later Stop. Publish only after durable commit.
-                    conversation.complete(result)
-                    try { activeWriter?.write(conversation.snapshot()) }
+                    // Linearization point: validated canonical completion on Main, without suspension.
+                    conversation.complete(result, generated?.reference)
+                    completionOwner = run
+                    try {
+                        val completed = conversation.snapshot()
+                        if (generated == null) activeWriter?.write(completed)
+                        else withContext(NonCancellable) {
+                            checkNotNull(generatedImages).commit(checkNotNull(activeWriter).entry, generated) { activeWriter.write(completed) }
+                        }
+                    }
                     catch (failure: Exception) {
                         if (run == epoch) { conversation.restore(beforeCompletion); conversation.fail(ApiProblem.CHAT_STORAGE); publishChat() }
                         throw failure
-                    }
+                    } finally { if (completionOwner == run) completionOwner = null }
                     if (run == epoch) publishChat()
                 }
             } catch (cancelled: CancellationException) {

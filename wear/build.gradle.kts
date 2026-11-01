@@ -14,7 +14,9 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
-        testInstrumentationRunner = if (providers.gradleProperty("wristprompt.imageInferenceAcceptance").orNull == "true")
+        testInstrumentationRunner = if (providers.gradleProperty("wristprompt.generationAcceptance").orNull == "true")
+            "io.github.grassified.wristprompt.storage.ImageGenerationInstrumentation"
+        else if (providers.gradleProperty("wristprompt.imageInferenceAcceptance").orNull == "true")
             "io.github.grassified.wristprompt.storage.ImageInferenceInstrumentation"
         else "io.github.grassified.wristprompt.storage.ConversationStorageInstrumentation"
     }

@@ -9,7 +9,7 @@ import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.*
 import org.junit.Test
 
-/** Contract/capability checkpoint only. No production generation dispatch or acceptance claim. */
+/** Exact reviewed contract and fail-closed capability policy. Synthetic HTTP only. */
 class ImageGenerationContractTest {
     private val api = CredentialMode.OPENAI_API_KEY
     private val plan = CredentialMode.CHATGPT_PLAN
@@ -103,4 +103,19 @@ class ImageGenerationContractTest {
         assertNull(OpenAiGeneration.capability("gpt-6.1-sol", plan))
         assertFalse(checkNotNull(model().imageGeneration).toString().contains("gpt-6.1-sol"))
     }
+    @Test fun refreshedCatalogLosingGenerationCapabilityCannotDispatch() = runBlocking {
+        var lease = CredentialLease("synthetic", 0, "first", Long.MAX_VALUE, api)
+        var dispatches = 0
+        val p = object : AiProvider {
+            override suspend fun models(credential: CredentialLease) = listOf(if (credential.accessToken == "first") model() else AiModel("gpt-6.1-sol", "Synthetic"))
+            override suspend fun stream(credential: CredentialLease, model: String, onEvent: suspend (ResponseEvent) -> Unit) = error("unused")
+            override suspend fun generateImage(credential: CredentialLease, model: AiModel, input: List<JsonObject>, onEvent: suspend (ResponseEvent) -> Unit) { dispatches++ }
+        }
+        val session = InferenceSession({ lease }, p) { true }
+        val catalog = session.catalog(); lease = CredentialLease("synthetic", 0, "second", Long.MAX_VALUE, api)
+        try { session.image(catalog, "gpt-6.1-sol", input()) {}; fail("Unreviewed refreshed capability must fail") }
+        catch (failure: ApiFailure) { assertEquals(ApiProblem.GENERATION_UNSUPPORTED, failure.problem) }
+        assertEquals(0, dispatches)
+    }
+
 }

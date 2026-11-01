@@ -62,7 +62,7 @@ class InferenceControlsTest {
             title = "Synthetic", updated = 1, snapshot = chat.snapshot())
         val (body, replay) = ConversationCodec.encode(entry)
         assertEquals("[]", replay)
-        assertEquals(3, chat.snapshot().version)
+        assertEquals(4, chat.snapshot().version)
         val restored = ChatConversation().apply { restore(ConversationCodec.decode(body, replay)) }
         assertEquals(config("ultra-Future"), restored.configuration)
         assertTrue(restored.snapshot().replay.isEmpty())

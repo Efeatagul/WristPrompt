@@ -13,6 +13,8 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
 interface AiProvider {
+    suspend fun generateImage(credential: CredentialLease, model: AiModel, input: List<JsonObject>,
+        onEvent: suspend (ResponseEvent) -> Unit) { throw ApiFailure(ApiProblem.CONFIGURATION) }
     suspend fun stream(credential: CredentialLease, model: AiModel, input: List<JsonObject>,
         configuration: InferenceConfiguration, onEvent: suspend (ResponseEvent) -> Unit) {
         InferenceControls.validate(configuration, model, credential.mode)
@@ -27,6 +29,9 @@ interface AiProvider {
 }
 
 class OpenAiProvider(private val http: OpenAiHttp) : AiProvider {
+    override suspend fun generateImage(credential: CredentialLease, model: AiModel, input: List<JsonObject>,
+        onEvent: suspend (ResponseEvent) -> Unit) =
+        streamRequest(credential, OpenAiGeneration.request(model, credential.mode, input), onEvent, generation = true)
     override suspend fun models(credential: CredentialLease): List<AiModel> = http.execute(
         Request.Builder().url(ResponsesProtocol.MODELS_URL).header("Authorization", "Bearer ${credential.accessToken}")
             .header("Accept", "application/json").build(), 30,
@@ -53,7 +58,7 @@ class OpenAiProvider(private val http: OpenAiHttp) : AiProvider {
         streamRequest(credential, ResponsesProtocol.request(model.slug, input, configuration,
             OpenAiThinkingCapabilities.forModel(model.slug, credential.mode), credential.mode), onEvent)
 
-    private suspend fun streamRequest(credential: CredentialLease, body: String, onEvent: suspend (ResponseEvent) -> Unit) {
+    private suspend fun streamRequest(credential: CredentialLease, body: String, onEvent: suspend (ResponseEvent) -> Unit, generation: Boolean = false) {
         var started = false
         try {
             http.execute(Request.Builder().url(ResponsesProtocol.RESPONSES_URL)
@@ -73,7 +78,7 @@ class OpenAiProvider(private val http: OpenAiHttp) : AiProvider {
                     throw ApiFailure(ApiProblem.PROTOCOL, status = response.code, protocolDetail = detail)
                 }
                 started = true
-                val events = SseReader(response.body.byteStream())
+                val events = SseReader(response.body.byteStream(), generation)
                 while (true) {
                     currentCoroutineContext().ensureActive()
                     val event = events.next() ?: throw ApiFailure(ApiProblem.INTERRUPTED)

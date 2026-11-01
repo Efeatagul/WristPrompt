@@ -28,8 +28,13 @@ internal fun chatInputIntent(label: String = "Message"): Intent = Intent("androi
             }).build()))
     .putExtra("android.support.wearable.input.extra.CONFIRM_LABEL", "Done")
 
-internal fun ShellListScope.chatItems(presentation: ChatPresentation, inspect: (List<MarkdownLink>) -> Unit) {
-    for (row in presentation.rows) item(key = row.key, contentType = row.markdown?.kind ?: row.type) { TranscriptText(row, inspect) }
+internal fun ShellListScope.chatItems(presentation: ChatPresentation, proof: InferenceViewModel,
+    inspect: (List<MarkdownLink>) -> Unit, openImage: (GeneratedAttachment) -> Unit) {
+    for (row in presentation.rows) item(key = row.key, contentType = row.markdown?.kind ?: row.type) {
+        val generated = row.generated
+        if (generated != null) GeneratedImageRow(proof, generated) { openImage(generated) }
+        else TranscriptText(row, inspect)
+    }
 }
 
 @androidx.compose.runtime.Composable

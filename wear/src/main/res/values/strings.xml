@@ -52,4 +52,5 @@
     <string name="image_text_required">Add text to ask about the selected photos.</string>
     <string name="generation_unsupported">Image generation requires a reviewed model and OpenAI API billing. No request sent.</string>
     <string name="generation_prompt">Enter text up to 8192 characters and remove input photos before generating.</string>
+    <string name="generation_output">Generated image invalid, missing or too large. No completed image saved.</string>
 </resources>

@@ -1,11 +1,8 @@
-# D7-F image generation — blocked implementation checkpoint
+# D7-F image generation — implementation in progress
 
-Issue #11 remains OPEN. This is a contract/capability checkpoint, **not** completed
-implementation or automated/emulator acceptance. One focused implementation
-attempt hit the Stop/completion persistence boundary below. Following the owner's
-explicit stop rule, the unfinished dispatch, schema, storage and viewer changes
-were removed before checkpointing. No generation action is exposed. PR #29 was
-inspected only; its branch/commit is not included and it was not modified/merged.
+Issue #11 remains OPEN. Continuing checkpoint 7a66710 on the existing branch.
+The ownership analysis below resolves the original planning blocker; implementation
+and new acceptance evidence are recorded as they complete. PR #29 is out of scope.
 
 ## Official contract audit — 2026-11-01
 
@@ -83,41 +80,60 @@ not accepted or changed by this operation. The whole request retains the existin
 262,144-byte text body bound. Static unsupported/prompt errors are available to a
 future caller. No composer, navigation, gesture or provider stream calls the builder.
 
-## Reproduced blocker: Stop during completion persistence
+## Completion / Stop ownership conclusion — 2026-11-01
 
-The existing `ConversationWriter.write` intentionally runs under `NonCancellable`.
-It also rejects a later snapshot with shorter replay, protecting a completed
-exchange from a late Stop checkpoint. `InferenceViewModel.send` explicitly records
-that completion wins once the terminal event has been handled. This is existing
-text behavior, not a newly introduced generation defect.
+The original inverse race expectation was an over-strong planning requirement,
+not an image provider requirement. #11's published scope requires safe cancellation;
+it does not require rolling back an owned or committed completion. Text and image
+operations use ONE ownership rule. The writer's NonCancellable transaction,
+shorter-replay guard, revision checks and tombstones remain authoritative.
 
-The attempted generation integration reused those same owners. A deterministic
-latch test did the following, without sleeps, real files, network or credentials:
+The Main-confined state machine is:
 
-1. Prepare a pending exchange and a completed generated-image exchange.
-2. Enter completion `save` and suspend it on a latch.
-3. Cancel the completion's owning Job, as Stop does; queue an excluded/stopped
-   checkpoint under the writer's mutex.
-4. Release completion saving and join both operations.
-5. Require that durable replay excludes the generated completion.
+- RUNNING: pending display exchange, no replay; Stop invalidates epoch and cancels HTTP.
+- TERMINAL_RECEIVED: session has received `response.completed`, but must finish
+  terminal validation, provider exit, lease and owning-Job checks. Stop can still win.
+- PREPARING (images only): validate/normalize and stage an unowned file candidate.
+  Stop still wins; no completed attachment or replay exists.
+- COMMIT_OWNED: on Main, after the last epoch/owner validation, synchronous
+  `ChatConversation.complete` validates and installs the canonical candidate and
+  `completionOwner = run` is set with no intervening suspension. **This is the
+  completion-versus-Stop linearization point.** Stop is now a no-op. It cannot cancel
+  the commit or advance its epoch. Receiving/validating a provider event alone,
+  entering SQLite, and SQLite success are different events.
+- COMPLETED: atomic durable save succeeded; only now publish completed display.
+- FAILED: save failed; restore pre-completion replay, preserve visible partial as
+  unsaved/excluded, expose CHAT_STORAGE; no automatic retry.
+- STOPPED: Stop acquired ownership before COMMIT_OWNED; late callbacks cannot
+  acquire commit ownership, and the excluded checkpoint has no new replay.
 
-The required assertion **FAILED**: `Stop must keep generated completion out of
-durable replay`. Completion committed despite cancellation; the subsequent stopped
-snapshot was discarded by the shorter-replay guard. The attempted integration
-compiled, but this required race did not pass. No failed test is relabeled PASS.
+Commit ownership is irrevocable **against Stop**, conditional on successful storage.
+Durable success becomes a fact only when the transaction atomically succeeds. These
+are two distinct boundaries. No fully committed transaction is ever undone.
 
-`ImageGenerationCommitBoundaryTest` retains a passing **characterization** of that
-unchanged policy using text-only canonical data, so this checkpoint needs no unsafe
-generated-image schema. It asserts that cancelled completion still wins; it is
-explicitly NOT acceptance of the requested generation Stop behavior. Invert the
-replay assertion to reproduce the incompatible requirement.
+Existing text already installed its completion synchronously before a protected save,
+and its writer rejects the later shorter stopped snapshot. A deterministic test
+preserves this characterization. The original six-step blocked-save/inverse-replay
+test crosses the ownership point before cancelling, so its correct expectation is
+completion wins. Making Stop win there would change text semantics, permit replay
+regression and undermine completion-save guarantees; compensation is prohibited.
+The generated-image provider lifecycle does not require such a rollback.
 
-A pre-save coroutine/epoch check cannot fix cancellation after entry to the
-non-cancellable save. The unresolved work is a commit-boundary ownership design
-that satisfies strict D7-F Stop without rolling back committed text exchanges or
-splitting SQLite/file ownership. The focused attempt did not resolve that design;
-per the owner's instruction, it stops here rather than changing the shared durable
-commit policy speculatively. No transport Stop behavior was weakened.
+Focused inspection did find a real UI/failure race: Stop could see unpublished busy
+UI while the canonical candidate was already completed, cancel the operation and
+advance epoch; a subsequent save failure would then skip in-memory rollback. The
+small shared ViewModel correction ignores Stop for its current completion owner.
+It preserves the existing durable winner, and ensures a later storage failure
+cannot leave failed completion in replay. ConversationWriter and SQLite semantics
+are unchanged. Account/New Chat destruction still invalidates publication and never
+revives old UI. Session Job, lease and ViewModel epoch checks reject stale callbacks;
+duplicate terminals are ignored; actual HTTP cancellation before ownership remains.
+
+Deterministic tests use deferred barriers, not sleeps: terminal received before
+session return → Stop wins; owned save blocked → completion wins; owned save fails
+after Stop → CHAT_STORAGE and prior replay; cancelled writer rejects shorter replay.
+Existing text late/duplicate callback and real transport-cancellation tests remain
+part of the gate. Generation will use the same finalization path and tests.
 
 ## Unimplemented boundaries and proposed limits
 
