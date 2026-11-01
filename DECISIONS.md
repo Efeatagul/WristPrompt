@@ -1368,3 +1368,12 @@ without a request or unsent draft. Rename/delete use revisions and wait for queu
 terminal checkpoints, preventing a Stop/open/rename race from using an old revision.
 Native history actions remain separate from the coalesced transcript; observe only
 distinct read-only/busy values. See docs/D6_C_HISTORY.md for validation and limits.
+
+## D7-A phone prompt presets — 2026-11-01
+
+Use the existing Preferences DataStore dependency for a separate bounded atomic
+phone catalog; no conversation/credential storage coupling or new framework.
+The shared version-1 codec defines UUID identity, expected per-record revisions,
+terminal text-free tombstones and strict bounded serialization. No transport or
+inference hook is wired. Limits, ordering, privacy, evidence and pending phone
+checks are in [docs/D7_A_PRESETS.md](docs/D7_A_PRESETS.md).

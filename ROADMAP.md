@@ -361,7 +361,10 @@ Image binaries belong in app-private files with durable metadata references,
 not large base64 database rows. D6-A owns the exact schema/storage choice.
 No image-input implementation in D6-A; no database selected in this handoff.
 
-## Day 7 — companion productivity + multimodal input + final integration — NOT STARTED
+## Day 7 — companion productivity + multimodal input + final integration
+
+D7-A phone presets are implemented and VERIFIED AUTOMATICALLY; manual phone checks
+remain pending in [docs/D7_A_PRESETS.md](docs/D7_A_PRESETS.md). D7-B onward is not started.
 
 - [ ] D7-A: durable named custom USER prompt presets managed on phone (list,
   create/edit/rename/delete, multiline editor); no hidden always-on system prompt.
