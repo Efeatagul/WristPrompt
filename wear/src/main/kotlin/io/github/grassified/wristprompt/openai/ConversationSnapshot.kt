@@ -15,17 +15,20 @@ import kotlinx.serialization.json.*
 ) { override fun toString() = SafeDiagnostics.REDACTED }
 
 @Serializable data class ConversationSnapshot(
-    val version: Int = 1,
+    val version: Int = 2,
     val messages: List<StoredMessage>,
     val replay: List<JsonObject>,
     val attempts: Int,
     val nextId: Long,
     val partial: String = "",
     val terminal: String = "EMPTY",
+    val configuration: InferenceConfiguration = InferenceConfiguration(),
 ) {
     override fun toString() = SafeDiagnostics.REDACTED
     fun validate() {
-        require(version == 1 && attempts in 0..ChatConversation.MAX_ATTEMPTS && nextId in 0..(Long.MAX_VALUE - 48))
+        require(version in 1..2 && attempts in 0..ChatConversation.MAX_ATTEMPTS && nextId in 0..(Long.MAX_VALUE - 48))
+        configuration.validate()
+        require(version != 1 || configuration.controls.isEmpty())
         require(messages.size <= ChatConversation.MAX_ATTEMPTS * 2)
         require(messages.map { it.id }.distinct().size == messages.size)
         require(messages.zipWithNext().all { (a, b) -> a.id < b.id })

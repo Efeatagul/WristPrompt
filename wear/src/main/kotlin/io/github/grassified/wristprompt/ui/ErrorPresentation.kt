@@ -29,6 +29,7 @@ internal fun errorPresentation(problem: ApiProblem): ErrorPresentation = when (p
     ApiProblem.PERMISSION -> ErrorPresentation("Account access unavailable", "Check the selected account's access.", RecoveryAction.ACCOUNT)
     ApiProblem.TEMPORARY -> ErrorPresentation("Service unavailable", "Try again with a new message later.")
     ApiProblem.NETWORK -> ErrorPresentation("Couldn't connect", "Check the watch's internet connection.")
+    ApiProblem.THINKING_UNSUPPORTED -> ErrorPresentation("Thinking level unsupported", "Choose Default or a supported value in Models.", action = null)
     ApiProblem.NO_MODELS -> ErrorPresentation("Model unavailable", action = RecoveryAction.MODELS)
     ApiProblem.STALE_ACCOUNT -> ErrorPresentation("Account changed", "Reload models to continue.", RecoveryAction.MODELS)
     ApiProblem.STORAGE -> ErrorPresentation("Secure storage unavailable", "Requests are blocked to protect your account.", RecoveryAction.DIAGNOSTICS)
@@ -42,6 +43,7 @@ internal fun errorPresentation(problem: ApiProblem): ErrorPresentation = when (p
 }
 
 internal fun chatError(chat: ChatState): ErrorPresentation? = when {
+    chat.problem == ApiProblem.THINKING_UNSUPPORTED -> errorPresentation(ApiProblem.THINKING_UNSUPPORTED)
     chat.problem == ApiProblem.CHAT_STORAGE -> errorPresentation(ApiProblem.CHAT_STORAGE)
     chat.limitReached && chat.stage !in setOf(ChatStage.FAILED, ChatStage.CANCELLED) -> ErrorPresentation("Start a new chat to continue", action = RecoveryAction.NEW_CHAT)
     chat.stage == ChatStage.CANCELLED -> ErrorPresentation("Response stopped", EXCLUDED_RESPONSE)

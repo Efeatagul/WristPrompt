@@ -1388,3 +1388,13 @@ input token and exact draft, then explicitly inserts with two LF separators or
 replaces; Cancel and oversize preserve content. No inference is dispatched.
 See [docs/D7_B_PRESET_SYNC.md](docs/D7_B_PRESET_SYNC.md) for protocol, evidence and
 pending paired/physical checks.
+
+## D7-H native thinking controls — 2026-11-01
+
+Use versioned provider-neutral native-string controls in snapshot v2, outside replay.
+Default omits reasoning entirely. Use audited exact API-model contracts; unknown
+IDs and the undocumented plan capability list expose only Default. Model changes
+visibly reset invalid values; restored stale values require explicit re-selection.
+See [D7_H_THINKING.md](docs/D7_H_THINKING.md) for sources, serialization, migration,
+validation and evidence. Owner physical acceptance remains deferred to #12; #18
+stays open. No #8/#9/#10/#11 work is included.

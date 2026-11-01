@@ -18,11 +18,16 @@ object ResponsesProtocol {
 
     fun models(body: String): List<AiModel> = ModelCatalog.read(body.byteInputStream())
 
-    fun request(model: String, input: List<JsonObject>): String {
+    fun request(model: String, input: List<JsonObject>, configuration: InferenceConfiguration = InferenceConfiguration(),
+        capability: ControlCapability? = null, mode: io.github.grassified.wristprompt.auth.CredentialMode = io.github.grassified.wristprompt.auth.CredentialMode.CHATGPT_PLAN): String {
+        InferenceControls.validate(configuration, AiModel(model, model, capability), mode)
         require(model.isNotBlank() && model.length <= 256 && model.none(Char::isISOControl))
         require(input.isNotEmpty())
         val body = buildJsonObject {
             put("model", model); put("input", JsonArray(input)); put("store", false); put("stream", true)
+            configuration.controls.singleOrNull()?.let { control ->
+                put("reasoning", buildJsonObject { put("effort", control.value) })
+            }
         }.toString()
         require(body.encodeToByteArray().size <= MAX_BODY_BYTES)
         return body
@@ -34,7 +39,7 @@ object ResponsesProtocol {
     }
 }
 
-data class AiModel(val slug: String, val displayName: String)
+data class AiModel(val slug: String, val displayName: String, val thinking: ControlCapability? = null)
 @Serializable private data class ResponsesRequest(val model: String, val input: List<InputMessage>, val store: Boolean = false, val stream: Boolean = true)
 @Serializable private data class InputMessage(val role: String, val content: String)
 

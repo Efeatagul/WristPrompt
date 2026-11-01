@@ -184,8 +184,12 @@ internal fun WearShellContent(
                                 item { ShellText("Choose model", heading = true) }
                                 val catalog = ui.recovery ?: modelCatalogPresentation(state)
                                 catalog?.let { item { ShellText(it.text) } }
-                                if (state.mode == key.mode) modelItems(state.models, state.selectedSlug,
-                                    enabled = ui.proofAvailable && !state.busy && !chatBusy, onSelect = proof::select)
+                                if (state.mode == key.mode) {
+                                    modelItems(state.models, state.selectedSlug,
+                                        enabled = ui.proofAvailable && !state.busy && !chatBusy && !state.thinkingSaving, onSelect = proof::select)
+                                    thinkingItems(state, enabled = ui.proofAvailable && !state.busy && !chatBusy,
+                                        onSelect = proof::selectThinking)
+                                }
                                 val recovery = catalog?.action ?: RecoveryAction.MODELS
                                 recoveryAction(recovery, proof, navigation, !state.busy && !chatBusy &&
                                     (recovery != RecoveryAction.MODELS || ui.proofAvailable))
