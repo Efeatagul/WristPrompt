@@ -48,6 +48,8 @@ class MainActivity : ComponentActivity() {
             val presets: PresetsViewModel = viewModel(factory = viewModelFactory {
                 initializer { PresetsViewModel((application as WristPromptApplication).presets) }
             })
+            val presetApp = application as WristPromptApplication
+            val presetSync by presetApp.presetPublisher.status.collectAsStateWithLifecycle()
             val state by auth.state.collectAsStateWithLifecycle()
             var usageBrowserUnavailable by remember { mutableStateOf(false) }
             MaterialTheme(colorScheme = darkColorScheme()) {
@@ -94,7 +96,7 @@ class MainActivity : ComponentActivity() {
                         HorizontalDivider()
                         ApiKeySetupUi(api)
                         HorizontalDivider()
-                        PresetsUi(presets)
+                        PresetsUi(presets, presetSync, presetApp::queuePresets)
                     }
                 }
             }

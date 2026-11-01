@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
-fun PresetsUi(model: PresetsViewModel) {
+fun PresetsUi(model: PresetsViewModel, syncStatus: PresetSyncStatus = PresetSyncStatus.WAITING, retrySync: () -> Unit = {}) {
     val state by model.state.collectAsStateWithLifecycle()
     var deleting by remember { mutableStateOf<PromptPreset?>(null) }
     var discard by remember { mutableStateOf(false) }
@@ -23,7 +23,13 @@ fun PresetsUi(model: PresetsViewModel) {
     BackHandler(enabled = editor != null) { if (!state.busy) requestClose() }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Prompt presets", style = MaterialTheme.typography.titleLarge)
-        Text("Reusable user text. Saved on this phone only; never sent or applied automatically.")
+        Text("Reusable user text. Syncs to your watch; never applied or sent to AI automatically.")
+        Text(when (syncStatus) {
+            PresetSyncStatus.WAITING -> "Saved on phone. Waiting for a reachable watch."
+            PresetSyncStatus.QUEUED -> "Queued for watch sync. Open Prompts on your watch to check."
+            PresetSyncStatus.FAILED -> "Saved on phone. Watch sync unavailable; retry when connected."
+        })
+        TextButton(onClick = retrySync) { Text("Retry watch sync") }
         if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         state.problem?.let { Text(problemText(it), color = MaterialTheme.colorScheme.error) }
         if (!state.loaded) {

@@ -364,7 +364,8 @@ No image-input implementation in D6-A; no database selected in this handoff.
 ## Day 7 — companion productivity + multimodal input + final integration
 
 D7-A phone presets are implemented and VERIFIED AUTOMATICALLY; manual phone checks
-remain pending in [docs/D7_A_PRESETS.md](docs/D7_A_PRESETS.md). D7-B onward is not started.
+remain pending in [docs/D7_A_PRESETS.md](docs/D7_A_PRESETS.md). D7-B sync/insertion is implemented; paired/physical checks remain in
+[docs/D7_B_PRESET_SYNC.md](docs/D7_B_PRESET_SYNC.md). D7-C onward is not started.
 
 - [ ] D7-A: durable named custom USER prompt presets managed on phone (list,
   create/edit/rename/delete, multiline editor); no hidden always-on system prompt.

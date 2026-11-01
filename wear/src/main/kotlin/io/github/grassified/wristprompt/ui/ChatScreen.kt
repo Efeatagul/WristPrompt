@@ -150,16 +150,32 @@ internal fun ComposerScreen(
     write: () -> Unit,
 ) {
     val chat by proof.chat.collectAsStateWithLifecycle()
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     ShellList(Modifier.fillMaxSize(), rememberShellScroll(navigation, Surface.COMPOSER)) {
         item { ShellText("Review message", heading = true) }
         chat.readOnlyReason?.let { reason -> item { ShellText(reason) } }
         item { ShellText("Model: ${ui.model}", compact = true) }
         if (!ui.proofAvailable || state.selectedSlug == null) item { ShellText(ui.status) }
+        action("Prompts", !chat.busy && !state.busy) { navigation.open(Surface.PROMPTS) }
         action(if (chat.draft.isEmpty()) "Write message" else "Replace draft", !chat.busy && !state.busy, write)
         if (interruptedInput) item { ShellText("Text input was interrupted. Write your message again.") }
         if (inputUnavailable) item { ShellText("System text input unavailable. Return and try again.") }
         if (chat.draft.isEmpty()) item { ShellText("Enter text, review it here, then Send.") }
-        else paragraphs(chat.draft)
+        else {
+            item { ShellText("Edit draft", heading = true) }
+            item {
+                androidx.compose.foundation.text.BasicTextField(
+                    value = chat.draft, onValueChange = { proof.draft(it) },
+                    enabled = !chat.busy && !state.busy, maxLines = 6,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { focusManager.clearFocus() }),
+                    cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary),
+                    textStyle = androidx.wear.compose.material3.MaterialTheme.typography.bodyMedium.copy(color = androidx.wear.compose.material3.MaterialTheme.colorScheme.onSurface),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                        .semantics { contentDescription = "Edit message draft" },
+                )
+            }
+        }
         if (chat.draft.length > ChatConversation.MAX_PROMPT_CHARS)
             item { ShellText("Message too long. Limit: ${ChatConversation.MAX_PROMPT_CHARS} characters. Replace the draft with a shorter message.") }
         if (chat.limitReached) {
