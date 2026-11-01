@@ -344,7 +344,10 @@ Gate: preserve inference/auth/account/billing/composer safety; verify automated
 and emulator results separately from physical evidence. D5 is not release freeze.
 No persistent conversation storage or new background infrastructure in D5.
 
-## Day 6 — persistent conversations — NOT STARTED
+## Day 6 — persistent conversations — implementation merged; physical acceptance pending
+
+D6-A–C are merged on main. D6-D nonphysical acceptance is complete; owner
+Galaxy Watch physical acceptance remains pending in #5. PR #21 remains open/draft.
 
 - [ ] D6-A: FIRST task, read-only architecture audit and decision/implementation
   plan before broad production changes. Select storage, schema/versioning,
@@ -363,8 +366,8 @@ No image-input implementation in D6-A; no database selected in this handoff.
 
 ## Day 7 — companion productivity + multimodal input + final integration
 
-D7-A phone presets are implemented and VERIFIED AUTOMATICALLY; manual phone checks
-remain pending in [docs/D7_A_PRESETS.md](docs/D7_A_PRESETS.md). D7-B sync/insertion is implemented; paired/physical checks remain in
+D7-A phone presets are merged via PR #22 and VERIFIED AUTOMATICALLY; manual phone checks
+remain pending in [docs/D7_A_PRESETS.md](docs/D7_A_PRESETS.md). D7-B sync/insertion is merged via PR #23; #7 remains open for paired/physical checks in
 [docs/D7_B_PRESET_SYNC.md](docs/D7_B_PRESET_SYNC.md). D7-C onward is not started.
 
 - [ ] D7-A: durable named custom USER prompt presets managed on phone (list,
